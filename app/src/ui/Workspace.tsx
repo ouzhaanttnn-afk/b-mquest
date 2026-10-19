@@ -1923,6 +1923,39 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                         />
                         <span className="bq-unit-tag">mm</span>
                       </div>
+                      {isFieldEditable('height') && (
+                        <div className="bq-quick-steppers-row" style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            className="bq-chip-btn bq-chip-accent"
+                            onClick={() => {
+                              commitSingleField('height', 3000);
+                            }}
+                          >
+                            ⚡ 3000 mm Yap
+                          </button>
+                          <button
+                            type="button"
+                            className="bq-chip-btn"
+                            onClick={() => {
+                              const curr = Number(editDrafts.height || selectedElement.height);
+                              commitSingleField('height', curr + 100);
+                            }}
+                          >
+                            +100 mm
+                          </button>
+                          <button
+                            type="button"
+                            className="bq-chip-btn"
+                            onClick={() => {
+                              const curr = Number(editDrafts.height || selectedElement.height);
+                              commitSingleField('height', Math.max(500, curr - 100));
+                            }}
+                          >
+                            −100 mm
+                          </button>
+                        </div>
+                      )}
                     </label>
 
                     {/* Wall Thickness */}
