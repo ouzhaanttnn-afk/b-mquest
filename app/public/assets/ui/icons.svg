@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs>
+<symbol id="select" viewBox="0 0 24 24"><path d="m5 3 14 10-7 1-3 7Z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="wall" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 12h18M9 5v7m6 0v7" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="door" viewBox="0 0 24 24"><path d="M5 21V3h14v18M9 21V7l7-2v16M12 13h1" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
+<symbol id="hint" viewBox="0 0 24 24"><path d="M8 16c0-3-3-4-3-7a7 7 0 0 1 14 0c0 3-3 4-3 7Zm0 4h8M10 23h4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="undo" viewBox="0 0 24 24"><path d="m8 3-5 5 5 5M3 8h10a7 7 0 0 1 0 14" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="redo" viewBox="0 0 24 24"><path d="m16 3 5 5-5 5m5-5H11a7 7 0 0 0 0 14" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="reset" viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 0 2-5M4 2v9h8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+</defs></svg>

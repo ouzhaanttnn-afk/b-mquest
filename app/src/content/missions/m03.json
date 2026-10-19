@@ -1,0 +1,197 @@
+{
+  "schemaVersion": "1.0",
+  "contentVersion": "1.0.0",
+  "id": "m03",
+  "title": "Bilgili Kapı (Host & Identity Data)",
+  "objective": "Güney cephe duvarına standart 900×2100 mm boyutlarında, zemine sıfır eşikli ve D-01 poz numaralı giriş kapısını yerleştir.",
+  "prerequisites": [
+    "m02"
+  ],
+  "estimatedMinutes": 8,
+  "initialModel": {
+    "levels": [
+      {
+        "id": "l0",
+        "elevation": 0,
+        "name": "Zemin Kat"
+      }
+    ],
+    "elements": [
+      {
+        "id": "w_south",
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          6000,
+          0
+        ],
+        "type": "wall",
+        "name": "w_south",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      },
+      {
+        "id": "w_east",
+        "start": [
+          6000,
+          0
+        ],
+        "end": [
+          6000,
+          4000
+        ],
+        "type": "wall",
+        "name": "w_east",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      },
+      {
+        "id": "w_north",
+        "start": [
+          6000,
+          4000
+        ],
+        "end": [
+          0,
+          4000
+        ],
+        "type": "wall",
+        "name": "w_north",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      },
+      {
+        "id": "w_west",
+        "start": [
+          0,
+          4000
+        ],
+        "end": [
+          0,
+          0
+        ],
+        "type": "wall",
+        "name": "w_west",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      }
+    ]
+  },
+  "permissions": {
+    "editableFields": [
+      "name",
+      "hostWallId",
+      "offset",
+      "width",
+      "height",
+      "sill",
+      "mark",
+      "fireRating"
+    ],
+    "creatableTypes": [
+      "door"
+    ],
+    "deletableCreated": true,
+    "editableSeedIds": []
+  },
+  "hints": [
+    {
+      "id": "h1",
+      "text": "İpucu 1 (Alan): Güney cephe duvarını (w_south) incele; kapı boşluğu bu taşıyıcı duvara (Host) açılacak."
+    },
+    {
+      "id": "h2",
+      "text": "İpucu 2 (Nesne): Architecture → Door (Kapı Oluştur) aracını aç ve Host Wall olarak w_south duvarını seç."
+    },
+    {
+      "id": "h3",
+      "text": "İpucu 3 (Parametre): Offset=2550 mm, Width=900 mm, Height=2100 mm, Sill=0 mm, Mark=D-01, Fire Rating=none değerlerini doğrula."
+    }
+  ],
+  "recap": "Kapıyı doğru Host duvara (w_south) bağladın ve Identity Data (Mark: D-01) bilgisini işledin. Revit: Architecture → Door → Pick Host Wall.",
+  "criteria": [
+    {
+      "id": "c_count",
+      "type": "count",
+      "elementType": "wall",
+      "expected": 4,
+      "message": "4 adet duvar gerekli."
+    },
+    {
+      "id": "c_doors",
+      "type": "count",
+      "elementType": "door",
+      "expected": 1,
+      "message": "1 adet kapı gerekli."
+    },
+    {
+      "id": "c_host",
+      "type": "property",
+      "elementId": "d1",
+      "field": "hostWallId",
+      "expected": "w_south",
+      "tolerance": 0,
+      "message": "d1: hostWallId hedefini kontrol et."
+    },
+    {
+      "id": "c_offset",
+      "type": "property",
+      "elementId": "d1",
+      "field": "offset",
+      "expected": 2550,
+      "tolerance": 1,
+      "message": "d1: offset hedefini kontrol et."
+    },
+    {
+      "id": "c_width",
+      "type": "property",
+      "elementId": "d1",
+      "field": "width",
+      "expected": 900,
+      "tolerance": 1,
+      "message": "d1: width hedefini kontrol et."
+    },
+    {
+      "id": "c_height",
+      "type": "property",
+      "elementId": "d1",
+      "field": "height",
+      "expected": 2100,
+      "tolerance": 1,
+      "message": "d1: height hedefini kontrol et."
+    },
+    {
+      "id": "c_sill",
+      "type": "property",
+      "elementId": "d1",
+      "field": "sill",
+      "expected": 0,
+      "tolerance": 0,
+      "message": "d1: sill hedefini kontrol et."
+    },
+    {
+      "id": "c_mark",
+      "type": "property",
+      "elementId": "d1",
+      "field": "mark",
+      "expected": "D-01",
+      "tolerance": 0,
+      "message": "d1: mark hedefini kontrol et."
+    },
+    {
+      "id": "c_rating",
+      "type": "property",
+      "elementId": "d1",
+      "field": "fireRating",
+      "expected": "none",
+      "tolerance": 0,
+      "message": "d1: fireRating hedefini kontrol et."
+    }
+  ]
+}

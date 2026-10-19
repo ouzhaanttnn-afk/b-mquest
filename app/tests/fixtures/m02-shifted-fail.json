@@ -1,0 +1,80 @@
+{
+  "taskId": "m02",
+  "model": {
+    "levels": [
+      {
+        "id": "l0",
+        "elevation": 0,
+        "name": "Zemin Kat"
+      }
+    ],
+    "elements": [
+      {
+        "id": "w_south",
+        "start": [
+          100,
+          0
+        ],
+        "end": [
+          6100,
+          0
+        ],
+        "type": "wall",
+        "name": "w_south",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      },
+      {
+        "id": "w_east",
+        "start": [
+          6100,
+          0
+        ],
+        "end": [
+          6100,
+          4000
+        ],
+        "type": "wall",
+        "name": "w_east",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      },
+      {
+        "id": "w_north",
+        "start": [
+          6100,
+          4000
+        ],
+        "end": [
+          100,
+          4000
+        ],
+        "type": "wall",
+        "name": "w_north",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      },
+      {
+        "id": "w_west",
+        "start": [
+          100,
+          4000
+        ],
+        "end": [
+          100,
+          0
+        ],
+        "type": "wall",
+        "name": "w_west",
+        "baseLevelId": "l0",
+        "height": 3000,
+        "thickness": 200
+      }
+    ]
+  },
+  "hintCount": 0,
+  "expectedPass": false
+}

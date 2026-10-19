@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="topFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="leftFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f4c81" />
+      <stop offset="100%" stop-color="#072ac8" />
+    </linearGradient>
+    <linearGradient id="rightFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+  </defs>
+
+  <!-- App Store Rounded Icon Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bgGrad)" />
+
+  <!-- Subtle Blueprint Grid -->
+  <g stroke="#38bdf8" stroke-opacity="0.12" stroke-width="4">
+    <line x1="0" y1="256" x2="1024" y2="256" />
+    <line x1="0" y1="512" x2="1024" y2="512" />
+    <line x1="0" y1="768" x2="1024" y2="768" />
+    <line x1="256" y1="0" x2="256" y2="1024" />
+    <line x1="512" y1="0" x2="512" y2="1024" />
+    <line x1="768" y1="0" x2="768" y2="1024" />
+  </g>
+
+  <!-- Isometric 3D Building Block with Hosted Door Cutout -->
+  <g transform="translate(512, 470)">
+    <!-- Top Slab -->
+    <polygon points="0,-290 310,-110 0,70 -310,-110" fill="url(#topFace)" />
+    <!-- Left Wall -->
+    <polygon points="-310,-110 0,70 0,360 -310,180" fill="url(#leftFace)" />
+    <!-- Right Wall with Hosted Door Cutout -->
+    <polygon points="0,70 310,-110 310,180 200,244 200,75 95,136 95,305 0,360" fill="url(#rightFace)" />
+    <!-- Dimension Nodes -->
+    <circle cx="0" cy="-290" r="16" fill="#e0f2fe" />
+    <circle cx="310" cy="-110" r="16" fill="#e0f2fe" />
+    <circle cx="-310" cy="-110" r="16" fill="#e0f2fe" />
+    <circle cx="0" cy="70" r="20" fill="#ffffff" />
+  </g>
+
+  <!-- Bottom Badge Label -->
+  <text x="512" y="935" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif" font-size="76" font-weight="900" letter-spacing="6" fill="#f8fafc">
+    BIM<tspan fill="#fb923c">QUEST</tspan>
+  </text>
+</svg>

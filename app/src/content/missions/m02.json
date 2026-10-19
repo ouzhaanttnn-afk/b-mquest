@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "contentVersion": "1.0.0",
+  "id": "m02",
+  "title": "Kapalı Oda (Room Boundary)",
+  "objective": "Zemin Kat (l0) üzerinde 6000 × 4000 mm ölçülerinde, 3000 mm yüksekliğinde ve 200 mm kalınlığında kesintisiz kapalı bir oda kabuğu oluştur.",
+  "prerequisites": [
+    "m01"
+  ],
+  "estimatedMinutes": 8,
+  "initialModel": {
+    "levels": [
+      {
+        "id": "l0",
+        "elevation": 0,
+        "name": "Zemin Kat"
+      }
+    ],
+    "elements": []
+  },
+  "permissions": {
+    "editableFields": [
+      "height",
+      "thickness",
+      "name",
+      "start",
+      "end",
+      "baseLevelId"
+    ],
+    "creatableTypes": [
+      "wall"
+    ],
+    "deletableCreated": true,
+    "editableSeedIds": []
+  },
+  "hints": [
+    {
+      "id": "h1",
+      "text": "İpucu 1 (Alan): 2B Plan düzleminde Zemin Kat (l0) aks sınırlarını kontrol et."
+    },
+    {
+      "id": "h2",
+      "text": "İpucu 2 (Nesne): Architecture → Wall (Duvar Oluştur) aracını kullanarak köşeleri uç uca birleşen 4 duvar üret."
+    },
+    {
+      "id": "h3",
+      "text": "İpucu 3 (Parametre): 6000×4000 mm dikdörtgen aks için köşeleri (0,0) → (6000,0) → (6000,4000) → (0,4000) → (0,0) olarak bağla; Height=3000, Thickness=200 mm."
+    }
+  ],
+  "recap": "Uç uca kapanan 4 duvar ile Room Bounding (kapalı hacim sınırı) oluşturdun. Revit: Architecture → Wall → Location Line (Wall Centerline).",
+  "criteria": [
+    {
+      "id": "c_count",
+      "type": "count",
+      "elementType": "wall",
+      "expected": 4,
+      "message": "4 adet duvar gerekli."
+    },
+    {
+      "id": "c_doors",
+      "type": "count",
+      "elementType": "door",
+      "expected": 0,
+      "message": "0 adet kapı gerekli."
+    },
+    {
+      "id": "c_room",
+      "type": "rectangle",
+      "levelId": "l0",
+      "origin": [
+        0,
+        0
+      ],
+      "width": 6000,
+      "depth": 4000,
+      "wallHeight": 3000,
+      "thickness": 200,
+      "tolerance": 1,
+      "message": "6000 × 4000 mm kapalı oda oluştur."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Never commit private keys or certificates
+*.p8
+*.p12
+*.cer
+*.key
+*.mobileprovision
+*.certSigningRequest
+
+# Exclude external repos and heavy build caches
+repos/
+graphify-out/
+BIM-QUEST-Antigravity-Handoff/
+BIM-QUEST-Assets/
+app/node_modules/
+app/dist/
+app/test-results/
+app/playwright-report/

@@ -1,0 +1,14 @@
+{
+  "appId": "com.bimquest.studio",
+  "appName": "BIM QUEST",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "iosScheme": "capacitor"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#090f1d",
+    "preferredContentMode": "mobile"
+  }
+}

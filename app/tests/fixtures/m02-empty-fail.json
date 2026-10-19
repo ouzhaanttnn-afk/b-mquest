@@ -1,0 +1,15 @@
+{
+  "taskId": "m02",
+  "model": {
+    "levels": [
+      {
+        "id": "l0",
+        "elevation": 0,
+        "name": "Zemin Kat"
+      }
+    ],
+    "elements": []
+  },
+  "hintCount": 0,
+  "expectedPass": false
+}

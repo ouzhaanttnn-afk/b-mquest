@@ -1,0 +1,524 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bimquest.invalid/schemas/task-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "contentVersion": {
+      "const": "1.0.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+      },
+      "minItems": 0,
+      "maxItems": 11
+    },
+    "estimatedMinutes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60
+    },
+    "initialModel": {
+      "$ref": "#/$defs/model"
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "editableFields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "height",
+              "thickness",
+              "name",
+              "start",
+              "end",
+              "baseLevelId",
+              "offset",
+              "width",
+              "sill",
+              "mark",
+              "fireRating",
+              "hostWallId"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 20
+        },
+        "creatableTypes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "wall",
+              "door"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 2
+        },
+        "deletableCreated": {
+          "type": "boolean"
+        },
+        "editableSeedIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+          },
+          "minItems": 0,
+          "maxItems": 500
+        }
+      },
+      "required": [
+        "editableFields",
+        "creatableTypes",
+        "deletableCreated",
+        "editableSeedIds"
+      ]
+    },
+    "hints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ]
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "recap": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "type": {
+                "const": "count"
+              },
+              "elementType": {
+                "enum": [
+                  "wall",
+                  "door"
+                ]
+              },
+              "expected": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 500
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "elementType",
+              "expected",
+              "message"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "type": {
+                "const": "property"
+              },
+              "elementId": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "field": {
+                "enum": [
+                  "height",
+                  "thickness",
+                  "width",
+                  "offset",
+                  "sill",
+                  "mark",
+                  "fireRating",
+                  "baseLevelId",
+                  "hostWallId"
+                ]
+              },
+              "expected": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200000
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                ]
+              },
+              "tolerance": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "elementId",
+              "field",
+              "expected",
+              "tolerance",
+              "message"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "type": {
+                "const": "rectangle"
+              },
+              "levelId": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "origin": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "integer",
+                    "minimum": -100000,
+                    "maximum": 100000
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": -100000,
+                    "maximum": 100000
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "wallHeight": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "thickness": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2000
+              },
+              "tolerance": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "levelId",
+              "origin",
+              "width",
+              "depth",
+              "wallHeight",
+              "thickness",
+              "tolerance",
+              "message"
+            ]
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 50
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "contentVersion",
+    "id",
+    "title",
+    "objective",
+    "prerequisites",
+    "estimatedMinutes",
+    "initialModel",
+    "permissions",
+    "hints",
+    "recap",
+    "criteria"
+  ],
+  "$defs": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "elevation": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100000
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "elevation",
+              "name"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+                  },
+                  "type": {
+                    "const": "wall"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "baseLevelId": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+                  },
+                  "start": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "integer",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "end": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "integer",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20000
+                  },
+                  "thickness": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2000
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "name",
+                  "baseLevelId",
+                  "start",
+                  "end",
+                  "height",
+                  "thickness"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+                  },
+                  "type": {
+                    "const": "door"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "hostWallId": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200000
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20000
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20000
+                  },
+                  "sill": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20000
+                  },
+                  "mark": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "fireRating": {
+                    "enum": [
+                      "none",
+                      "EI30",
+                      "EI60"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "name",
+                  "hostWallId",
+                  "offset",
+                  "width",
+                  "height",
+                  "sill",
+                  "mark",
+                  "fireRating"
+                ]
+              }
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 500
+        }
+      },
+      "required": [
+        "levels",
+        "elements"
+      ]
+    }
+  }
+}

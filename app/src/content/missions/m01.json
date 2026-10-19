@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "1.0",
+  "contentVersion": "1.0.0",
+  "id": "m01",
+  "title": "İlk Model Kontrolü",
+  "objective": "Odada hedef kotun (3000 mm) altında kalan duvarları tespit et ve tüm duvarların üst kotunu 3000 mm yüksekliğe eşitle.",
+  "prerequisites": [],
+  "estimatedMinutes": 8,
+  "initialModel": {
+    "levels": [
+      {
+        "id": "l0",
+        "elevation": 0,
+        "name": "Zemin Kat"
+      }
+    ],
+    "elements": [
+      {
+        "id": "w1",
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          6000,
+          0
+        ],
+        "type": "wall",
+        "name": "w_south",
+        "baseLevelId": "l0",
+        "height": 2800,
+        "thickness": 200
+      },
+      {
+        "id": "w2",
+        "start": [
+          6000,
+          0
+        ],
+        "end": [
+          6000,
+          4000
+        ],
+        "type": "wall",
+        "name": "w_east",
+        "baseLevelId": "l0",
+        "height": 2800,
+        "thickness": 200
+      },
+      {
+        "id": "w3",
+        "start": [
+          6000,
+          4000
+        ],
+        "end": [
+          0,
+          4000
+        ],
+        "type": "wall",
+        "name": "w_north",
+        "baseLevelId": "l0",
+        "height": 2800,
+        "thickness": 200
+      },
+      {
+        "id": "w4",
+        "start": [
+          0,
+          4000
+        ],
+        "end": [
+          0,
+          0
+        ],
+        "type": "wall",
+        "name": "w_west",
+        "baseLevelId": "l0",
+        "height": 2800,
+        "thickness": 200
+      }
+    ]
+  },
+  "permissions": {
+    "editableFields": [
+      "height"
+    ],
+    "creatableTypes": [],
+    "deletableCreated": false,
+    "editableSeedIds": [
+      "w1",
+      "w2",
+      "w3",
+      "w4"
+    ]
+  },
+  "hints": [
+    {
+      "id": "h1",
+      "text": "İpucu 1 (Alan): 3B Sahnede ve 2B Planda oda çevresini oluşturan dış duvarların üst kotlarını incele."
+    },
+    {
+      "id": "h2",
+      "text": "İpucu 2 (Nesne): Duvar (Wall) nesnelerinden birini seçerek Properties panelini aç."
+    },
+    {
+      "id": "h3",
+      "text": "İpucu 3 (Parametre): Properties → Constraints → Unconnected Height (Yükseklik) değerini 3000 mm yap."
+    }
+  ],
+  "recap": "Duvarların Unconnected Height parametresini 3000 mm yaptın ve üst kotları eşitledin. Revit: Select Wall → Properties → Constraints → Unconnected Height.",
+  "criteria": [
+    {
+      "id": "c_count",
+      "type": "count",
+      "elementType": "wall",
+      "expected": 4,
+      "message": "4 adet duvar gerekli."
+    },
+    {
+      "id": "c_doors",
+      "type": "count",
+      "elementType": "door",
+      "expected": 0,
+      "message": "0 adet kapı gerekli."
+    },
+    {
+      "id": "c_h1",
+      "type": "property",
+      "elementId": "w1",
+      "field": "height",
+      "expected": 3000,
+      "tolerance": 1,
+      "message": "w1: height hedefini kontrol et."
+    },
+    {
+      "id": "c_h2",
+      "type": "property",
+      "elementId": "w2",
+      "field": "height",
+      "expected": 3000,
+      "tolerance": 1,
+      "message": "w2: height hedefini kontrol et."
+    },
+    {
+      "id": "c_h3",
+      "type": "property",
+      "elementId": "w3",
+      "field": "height",
+      "expected": 3000,
+      "tolerance": 1,
+      "message": "w3: height hedefini kontrol et."
+    },
+    {
+      "id": "c_h4",
+      "type": "property",
+      "elementId": "w4",
+      "field": "height",
+      "expected": 3000,
+      "tolerance": 1,
+      "message": "w4: height hedefini kontrol et."
+    }
+  ]
+}

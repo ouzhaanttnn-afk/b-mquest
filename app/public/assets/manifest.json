@@ -1,0 +1,90 @@
+{
+  "manifestVersion": 1,
+  "brand": "BIM QUEST",
+  "provenance": "PROVENANCE.md",
+  "assets": [
+    {
+      "id": "logo_horizontal_svg",
+      "file": "brand/logo-horizontal.svg",
+      "role": "wordmark",
+      "dimensions": "360x80",
+      "altTr": "BIM QUEST",
+      "status": "delivered",
+      "format": "svg",
+      "bytes": 485,
+      "source": "Original shapes/CSS created for this handoff; see PROVENANCE.md"
+    },
+    {
+      "id": "icon_svg",
+      "file": "brand/icon.svg",
+      "role": "app icon",
+      "dimensions": "64x72",
+      "altTr": "BIM QUEST simgesi",
+      "status": "delivered",
+      "format": "svg",
+      "bytes": 334,
+      "source": "Original shapes/CSS created for this handoff; see PROVENANCE.md"
+    },
+    {
+      "id": "favicon_svg",
+      "file": "brand/favicon.svg",
+      "role": "favicon",
+      "dimensions": "72x72",
+      "altTr": "",
+      "status": "delivered",
+      "format": "svg",
+      "bytes": 422,
+      "source": "Original shapes/CSS created for this handoff; see PROVENANCE.md"
+    },
+    {
+      "id": "empty_state_svg",
+      "file": "illustrations/empty-state.svg",
+      "role": "decorative empty state",
+      "dimensions": "480x280",
+      "altTr": "",
+      "status": "delivered",
+      "format": "svg",
+      "bytes": 457,
+      "source": "Original shapes/CSS created for this handoff; see PROVENANCE.md"
+    },
+    {
+      "id": "icons_svg",
+      "file": "ui/icons.svg",
+      "role": "8-symbol interface sprite",
+      "dimensions": "24x24 per symbol",
+      "altTr": "DOM labels required",
+      "status": "delivered",
+      "format": "svg",
+      "bytes": 1229,
+      "source": "Original shapes/CSS created for this handoff; see PROVENANCE.md"
+    },
+    {
+      "id": "tokens_css",
+      "file": "ui/tokens.css",
+      "role": "design tokens",
+      "dimensions": null,
+      "altTr": null,
+      "status": "delivered",
+      "format": "css",
+      "bytes": 378,
+      "source": "Original shapes/CSS created for this handoff; see PROVENANCE.md"
+    }
+  ],
+  "optionalAssets": [
+    {
+      "id": "hero",
+      "status": "instructions-only",
+      "instructions": "../asset-instructions/PRODUCTION-BRIEF.md"
+    },
+    {
+      "id": "mission-cards",
+      "status": "instructions-only",
+      "instructions": "../asset-instructions/PROMPTS.md"
+    },
+    {
+      "id": "badges-and-sound",
+      "status": "instructions-only",
+      "instructions": "../asset-instructions/PRODUCTION-BRIEF.md"
+    }
+  ]
+}
