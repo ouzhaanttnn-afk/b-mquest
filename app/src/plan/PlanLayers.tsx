@@ -1,13 +1,17 @@
 import React from 'react';
 import { roomBoundary, wallLengthMm } from '../domain/derived';
+import { dimensionValue, tagLabel } from '../domain/documentation';
 import type {
   BimModel,
+  DimensionElement,
   FloorElement,
   GridElement,
   Point,
   RoofElement,
   RoomElement,
   StairElement,
+  TagElement,
+  ViewElement,
   WallElement,
   WindowElement,
 } from '../domain/types';
@@ -23,6 +27,8 @@ interface LayerProps {
   /** false while a drawing tool is active: taps fall through to the plan. */
   interactive?: boolean;
   onOpeningPointerDown?: (id: string) => void;
+  /** Plan view cut plane (absolute mm); windows outside it are drawn faint. */
+  cutPlane?: number | null;
 }
 
 const SEL = '#38BDF8';
@@ -312,6 +318,7 @@ export const PlanWindows: React.FC<LayerProps> = ({
   onSelect,
   interactive = true,
   onOpeningPointerDown,
+  cutPlane = null,
 }) => {
   const walls = model.elements.filter((e): e is WallElement => e.type === 'wall');
   const windows = model.elements.filter((e): e is WindowElement => e.type === 'window');
@@ -328,7 +335,11 @@ export const PlanWindows: React.FC<LayerProps> = ({
         const sz = host.start[1] + dz * w.offset;
         const ex = host.start[0] + dx * (w.offset + w.width);
         const ez = host.start[1] + dz * (w.offset + w.width);
-        const col = selectedId === w.id ? SEL : failedElementIds.has(w.id) ? ERR : '#38BDF8';
+        const baseElev = model.levels.find((l) => l.id === host.baseLevelId)?.elevation ?? 0;
+        const cut =
+          cutPlane === null ||
+          (cutPlane >= baseElev + w.sill && cutPlane <= baseElev + w.sill + w.height);
+        const col = selectedId === w.id ? SEL : failedElementIds.has(w.id) ? ERR : cut ? '#38BDF8' : '#64748B';
         const line = (k: number, width: number) => (
           <line
             x1={sx + nx * t * k}
@@ -354,9 +365,11 @@ export const PlanWindows: React.FC<LayerProps> = ({
           >
             <line x1={sx} y1={sz} x2={ex} y2={ez} stroke="transparent" strokeWidth={Math.max(host.thickness + 420, 620)} />
             <line x1={sx} y1={sz} x2={ex} y2={ez} stroke="rgba(56,189,248,0.18)" strokeWidth={host.thickness} />
-            {line(1, 24)}
-            {line(-1, 24)}
-            {line(0, 14)}
+            <g opacity={cut ? 1 : 0.55} data-cut={cut ? 'yes' : 'no'}>
+              {line(1, 24)}
+              {line(-1, 24)}
+              {cut && line(0, 14)}
+            </g>
             {showLabels && (
               <text
                 x={(sx + ex) / 2 + nx * (t + 190)}
@@ -372,6 +385,242 @@ export const PlanWindows: React.FC<LayerProps> = ({
           </g>
         );
       })}
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Faz 4 — annotations: dimensions, tags, section / elevation marks, crop
+// ---------------------------------------------------------------------------
+
+interface AnnotationProps extends LayerProps {
+  activeViewId: string | null;
+  /** Crop corner dragging (only when the crop is editable). */
+  onCropHandleDown?: (corner: 'min' | 'max') => void;
+}
+
+const COMPASS_POS = (
+  b: { minX: number; maxX: number; minZ: number; maxZ: number },
+  d: 'N' | 'S' | 'E' | 'W'
+): { x: number; z: number; pts: string } => {
+  const cx = (b.minX + b.maxX) / 2;
+  const cz = (b.minZ + b.maxZ) / 2;
+  const g = 1300;
+  if (d === 'N') return { x: cx, z: b.minZ - g, pts: `${cx - 200},${b.minZ - g - 220} ${cx + 200},${b.minZ - g - 220} ${cx},${b.minZ - g + 120}` };
+  if (d === 'S') return { x: cx, z: b.maxZ + g, pts: `${cx - 200},${b.maxZ + g + 220} ${cx + 200},${b.maxZ + g + 220} ${cx},${b.maxZ + g - 120}` };
+  if (d === 'E') return { x: b.maxX + g, z: cz, pts: `${b.maxX + g + 220},${cz - 200} ${b.maxX + g + 220},${cz + 200} ${b.maxX + g - 120},${cz}` };
+  return { x: b.minX - g, z: cz, pts: `${b.minX - g - 220},${cz - 200} ${b.minX - g - 220},${cz + 200} ${b.minX - g + 120},${cz}` };
+};
+
+export const PlanAnnotations: React.FC<AnnotationProps> = ({
+  model,
+  selectedId,
+  failedElementIds,
+  showLabels,
+  isDark,
+  onSelect,
+  interactive = true,
+  activeViewId,
+  onCropHandleDown,
+}) => {
+  const walls = model.elements.filter((e): e is WallElement => e.type === 'wall');
+  const labelBg = isDark ? 'rgba(15,23,42,0.94)' : 'rgba(255,255,255,0.95)';
+  const labelFg = isDark ? '#E2E8F0' : '#0F172A';
+  const col = (id: string, base: string) =>
+    selectedId === id ? SEL : failedElementIds.has(id) ? ERR : base;
+
+  const xs = walls.flatMap((w) => [w.start[0], w.end[0]]);
+  const zs = walls.flatMap((w) => [w.start[1], w.end[1]]);
+  const bounds = walls.length
+    ? { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) }
+    : null;
+
+  const activeView = model.elements.find(
+    (e): e is ViewElement => e.id === activeViewId && e.type === 'view'
+  );
+  const crop =
+    activeView &&
+    activeView.cropMinX !== undefined &&
+    activeView.cropMaxX !== undefined &&
+    activeView.cropMinZ !== undefined &&
+    activeView.cropMaxZ !== undefined
+      ? { minX: activeView.cropMinX, maxX: activeView.cropMaxX, minZ: activeView.cropMinZ, maxZ: activeView.cropMaxZ }
+      : null;
+
+  return (
+    <g data-testid="plan-annotations" pointerEvents={interactive ? undefined : 'none'}>
+      {/* Dimensions */}
+      {model.elements
+        .filter((e): e is DimensionElement => e.type === 'dimension')
+        .map((d) => {
+          const a = walls.find((w) => w.id === d.wallA);
+          const b = walls.find((w) => w.id === d.wallB);
+          const v = a && b ? dimensionValue(d, model) : null;
+          if (!a || !b || v === null) return null;
+          const horiz = a.start[1] === a.end[1];
+          const color = col(d.id, '#38BDF8');
+          const mid = horiz
+            ? [(Math.min(a.start[0], a.end[0]) + Math.max(a.start[0], a.end[0])) / 2 + 600, (a.start[1] + b.start[1]) / 2]
+            : [(a.start[0] + b.start[0]) / 2, (Math.min(a.start[1], a.end[1]) + Math.max(a.start[1], a.end[1])) / 2 + 600];
+          const p1 = horiz ? [mid[0], a.start[1]] : [a.start[0], mid[1]];
+          const p2 = horiz ? [mid[0], b.start[1]] : [b.start[0], mid[1]];
+          return (
+            <g
+              key={d.id}
+              data-testid={`plan-dimension-${d.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(d.id);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <line x1={p1[0]} y1={p1[1]} x2={p2[0]} y2={p2[1]} stroke="transparent" strokeWidth={360} />
+              <line x1={p1[0]} y1={p1[1]} x2={p2[0]} y2={p2[1]} stroke={color} strokeWidth={selectedId === d.id ? 26 : 16} />
+              {[p1, p2].map((p, i) => (
+                <line
+                  key={i}
+                  x1={p[0] - (horiz ? 160 : 0)}
+                  y1={p[1] - (horiz ? 0 : 160)}
+                  x2={p[0] + (horiz ? 160 : 0)}
+                  y2={p[1] + (horiz ? 0 : 160)}
+                  stroke={color}
+                  strokeWidth={22}
+                />
+              ))}
+              <g transform={`translate(${mid[0] + (horiz ? 330 : 0)}, ${mid[1] + (horiz ? 0 : -170)})`}>
+                <rect x={-250} y={-110} width={500} height={200} rx={40} fill={labelBg} stroke={color} strokeWidth={12} />
+                <text x={0} y={40} textAnchor="middle" fill={labelFg} fontSize={125} fontWeight={800} data-testid={`plan-dimension-value-${d.id}`}>
+                  {v}
+                </text>
+              </g>
+            </g>
+          );
+        })}
+
+      {/* Tags */}
+      {model.elements
+        .filter((e): e is TagElement => e.type === 'tag')
+        .map((t) => {
+          const target = model.elements.find((e) => e.id === t.targetId);
+          if (!target) return null;
+          let at: Point = [0, 0];
+          if (target.type === 'door' || target.type === 'window') {
+            const host = walls.find((w) => w.id === target.hostWallId);
+            if (!host) return null;
+            const [dx, dz] = getWallDirection(host);
+            const m = target.offset + target.width / 2;
+            at = [host.start[0] + dx * m - dz * 520, host.start[1] + dz * m + dx * 520];
+          } else if (target.type === 'room') {
+            at = [target.seedPoint[0], target.seedPoint[1] - 520];
+          } else {
+            return null;
+          }
+          const text = tagLabel(t, model);
+          const color = col(t.id, '#F97316');
+          return (
+            <g
+              key={t.id}
+              data-testid={`plan-tag-${t.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(t.id);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <rect x={at[0] - text.length * 52 - 70} y={at[1] - 120} width={text.length * 104 + 140} height={220} rx={110} fill={labelBg} stroke={color} strokeWidth={14} />
+              <text x={at[0]} y={at[1] + 38} textAnchor="middle" fill={color} fontSize={120} fontWeight={800}>
+                {text}
+              </text>
+            </g>
+          );
+        })}
+
+      {/* Section marks */}
+      {model.elements
+        .filter((e): e is ViewElement => e.type === 'view' && e.kind === 'section' && Boolean(e.cutLine))
+        .map((v) => {
+          const [p, q] = v.cutLine as [Point, Point];
+          const color = col(v.id, '#EF4444');
+          const mx = (p[0] + q[0]) / 2;
+          const mz = (p[1] + q[1]) / 2;
+          const [lx, lz] = v.lookDir === 'x+' ? [1, 0] : v.lookDir === 'x-' ? [-1, 0] : v.lookDir === 'z+' ? [0, 1] : [0, -1];
+          return (
+            <g
+              key={v.id}
+              data-testid={`plan-section-${v.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(v.id);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <line x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke="transparent" strokeWidth={420} />
+              <line x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke={color} strokeWidth={selectedId === v.id ? 34 : 22} strokeDasharray="400 100 60 100" />
+              <polygon
+                points={`${mx + lx * 360},${mz + lz * 360} ${mx - lz * 160},${mz + lx * 160} ${mx + lz * 160},${mz - lx * 160}`}
+                fill={color}
+              />
+              {[p, q].map((pt, i) => (
+                <g key={i}>
+                  <circle cx={pt[0]} cy={pt[1]} r={190} fill={labelBg} stroke={color} strokeWidth={20} />
+                  <text x={pt[0]} y={pt[1] + 55} textAnchor="middle" fill={color} fontSize={150} fontWeight={800}>
+                    {v.name.replace('Kesit ', '')}
+                  </text>
+                </g>
+              ))}
+              {showLabels && (
+                <text x={mx + 250} y={mz - 220} fill={color} fontSize={125} fontWeight={800}>
+                  {v.name}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+      {/* Elevation markers */}
+      {bounds &&
+        model.elements
+          .filter((e): e is ViewElement => e.type === 'view' && e.kind === 'elevation' && Boolean(e.direction))
+          .map((v) => {
+            const pos = COMPASS_POS(bounds, v.direction as 'N' | 'S' | 'E' | 'W');
+            const color = col(v.id, '#A78BFA');
+            return (
+              <g
+                key={v.id}
+                data-testid={`plan-elevation-${v.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(v.id);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <circle cx={pos.x} cy={pos.z} r={330} fill="transparent" />
+                <polygon points={pos.pts} fill={color} />
+                <text x={pos.x} y={pos.z + 55} textAnchor="middle" fill={labelFg} fontSize={150} fontWeight={800}>
+                  {v.direction}
+                </text>
+              </g>
+            );
+          })}
+
+      {/* Crop region of the active plan view */}
+      {crop && (
+        <g data-testid="plan-crop-region">
+          <path
+            d={`M -20000 -20000 H 40000 V 40000 H -20000 Z M ${crop.minX} ${crop.minZ} V ${crop.maxZ} H ${crop.maxX} V ${crop.minZ} Z`}
+            fill={isDark ? 'rgba(2,6,23,0.55)' : 'rgba(148,163,184,0.45)'}
+            fillRule="evenodd"
+            pointerEvents="none"
+          />
+          <rect x={crop.minX} y={crop.minZ} width={crop.maxX - crop.minX} height={crop.maxZ - crop.minZ} fill="none" stroke="#22C55E" strokeWidth={26} strokeDasharray="200 90" pointerEvents="none" />
+          {onCropHandleDown && (
+            <>
+              <circle cx={crop.minX} cy={crop.minZ} r={150} fill="#22C55E" stroke="#FFFFFF" strokeWidth={26} data-testid="crop-handle-min" onPointerDown={(e) => { e.stopPropagation(); onCropHandleDown('min'); }} />
+              <circle cx={crop.maxX} cy={crop.maxZ} r={150} fill="#22C55E" stroke="#FFFFFF" strokeWidth={26} data-testid="crop-handle-max" onPointerDown={(e) => { e.stopPropagation(); onCropHandleDown('max'); }} />
+            </>
+          )}
+        </g>
+      )}
     </g>
   );
 };

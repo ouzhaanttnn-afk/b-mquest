@@ -1,3 +1,5 @@
+import type { BimModel } from './types';
+
 export interface CommandError {
   code: string;
   field?: string;
@@ -156,3 +158,16 @@ export function normalizeTextField(
   }
   return { ok: true, value: normalized };
 }
+
+export function cloneModelDeep(model: BimModel): BimModel {
+  return JSON.parse(JSON.stringify(model)) as BimModel;
+}
+
+/** Smallest unused id of the form `${prefix}${n}`. */
+export function nextId(model: BimModel, prefix: string): string {
+  const used = new Set(model.elements.map((e) => e.id));
+  let n = 1;
+  while (used.has(`${prefix}${n}`)) n++;
+  return `${prefix}${n}`;
+}
+

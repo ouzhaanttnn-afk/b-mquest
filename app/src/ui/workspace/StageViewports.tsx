@@ -6,6 +6,8 @@ import type { ToolId } from './toolActions';
 import { PlanViewport } from '../../plan/PlanViewport';
 import { updateElementProperty } from '../../domain/commands';
 import { SceneViewport } from '../../scene/SceneViewport';
+import type { ViewElement } from '../../domain/types';
+import { ViewPane } from './DocumentationPanels';
 
 export interface StageViewportsProps {
   viewMode: "split" | "plan" | "3d";
@@ -21,6 +23,9 @@ export interface StageViewportsProps {
   isFieldEditable: (field: EditableField) => boolean;
   handleSelectElement: (id: string | null) => void;
   planTools: PlanToolProps;
+  /** Section / elevation being viewed instead of the plan. */
+  drawingView: ViewElement | null;
+  onBackToPlan: () => void;
   session: MissionSessionState;
   onSessionChange: (next: MissionSessionState, passingEvaluation?: SubmittedEvaluation) => void;
   setStatusToast: React.Dispatch<React.SetStateAction<string | null>>;
@@ -41,6 +46,8 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
   isFieldEditable,
   handleSelectElement,
   planTools,
+  drawingView,
+  onBackToPlan,
   session,
   onSessionChange,
   setStatusToast,
@@ -83,6 +90,14 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
           <div className={`bq-viewports-grid mode-${viewMode}`}>
             {(viewMode === 'split' || viewMode === 'plan') && (
               <div className="bq-viewport-pane">
+                {drawingView ? (
+                  <ViewPane
+                    session={session}
+                    view={drawingView}
+                    isDark={theme === 'dark'}
+                    onBack={onBackToPlan}
+                  />
+                ) : (
                 <PlanViewport
                   task={task}
                   model={model}
@@ -112,6 +127,7 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
                     }
                   }}
                 />
+                )}
               </div>
             )}
 

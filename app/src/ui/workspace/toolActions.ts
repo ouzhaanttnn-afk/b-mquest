@@ -1,4 +1,7 @@
 import {
+  createDimensionCommand,
+  createTagCommand,
+  createViewCommand,
   createDoorCommand,
   createFloorCommand,
   createGridCommand,
@@ -12,6 +15,7 @@ import {
   type MissionSessionState,
 } from '../../domain/commands';
 import { rectPolygon, roomBoundary, wallLengthMm } from '../../domain/derived';
+import type { CompassDir } from '../../domain/types';
 import type { Point, StairDirection, WallElement } from '../../domain/types';
 import { lockAxis } from '../../plan/snap';
 
@@ -24,12 +28,16 @@ export type ToolId =
   | 'roof'
   | 'room'
   | 'stair'
-  | 'grid';
+  | 'grid'
+  | 'section'
+  | 'elevation'
+  | 'dimension'
+  | 'tag';
 
 export interface ToolDef {
   id: ToolId;
   label: string;
-  group: 'Mimari' | 'Referans';
+  group: 'Mimari' | 'Referans' | 'Görünüm' | 'Açıklama';
   hint: string;
 }
 
@@ -43,6 +51,10 @@ export const TOOL_DEFS: ToolDef[] = [
   { id: 'room', label: 'Oda', group: 'Mimari', hint: 'Kapalı bir alanın içine dokun. Alan kapalı değilse boşluk kırmızı işaretlenir.' },
   { id: 'stair', label: 'Merdiven', group: 'Mimari', hint: 'Merdivenin başlangıç noktasına dokun.' },
   { id: 'grid', label: 'Aks', group: 'Referans', hint: 'İki noktaya dokun: aks çizgisi oluşur, adı otomatik verilir.' },
+  { id: 'section', label: 'Kesit', group: 'Görünüm', hint: 'İki noktaya dokun: kesit çizgisi oluşur. Bakış yönünü Properties’ten çevirebilirsin.' },
+  { id: 'elevation', label: 'Cephe', group: 'Görünüm', hint: 'Bir yön seç (K / G / D / B): o cephenin görünümü eklenir.' },
+  { id: 'dimension', label: 'Ölçü', group: 'Açıklama', hint: 'Birbirine paralel iki duvara dokun: aralarındaki ölçü çizilir ve model değişince güncellenir.' },
+  { id: 'tag', label: 'Etiket', group: 'Açıklama', hint: 'Bir kapıya, pencereye veya odaya dokun: etiketi eklenir.' },
 ];
 
 const round50 = (v: number) => Math.round(v / 50) * 50;
@@ -245,4 +257,62 @@ export function stairAt(
   o: StairOptions
 ): CommandResult {
   return createStairCommand(session, { ...o, start: tap });
+}
+
+/** Section tool: first tap = start, second tap = end of the cut line. */
+export function sectionTap(
+  session: MissionSessionState,
+  start: Point | null,
+  tap: Point
+): TapOutcome<Point | null> {
+  if (!start) return { result: null, next: tap, toast: 'Kesit çizgisinin bitiş noktasına dokun.' };
+  const end = lockAxis(start, tap);
+  if (end[0] === start[0] && end[1] === start[1]) return { result: null, next: start };
+  const result = createViewCommand(session, { kind: 'section', cutLine: [start, end] });
+  return { result, next: result.ok ? null : start };
+}
+
+export function elevationFor(session: MissionSessionState, direction: CompassDir): CommandResult {
+  return createViewCommand(session, { kind: 'elevation', direction });
+}
+
+/** Dimension tool: first wall, then a parallel second wall. */
+export function dimensionTap(
+  session: MissionSessionState,
+  firstWallId: string | null,
+  wallId: string
+): TapOutcome<string | null> {
+  if (!firstWallId) return { result: null, next: wallId, toast: `${wallId} seçildi; paralel ikinci duvara dokun.` };
+  if (firstWallId === wallId) return { result: null, next: firstWallId };
+  const result = createDimensionCommand(session, firstWallId, wallId);
+  return { result, next: result.ok ? null : firstWallId };
+}
+
+/** Closest door / window / room to a plan point (within 900 mm). */
+export function pickTaggable(session: MissionSessionState, pt: Point): string | null {
+  const m = session.model;
+  let best: { id: string; d: number } | null = null;
+  const consider = (id: string, p: Point) => {
+    const d = Math.hypot(pt[0] - p[0], pt[1] - p[1]);
+    if (d <= 900 && (!best || d < best.d)) best = { id, d };
+  };
+  for (const e of m.elements) {
+    if (e.type === 'door' || e.type === 'window') {
+      const host = m.elements.find((w): w is WallElement => w.id === e.hostWallId && w.type === 'wall');
+      if (!host) continue;
+      const len = wallLengthMm(host);
+      if (len === 0) continue;
+      const k = (e.offset + e.width / 2) / len;
+      consider(e.id, [host.start[0] + (host.end[0] - host.start[0]) * k, host.start[1] + (host.end[1] - host.start[1]) * k]);
+    } else if (e.type === 'room') {
+      consider(e.id, e.seedPoint);
+    }
+  }
+  return best ? (best as { id: string }).id : null;
+}
+
+export function tagTap(session: MissionSessionState, tap: Point): { result: CommandResult | null; toast?: string } {
+  const id = pickTaggable(session, tap);
+  if (!id) return { result: null, toast: 'Yakında kapı, pencere ya da oda yok; birine daha yakın dokun.' };
+  return { result: createTagCommand(session, id) };
 }

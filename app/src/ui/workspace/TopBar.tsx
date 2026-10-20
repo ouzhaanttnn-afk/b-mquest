@@ -16,6 +16,8 @@ export interface TopBarProps {
   showLevels: boolean;
   /** null = hide the button. */
   warningCount: number | null;
+  showViews: boolean;
+  onOpenViews: () => void;
   onOpenWarnings: () => void;
   setFieldError: React.Dispatch<React.SetStateAction<string | null>>;
   setMobileDrawerTab: React.Dispatch<React.SetStateAction<"brief" | "inspector" | "check">>;
@@ -40,6 +42,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   showLevels,
   warningCount,
   onOpenWarnings,
+  showViews,
+  onOpenViews,
   setFieldError,
   setMobileDrawerTab,
   session,
@@ -104,7 +108,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
 
           {TOOL_DEFS.filter((t) =>
-            task.permissions.creatableTypes.includes(t.id as never)
+            task.permissions.creatableTypes.includes(
+              (t.id === 'section' || t.id === 'elevation' ? 'view' : t.id) as never
+            )
           ).map((t) => (
             <button
               key={t.id}
@@ -127,6 +133,18 @@ export const TopBar: React.FC<TopBarProps> = ({
               <span>{t.label}</span>
             </button>
           ))}
+
+          {showViews && (
+            <button
+              type="button"
+              className="bq-tool-btn"
+              data-testid="project-browser-btn"
+              onClick={onOpenViews}
+              title="Proje Tarayıcısı: görünümler ve paftalar"
+            >
+              <span>Görünümler</span>
+            </button>
+          )}
 
           {warningCount !== null && (
             <button

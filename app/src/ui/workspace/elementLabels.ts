@@ -9,6 +9,10 @@ const LABELS: Record<BimElement['type'], string> = {
   stair: 'Merdiven',
   room: 'Oda',
   grid: 'Aks',
+  view: 'Görünüm',
+  dimension: 'Ölçü',
+  tag: 'Etiket',
+  sheet: 'Pafta',
 };
 
 const ICONS: Record<BimElement['type'], string> = {
@@ -20,6 +24,10 @@ const ICONS: Record<BimElement['type'], string> = {
   stair: '🪜',
   room: '▣',
   grid: '#',
+  view: '👁',
+  dimension: '↔',
+  tag: '🏷',
+  sheet: '📄',
 };
 
 export const elementLabelTr = (el: BimElement): string => LABELS[el.type];
@@ -44,5 +52,13 @@ export function elementMetaTr(el: BimElement): string {
       return `${el.number || '—'} · ${el.name}`;
     case 'grid':
       return el.name;
+    case 'view':
+      return `${el.kind} · 1:${el.scale}`;
+    case 'dimension':
+      return `${el.wallA} ↔ ${el.wallB}`;
+    case 'tag':
+      return `→ ${el.targetId}`;
+    case 'sheet':
+      return `${el.number} · ${el.placements.length} görünüm`;
   }
 }

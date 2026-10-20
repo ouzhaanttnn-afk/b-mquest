@@ -1,8 +1,8 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import taskSchemaJson from '../schemas/task.schema.json';
-import { checkModel, summarizeIssues } from './modelCheck';
+import { checkModel, checkOptionsFor, summarizeIssues } from './modelCheck';
+import { fieldValue } from './fieldValues';
 import {
-  fieldValue,
   isOpening,
   roomBoundary,
   wallsOf,
@@ -105,6 +105,28 @@ export function modelErrors(model: unknown): string[] {
       }
     } else if (e.type === 'grid') {
       if (same(e.start, e.end)) errors.push(`E_GRID_DEGENERATE:${e.id}`);
+    } else if (e.type === 'view') {
+      if (e.levelId && !levels.has(e.levelId)) errors.push(`E_LEVEL:${e.id}`);
+      if (e.kind === 'section') {
+        const cut = e.cutLine;
+        if (!cut || (cut[0][0] !== cut[1][0] && cut[0][1] !== cut[1][1]) || same(cut[0], cut[1])) {
+          errors.push(`E_SECTION_LINE:${e.id}`);
+        }
+      }
+    } else if (e.type === 'dimension') {
+      const a = elements.get(e.wallA);
+      const b = elements.get(e.wallB);
+      if (!a || !b || a.type !== 'wall' || b.type !== 'wall') errors.push(`E_DIM_REF:${e.id}`);
+    } else if (e.type === 'tag') {
+      const t = elements.get(e.targetId);
+      if (!t || !(t.type === 'door' || t.type === 'window' || t.type === 'room')) {
+        errors.push(`E_TAG_TARGET:${e.id}`);
+      }
+    } else if (e.type === 'sheet') {
+      for (const pl of e.placements) {
+        const v = elements.get(pl.viewId);
+        if (!v || v.type !== 'view') errors.push(`E_SHEET_VIEW:${e.id}`);
+      }
     }
   }
 
@@ -174,6 +196,12 @@ export function taskErrors(task: unknown): string[] {
         'risers',
         'riserHeight',
         'treadDepth',
+        'scale',
+        'cutHeight',
+        'cropMinX',
+        'cropMaxX',
+        'cropMinZ',
+        'cropMaxZ',
       ].includes(c.field);
       if (
         numeric !== (typeof c.expected === 'number') ||
@@ -332,7 +360,9 @@ const evidence = (
 /** Criteria that look at relationships between elements, not one field. */
 function evaluateExtended(c: TaskCriterion, m: BimModel): CriterionEvidence | null {
   if (c.type === 'modelClean') {
-    const issues = checkModel(m).filter((i) => !c.codes || c.codes.includes(i.code));
+    const issues = checkModel(m, checkOptionsFor([c])).filter(
+      (i) => !c.codes || c.codes.includes(i.code)
+    );
     const sum = summarizeIssues(issues);
     return evidence(
       c,

@@ -34,17 +34,8 @@ const fail = (code: string, message: string, field?: string): OpResult => ({
   error: { code, message, field },
 });
 
-export function cloneModelDeep(model: BimModel): BimModel {
-  return JSON.parse(JSON.stringify(model)) as BimModel;
-}
-
-/** Smallest unused id of the form `${prefix}${n}`. */
-export function nextId(model: BimModel, prefix: string): string {
-  const used = new Set(model.elements.map((e) => e.id));
-  let n = 1;
-  while (used.has(`${prefix}${n}`)) n++;
-  return `${prefix}${n}`;
-}
+export { cloneModelDeep, nextId } from './validation';
+import { cloneModelDeep, nextId } from './validation';
 
 const MAX_ELEMENTS = 500;
 const tooMany = (model: BimModel): OpResult | null =>
@@ -459,7 +450,7 @@ export function updateExtendedFieldOp(
       break;
     }
     case 'number': {
-      if (el.type !== 'room') return bad('Numara yalnızca odalar içindir.');
+      if (el.type !== 'room' && el.type !== 'sheet') return bad('Numara yalnızca oda ve paftalar içindir.');
       if (typeof raw !== 'string' || raw.trim().length > 20) {
         return fail('E_TEXT_LENGTH', 'Oda numarası en fazla 20 karakter olabilir.', field);
       }
@@ -558,8 +549,40 @@ export function updateExtendedFieldOp(
       return synced;
     }
     case 'flip': {
-      if (el.type !== 'door') return bad('Yön çevirme yalnızca kapılar içindir.');
+      if (el.type === 'view' && el.kind === 'section' && el.lookDir) {
+        const flipped = { 'x+': 'x-', 'x-': 'x+', 'z+': 'z-', 'z-': 'z+' } as const;
+        el.lookDir = flipped[el.lookDir];
+        break;
+      }
+      if (el.type !== 'door') return bad('Yön çevirme yalnızca kapı ve kesitler içindir.');
       rec.flip = raw === undefined ? !rec.flip : Boolean(raw);
+      break;
+    }
+    case 'scale':
+      if (el.type !== 'view') return bad('Ölçek yalnızca görünümler içindir.');
+      err = setInt(1, 500);
+      if (err) return err;
+      break;
+    case 'cutHeight':
+      if (el.type !== 'view' || el.kind !== 'plan') return bad('Kesme yüksekliği yalnızca plan görünümleri içindir.');
+      err = setInt(0, 5000);
+      if (err) return err;
+      break;
+    case 'cropMinX':
+    case 'cropMaxX':
+    case 'cropMinZ':
+    case 'cropMaxZ':
+      if (el.type !== 'view') return bad('Kadraj yalnızca görünümler içindir.');
+      err = setInt(-100000, 100000);
+      if (err) return err;
+      break;
+    case 'wallA':
+    case 'wallB': {
+      if (el.type !== 'dimension') return bad('Referans duvar yalnızca ölçüler içindir.');
+      if (typeof raw !== 'string' || !next.elements.some((x) => x.id === raw && x.type === 'wall')) {
+        return fail('E_DIM_REF', 'Geçerli bir duvar seçilmelidir.', field);
+      }
+      rec[field] = raw;
       break;
     }
     case 'typeId': {

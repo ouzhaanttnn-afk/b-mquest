@@ -11,6 +11,7 @@ import {
   type CommandResult,
   type MissionSessionState,
 } from '../../domain/commands';
+import { dimensionValue, tagLabel } from '../../domain/documentation';
 import {
   levelById,
   roomBoundary,
@@ -90,6 +91,23 @@ const SPECS: Record<string, Spec[]> = {
     { field: 'levelId', label: 'Kat (Level)', kind: 'level' },
   ],
   grid: [{ field: 'name', label: 'Aks Adı', kind: 'text' }],
+  view: [
+    { field: 'name', label: 'Görünüm Adı', kind: 'text' },
+    { field: 'scale', label: 'Ölçek (1:n)', kind: 'mm' },
+    { field: 'cutHeight', label: 'Kesme Düzlemi / View Range (mm)', kind: 'mm' },
+    { field: 'cropMinX', label: 'Kadraj min X (mm)', kind: 'mm' },
+    { field: 'cropMaxX', label: 'Kadraj max X (mm)', kind: 'mm' },
+    { field: 'cropMinZ', label: 'Kadraj min Z (mm)', kind: 'mm' },
+    { field: 'cropMaxZ', label: 'Kadraj max Z (mm)', kind: 'mm' },
+  ],
+  dimension: [
+    { field: 'wallA', label: 'Birinci duvar', kind: 'wall' },
+    { field: 'wallB', label: 'İkinci duvar', kind: 'wall' },
+  ],
+  sheet: [
+    { field: 'number', label: 'Pafta No', kind: 'text' },
+    { field: 'name', label: 'Pafta Adı', kind: 'text' },
+  ],
   door: [{ field: 'typeId', label: 'Tip (Type)', kind: 'type' }],
 };
 
@@ -206,9 +224,14 @@ export const FieldRow: React.FC<FieldProps & { spec: Spec }> = ({
 };
 
 /** Editor for window / floor / roof / stair / room / grid (and door Type). */
-export const GenericElementForm: React.FC<FieldProps> = (props) => {
-  const { selectedElement: el, model } = props;
-  const specs = SPECS[el.type] ?? [];
+export const GenericElementForm: React.FC<FieldProps & { extras?: React.ReactNode }> = (props) => {
+  const { selectedElement: el, model, extras } = props;
+  const specs = (SPECS[el.type] ?? []).filter((spec) => {
+    if (el.type !== 'view') return true;
+    if (spec.field === 'cutHeight') return el.kind === 'plan';
+    if (spec.field.startsWith('crop')) return el.cropMinX !== undefined;
+    return true;
+  });
   let info: string | null = null;
   if (el.type === 'room') {
     const b = roomBoundary(el, model);
@@ -221,6 +244,13 @@ export const GenericElementForm: React.FC<FieldProps> = (props) => {
     info = `${el.risers} × ${el.riserHeight} = ${stairRise(el)} mm · kat farkı ${hi - lo} mm`;
   } else if (el.type === 'roof') {
     info = `Taban kotu: +${levelById(model, el.baseLevelId)?.elevation ?? 0} mm`;
+  } else if (el.type === 'dimension') {
+    const v = dimensionValue(el, model);
+    info = v === null ? 'İki duvar paralel değil.' : `Ölçü: ${v} mm`;
+  } else if (el.type === 'tag') {
+    info = `Etiket: ${tagLabel(el, model)}`;
+  } else if (el.type === 'view') {
+    info = el.kind === 'section' ? `Kesit çizgisi ${el.lookDir} yönüne bakıyor` : el.kind === 'elevation' ? `${el.direction} cephesi` : `Plan · ${el.levelId}`;
   }
   return (
     <div className="bq-prop-form" data-testid={`prop-form-${el.id}`}>
@@ -237,6 +267,7 @@ export const GenericElementForm: React.FC<FieldProps> = (props) => {
       {specs.map((spec) => (
         <FieldRow key={spec.field} {...props} spec={spec} />
       ))}
+      {extras}
     </div>
   );
 };

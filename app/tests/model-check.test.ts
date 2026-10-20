@@ -61,9 +61,10 @@ describe('Faz 3 — modelCheck (her kod: pozitif + negatif)', () => {
 
   it('ROOM_NOT_PLACED', () => {
     const m = edit((x) => { x.elements = x.elements.filter((e) => e.id !== 'r1'); });
-    const issue = checkModel(m).find((i) => i.code === 'ROOM_NOT_PLACED');
+    const issue = checkModel(m, { requireRooms: true }).find((i) => i.code === 'ROOM_NOT_PLACED');
     expect(issue?.message).toContain('24.0 m²');
-    expect(codes(base())).not.toContain('ROOM_NOT_PLACED');
+    expect(checkModel(m).map((i) => i.code)).not.toContain('ROOM_NOT_PLACED'); // opt-in
+    expect(checkModel(base(), { requireRooms: true }).map((i) => i.code)).not.toContain('ROOM_NOT_PLACED');
   });
 
   it('ROOM_NOT_PLACED: iki alanın yalnızca biri odalı', () => {
@@ -72,7 +73,7 @@ describe('Faz 3 — modelCheck (her kod: pozitif + negatif)', () => {
       (x.elements.find((e) => e.id === 'r1') as { seedPoint: [number, number] }).seedPoint = [1500, 2000];
     });
     expect(enclosedRegions(m, 'l0')).toHaveLength(2);
-    expect(checkModel(m).filter((i) => i.code === 'ROOM_NOT_PLACED')).toHaveLength(1);
+    expect(checkModel(m, { requireRooms: true }).filter((i) => i.code === 'ROOM_NOT_PLACED')).toHaveLength(1);
   });
 
   it('WALL_WRONG_LEVEL', () => {

@@ -10,6 +10,7 @@ import {
   WallRelationFields,
 } from './ExtendedPanels';
 import { elementLabelTr, elementMetaTr } from './elementLabels';
+import { ViewExtras } from './ViewExtras';
 import type { WallElement } from '../../domain/types';
 import type { LearningConceptInfo } from '../../domain/pedagogy';
 import type { MissionTask, BimModel, BimElement, EditableField } from '../../domain/types';
@@ -30,6 +31,7 @@ export interface PropertyInspectorProps {
   task: MissionTask;
   session: MissionSessionState;
   applyResult: (res: CommandResult) => void;
+  onOpenSheet: (id: string) => void;
   handleCreateWallSubmit: (e: React.FormEvent) => void;
   setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
   setWallForm: React.Dispatch<React.SetStateAction<{ name: string; baseLevelId: string; startX: string; startZ: string; endX: string; endZ: string; height: string; thickness: string; }>>;
@@ -69,6 +71,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
   task,
   session,
   applyResult,
+  onOpenSheet,
   handleCreateWallSubmit,
   setActiveTool,
   setWallForm,
@@ -1073,6 +1076,14 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                 ) : (
                   <>
                   <GenericElementForm
+                    extras={
+                      <ViewExtras
+                        element={selectedElement}
+                        session={session}
+                        applyResult={applyResult}
+                        onOpenSheet={onOpenSheet}
+                      />
+                    }
                     model={model}
                     selectedElement={selectedElement}
                     editDrafts={editDrafts}

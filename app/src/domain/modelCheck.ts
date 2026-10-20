@@ -88,12 +88,30 @@ const rectContains = (rects: Array<[number, number, number, number]>, p: Point) 
   rects.some((r) => p[0] >= r[0] && p[0] <= r[2] && p[1] >= r[1] && p[1] <= r[3]);
 
 export interface CheckOptions {
-  /** Views / sheets, supplied by Faz 4 checks. */
-  viewsEnabled?: boolean;
+  /** Every enclosed area must hold a Room (opt-in, like Revit's room schedule). */
+  requireRooms?: boolean;
+  /** Every door, window and room must carry a tag. */
+  requireTags?: boolean;
+  /** At least one dimension must exist. */
+  requireDimensions?: boolean;
+}
+
+/** Opt-in checks are only on for missions whose goal asks for them. */
+export function checkOptionsFor(
+  criteria: Array<{ type: string; codes?: string[] }>
+): CheckOptions {
+  const codes = criteria
+    .filter((c) => c.type === 'modelClean')
+    .flatMap((c) => c.codes ?? []);
+  return {
+    requireRooms: codes.includes('ROOM_NOT_PLACED'),
+    requireTags: codes.includes('TAG_MISSING'),
+    requireDimensions: codes.includes('DIMENSION_MISSING'),
+  };
 }
 
 /** Runs every model check; stable order (errors first, then by code). */
-export function checkModel(model: BimModel, _opts: CheckOptions = {}): ModelIssue[] {
+export function checkModel(model: BimModel, opts: CheckOptions = {}): ModelIssue[] {
   const issues: ModelIssue[] = [];
   const levels = new Set(model.levels.map((l) => l.id));
   const walls = wallsOf(model);
@@ -123,7 +141,7 @@ export function checkModel(model: BimModel, _opts: CheckOptions = {}): ModelIssu
     }
   }
 
-  for (const levelId of levels) {
+  for (const levelId of opts.requireRooms ? levels : []) {
     const levelRooms = rooms.filter((r) => r.levelId === levelId);
     for (const region of enclosedRegions(model, levelId)) {
       const hasRoom = levelRooms.some((r) => rectContains(region.rects, r.seedPoint));
@@ -219,6 +237,34 @@ export function checkModel(model: BimModel, _opts: CheckOptions = {}): ModelIssu
       elementIds: badSill,
       message: `${badSill.join(', ')} pencere(leri)nin parapet yüksekliği diğerlerinden farklı.`,
       revitHint: 'Pencere seç → Properties → Constraints → Sill Height.',
+    });
+  }
+
+  // ---- documentation (opt-in) ----------------------------------------------
+  if (opts.requireTags) {
+    const tagged = new Set(
+      model.elements.filter((e) => e.type === 'tag').map((e) => (e as { targetId: string }).targetId)
+    );
+    const missing = model.elements
+      .filter((e) => (e.type === 'door' || e.type === 'window' || e.type === 'room') && !tagged.has(e.id))
+      .map((e) => e.id);
+    if (missing.length) {
+      issues.push({
+        code: 'TAG_MISSING',
+        severity: 'warning',
+        elementIds: missing,
+        message: `${missing.join(', ')} etiketlenmemiş.`,
+        revitHint: 'Annotate → Tag by Category → nesneye tıkla.',
+      });
+    }
+  }
+  if (opts.requireDimensions && !model.elements.some((e) => e.type === 'dimension')) {
+    issues.push({
+      code: 'DIMENSION_MISSING',
+      severity: 'warning',
+      elementIds: [],
+      message: 'Modelde hiç ölçü (dimension) yok.',
+      revitHint: 'Annotate → Aligned → iki duvara tıkla.',
     });
   }
 

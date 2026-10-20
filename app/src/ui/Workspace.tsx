@@ -6,6 +6,7 @@ import {
   moveWallCommand,
   redoCommand,
   undoCommand,
+  setCropRectCommand,
   updateElementProperty,
   type CommandResult,
   type MissionSessionState,
@@ -19,6 +20,7 @@ import type {
   EditableField,
   MissionTask,
   SubmittedEvaluation,
+  ViewElement,
   WallElement,
 } from '../domain/types';
 import type { DoorDraftPreview, WallDraftPreview } from '../plan/PlanViewport';
@@ -27,15 +29,20 @@ import { isSoundMuted, playSound } from './sound';
 import { buildDraftsForElement } from './workspace/drafts';
 import { TopBar } from './workspace/TopBar';
 import { LevelsSheet } from './workspace/LevelsSheet';
+import { ProjectBrowser, SheetEditor } from './workspace/DocumentationPanels';
 import { WarningsSheet } from './workspace/WarningsSheet';
-import { checkModel } from '../domain/modelCheck';
+import { checkModel, checkOptionsFor } from '../domain/modelCheck';
 import { getChapterForMissionId } from '../content/curriculum';
 import { ToolOptionsBar, type ToolOptions } from './workspace/ToolOptionsBar';
 import {
   EMPTY_CHAIN,
   canMoveOpening,
+  dimensionTap,
+  elevationFor,
   floorFromWalls,
   gridTap,
+  sectionTap,
+  tagTap,
   placeOpening,
   placeRoomAt,
   roofFromWalls,
@@ -162,6 +169,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     session.model.levels[0]?.id ?? 'l0'
   );
   const [levelsOpen, setLevelsOpen] = useState(false);
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [sheetId, setSheetId] = useState<string | null>(null);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [dimFirst, setDimFirst] = useState<string | null>(null);
   const [warningsOpen, setWarningsOpen] = useState(false);
   const [toolOpts, setToolOpts] = useState<ToolOptions>({
     winWidth: '1200',
@@ -293,7 +304,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         }
         // Chapters 1-5 may point at the offending elements; 6-7 must find them.
         if (taskCrit && taskCrit.type === 'modelClean' && !hideDiagnostics) {
-          for (const issue of checkModel(model)) {
+          for (const issue of checkModel(model, checkOptionsFor(task.criteria))) {
             if (!taskCrit.codes || taskCrit.codes.includes(issue.code)) {
               issue.elementIds.forEach((id) => set.add(id));
             }
@@ -473,8 +484,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const learningGuide = useMemo(() => getMissionLearningGuide(task), [task]);
 
   // Model checks (Faz 3): chapters 6-7 hide the detailed list.
-  const modelIssues = useMemo(() => checkModel(model), [model]);
+  const modelIssues = useMemo(
+    () => checkModel(model, checkOptionsFor(task.criteria)),
+    [model, task.criteria]
+  );
   const advancedChapter = hideDiagnostics;
+  // Views (Faz 4): a section/elevation replaces the plan pane; a plan view adds crop/cut plane.
+  const activeView = useMemo(
+    () =>
+      model.elements.find(
+        (e): e is ViewElement => e.type === 'view' && e.id === activeViewId
+      ) ?? null,
+    [model.elements, activeViewId]
+  );
+  const drawingView = activeView && activeView.kind !== 'plan' ? activeView : null;
+  const activePlanView = activeView && activeView.kind === 'plan' ? activeView : null;
+  const hasViews = model.elements.some((e) => e.type === 'view' || e.type === 'sheet');
   const hasModelCheckGoal = task.criteria.some((c) => c.type === 'modelClean');
   const pedagogicalSteps = useMemo(
     () => getPedagogicalFlowSteps(session.revision, lastEvaluation),
@@ -549,6 +574,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setGridStart(null);
     setPickedWalls(new Set());
     setRoomGap(null);
+    setDimFirst(null);
   };
 
   useEffect(() => {
@@ -607,6 +633,24 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         setStatusToast('Alan kapalı değil: kırmızı işaretli boşluğu duvarla kapat.');
         playSound('error');
       }
+    } else if (activeTool === 'section') {
+      const o = sectionTap(session, gridStart, pt);
+      setGridStart(o.next);
+      if (o.result) applyResult(o.result);
+      if (o.toast) setStatusToast(o.toast);
+    } else if (activeTool === 'dimension') {
+      if (!hit) {
+        setStatusToast('Bir duvara dokun: ölçü iki paralel duvar arasındadır.');
+        return;
+      }
+      const o = dimensionTap(session, dimFirst, hit.wallId);
+      setDimFirst(o.next);
+      if (o.result) applyResult(o.result);
+      if (o.toast) setStatusToast(o.toast);
+    } else if (activeTool === 'tag') {
+      const t = tagTap(session, pt);
+      if (t.result) applyResult(t.result);
+      if (t.toast) setStatusToast(t.toast);
     } else if (activeTool === 'grid') {
       const o = gridTap(session, gridStart, pt);
       setGridStart(o.next);
@@ -716,6 +760,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             hasModelCheckGoal || modelIssues.length > 0 ? modelIssues.length : null
           }
           onOpenWarnings={() => setWarningsOpen(true)}
+          showViews={
+            hasViews ||
+            ['view', 'sheet'].some((t) =>
+              task.permissions.creatableTypes.includes(t as never)
+            )
+          }
+          onOpenViews={() => setProjectOpen(true)}
           showLevels={
             model.levels.length > 1 ||
             task.permissions.editableFields.includes('elevation')
@@ -811,11 +862,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           setActiveLevelId={setActiveLevelId}
           opts={toolOpts}
           setOpts={setToolOpts}
-          drawing={Boolean(chain.start) || Boolean(gridStart)}
+          drawing={Boolean(chain.start) || Boolean(gridStart) || Boolean(dimFirst)}
           pickedCount={pickedWalls.size}
           onFinish={resetToolState}
           onCreateFloor={handleCreateFloorTool}
           onCreateRoof={handleCreateRoofTool}
+          onElevation={(dir) => applyResult(elevationFor(session, dir))}
         />
         <StageViewports
           viewMode={viewMode}
@@ -830,10 +882,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           theme={theme}
           isFieldEditable={isFieldEditable}
           handleSelectElement={handleSelectElement}
+          drawingView={drawingView}
+          onBackToPlan={() => setActiveViewId(null)}
           planTools={{
             onToolPoint: handleToolPoint,
-            chainStart: activeTool === 'grid' ? gridStart : chain.start,
-            pickedWallIds: pickedWalls,
+            chainStart: activeTool === 'grid' || activeTool === 'section' ? gridStart : chain.start,
+            pickedWallIds: dimFirst ? new Set([dimFirst]) : pickedWalls,
+            activeViewId: activePlanView?.id ?? null,
+            cropEditable:
+              Boolean(activePlanView) &&
+              task.permissions.editableFields.includes('cropMinX'),
+            onCropRect: (rect) =>
+              activePlanView && applyResult(setCropRectCommand(session, activePlanView.id, rect)),
             roomGap,
             canDragOpenings:
               activeTool === 'select' &&
@@ -869,6 +929,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         <PropertyInspector
           session={session}
           applyResult={applyResult}
+          onOpenSheet={setSheetId}
           rightCollapsed={rightCollapsed}
           mobileDrawerTab={mobileDrawerTab}
           mobileSheetOpen={mobileSheetOpen}
@@ -957,7 +1018,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onGoToNextMission={onGoToNextMission}
         />
 
-        <WarningsSheet
+        <ProjectBrowser
+        open={projectOpen}
+        session={session}
+        applyResult={applyResult}
+        activeViewId={activeViewId}
+        setActiveViewId={setActiveViewId}
+        onOpenSheet={setSheetId}
+        onClose={() => setProjectOpen(false)}
+      />
+      <SheetEditor
+        session={session}
+        applyResult={applyResult}
+        sheetId={sheetId}
+        setSheetId={setSheetId}
+      />
+      <WarningsSheet
         open={warningsOpen}
         issues={modelIssues}
         advanced={advancedChapter}

@@ -395,6 +395,183 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
     ],
   },
 
+  // ---- Bölüm 5: View, Section, Elevation, Dokümantasyon ------------------
+  m30: {
+    lesson: {
+      objective:
+        'Plan görünümünde pencere sembolü soluk (kesilmemiş) çiziliyor. Kesme düzlemini pencereyi tam ortadan kesecek şekilde 1500 mm yap.',
+      hintLevels: hints(
+        'Planın görünümüne bak: pencere neden düz bir çizgi gibi değil de soluk?',
+        'Bu davranışı pencere değil, plan görünümünün kendisi belirliyor.',
+        'Plan görünümünün View Range / kesme düzlemi yüksekliği pencerenin sill ve üst kotu arasında kalmalı.',
+        '1) Görünümler → Plan - Zemin Kat’ı aç. 2) Görünümü seç. 3) Kesme düzlemini 1500 mm yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['cutHeight'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      window1('win1', 'w1', 2400),
+      { id: 'v1', type: 'view', name: 'Plan - Zemin Kat', kind: 'plan', levelId: 'l0', scale: 100, cutHeight: 2400 },
+    ],
+    editable: ['cutHeight'],
+    seeds: ['v1'],
+    criteria: [
+      { id: 'c_cut', type: 'property', elementId: 'v1', field: 'cutHeight', expected: 1500, tolerance: 0, message: 'Kesme düzlemi 1500 mm olmalı.' },
+    ],
+  },
+  m31: {
+    lesson: {
+      objective: 'Binanın içinden geçen bir kesit çizgisi çiz. Kesit, duvarları ve döşemeyi doğru kotlarla göstermeli.',
+      hintLevels: hints(
+        'Kesit, binayı bir çizgi boyunca “kesip” yandan gösterir.',
+        'Kesit çizgisi plan üzerinde iki noktayla tanımlanır ve binanın içinden geçmelidir.',
+        'Kesit aracı Görünüm sekmesindedir; çizgi X veya Z eksenine paralel olur.',
+        '1) Kesit aracını seç. 2) Planda binayı baştan başa geçen iki nokta seç (ör. 0,2000 → 6000,2000). 3) Görünümler’den kesiti aç. 4) Kontrol Et.'
+      ),
+      primaryFields: ['cutLine'] as never,
+    },
+    levels: [L0, l1(3000)],
+    elements: [...box(), window1('win1', 'w1', 2400)],
+    editable: ['flip'],
+    creatable: ['view'],
+    criteria: [
+      { id: 'c_s', type: 'exists', category: 'view', where: { kind: 'section', cutsModel: 1 }, message: 'Binayı kesen bir kesit gerekli.' },
+    ],
+  },
+  m32: {
+    lesson: {
+      objective: 'Güney cephesinin görünümünü (Elevation) ekle ve pencereleri yüzeyde doğru kotta gör.',
+      hintLevels: hints(
+        'Cephe görünümü binaya dışarıdan bakar; hangi yönden baktığını seçersin.',
+        'Pencerelerin bulunduğu duvar hangi cephede?',
+        'Cephe aracında dört yön işareti (K, G, D, B) vardır.',
+        '1) Cephe aracını seç. 2) G (Güney) yönünü seç. 3) Görünümler’den cepheyi aç. 4) Kontrol Et.'
+      ),
+      primaryFields: ['direction'] as never,
+    },
+    levels: [L0],
+    elements: [...box(), window1('win1', 'w1', 800), window1('win2', 'w1', 3600)],
+    editable: [],
+    creatable: ['view'],
+    criteria: [
+      { id: 'c_e', type: 'exists', category: 'view', where: { kind: 'elevation', direction: 'S' }, message: 'Güney cephesi görünümü gerekli.' },
+    ],
+  },
+  m33: {
+    lesson: {
+      objective: 'Plan görünümünün kadrajını (Crop Region) yalnızca doğu odasına, yani x = 3000–6000 mm, z = 0–4000 mm aralığına sınırla.',
+      hintLevels: hints(
+        'Görünümde istemediğin kısımlar var; kadraj dışını gizler.',
+        'Kadraj, plan görünümünün bir özelliğidir ve dört kenarı vardır.',
+        'Crop Region açıldığında köşe tutamaklarını sürükleyebilir ya da değerleri yazabilirsin.',
+        '1) Planı açıp görünümü seç. 2) Kadrajı aç. 3) Sınırları 3000–6000 × 0–4000 mm yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['cropMinX', 'cropMaxX', 'cropMinZ', 'cropMaxZ'] as never,
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      wall('w5', [3000, 0], [3000, 4000]),
+      { id: 'v1', type: 'view', name: 'Plan - Zemin Kat', kind: 'plan', levelId: 'l0', scale: 100, cutHeight: 1200 },
+    ],
+    editable: ['cropMinX', 'cropMaxX', 'cropMinZ', 'cropMaxZ'],
+    seeds: ['v1'],
+    criteria: [
+      { id: 'c_x0', type: 'property', elementId: 'v1', field: 'cropMinX', expected: 3000, tolerance: 10, message: 'Kadraj sol sınırı 3000 mm olmalı.' },
+      { id: 'c_x1', type: 'property', elementId: 'v1', field: 'cropMaxX', expected: 6000, tolerance: 10, message: 'Kadraj sağ sınırı 6000 mm olmalı.' },
+      { id: 'c_z0', type: 'property', elementId: 'v1', field: 'cropMinZ', expected: 0, tolerance: 10, message: 'Kadraj üst sınırı 0 mm olmalı.' },
+      { id: 'c_z1', type: 'property', elementId: 'v1', field: 'cropMaxZ', expected: 4000, tolerance: 10, message: 'Kadraj alt sınırı 4000 mm olmalı.' },
+    ],
+  },
+  m34: {
+    lesson: {
+      objective: 'Güney ve kuzey duvarı arasına bir ölçü (Dimension) koy; değer duvar aralığından otomatik gelsin.',
+      hintLevels: hints(
+        'Ölçü elle yazılan bir sayı değil, iki referans arasındaki gerçek mesafedir.',
+        'Birbirine paralel iki duvarı referans almalısın.',
+        'Annotate sekmesindeki hizalı ölçü iki duvara tıklanarak yerleştirilir.',
+        '1) Ölçü aracını seç. 2) Güney duvarına dokun. 3) Kuzey duvarına dokun. 4) Ölçünün 4000 mm olduğunu doğrula. 5) Kontrol Et.'
+      ),
+      primaryFields: ['wallA', 'wallB'] as never,
+    },
+    levels: [L0],
+    elements: box(),
+    editable: ['wallA', 'wallB'],
+    creatable: ['dimension'],
+    criteria: [
+      { id: 'c_d', type: 'exists', category: 'dimension', where: { value: 4000 }, message: '4000 mm’lik bir ölçü gerekli.' },
+    ],
+  },
+  m35: {
+    lesson: {
+      objective: 'Kapı, pencere ve odayı etiketle. Etiketler verisini nesnenin kendisinden okur.',
+      hintLevels: hints(
+        'Pafta okunurken hangi elemanın hangi poz numarasına sahip olduğunu etiket söyler.',
+        'Kapı, pencere ve oda etiketlenebilir.',
+        'Etiket aracına dokunup eleman üzerine tıkla.',
+        '1) Etiket aracını seç. 2) Kapıya, pencereye ve odaya sırayla dokun. 3) Uyarılar’da etiket sorununun bittiğini gör. 4) Kontrol Et.'
+      ),
+      primaryFields: ['targetId'] as never,
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 600),
+      window1('win1', 'w1', 3200),
+      { id: 'r1', type: 'room', name: 'Salon', number: '101', levelId: 'l0', seedPoint: [3000, 2000] },
+    ],
+    editable: [],
+    creatable: ['tag'],
+    criteria: [
+      { id: 'c_tags', type: 'modelClean', codes: ['TAG_MISSING'], message: 'Tüm kapı, pencere ve odalar etiketli olmalı.' },
+    ],
+  },
+  m36: {
+    lesson: {
+      objective: 'Yeni bir pafta oluştur: numarası A-101, adı "Zemin Kat Planı" olsun.',
+      hintLevels: hints(
+        'Pafta, görünümlerin yerleştirildiği çizim kâğıdıdır.',
+        'Her paftanın bir numarası ve adı vardır; antet bunlardan beslenir.',
+        'Proje Tarayıcısı’ndan pafta ekleyebilir, düzenleyicide ad ve numarayı değiştirebilirsin.',
+        '1) Görünümler → Pafta Ekle. 2) Paftayı aç. 3) Adı “Zemin Kat Planı” yap. 4) Numarası A-101 olsun. 5) Kontrol Et.'
+      ),
+      primaryFields: ['number', 'name'],
+    },
+    levels: [L0],
+    elements: box(),
+    editable: ['number', 'name'],
+    creatable: ['sheet'],
+    criteria: [
+      { id: 'c_sh', type: 'exists', category: 'sheet', where: { number: 'A-101', name: 'Zemin Kat Planı' }, message: 'A-101 numaralı "Zemin Kat Planı" paftası gerekli.' },
+    ],
+  },
+  m37: {
+    lesson: {
+      objective: 'A-101 paftasına hem plan hem kesit görünümünü yerleştir; görünümler antetle çakışmasın.',
+      hintLevels: hints(
+        'Paftada iki farklı görünüm türü olmalı.',
+        'Hazır bir plan ve bir kesit görünümü var; ikisi de paftaya girmeli.',
+        'Pafta düzenleyicide her görünümün yanında bir yerleştir düğmesi var.',
+        '1) Pafta düzenleyiciyi aç. 2) Plan ve kesiti yerleştir. 3) Gerekirse sürükleyerek konumunu ayarla. 4) Kontrol Et.'
+      ),
+      primaryFields: ['placements'] as never,
+    },
+    levels: [L0, l1(3000)],
+    elements: [
+      ...box(),
+      window1('win1', 'w1', 2400),
+      { id: 'v1', type: 'view', name: 'Plan - Zemin Kat', kind: 'plan', levelId: 'l0', scale: 100, cutHeight: 1200 },
+      { id: 'v2', type: 'view', name: 'Kesit 1', kind: 'section', cutLine: [[0, 2000], [6000, 2000]], lookDir: 'z+', scale: 50 },
+      { id: 'sh1', type: 'sheet', name: 'Zemin Kat Planı', number: 'A-101', size: 'A3', placements: [] },
+    ],
+    editable: ['placements'],
+    seeds: ['sh1'],
+    criteria: [
+      { id: 'c_sh', type: 'exists', category: 'sheet', where: { number: 'A-101', hasPlan: 1, hasSection: 1 }, message: 'Pafta hem plan hem kesit içermeli.' },
+    ],
+  },
+
   // ---- Bölüm 6: Model QA --------------------------------------------------
   m38: {
     lesson: {

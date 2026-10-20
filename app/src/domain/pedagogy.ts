@@ -1,5 +1,5 @@
 import { roomBoundary } from './derived';
-import { checkModel, ISSUE_ELEMENT_KIND_TR, summarizeIssues } from './modelCheck';
+import { checkModel, checkOptionsFor, ISSUE_ELEMENT_KIND_TR, summarizeIssues } from './modelCheck';
 import type {
   BimModel,
   CriterionEvidence,
@@ -197,7 +197,9 @@ function explainModelClean(
   model: BimModel,
   hintCount: number
 ): string {
-  const issues = checkModel(model).filter((i) => !rule.codes || rule.codes.includes(i.code));
+  const issues = checkModel(model, checkOptionsFor([rule])).filter(
+    (i) => !rule.codes || rule.codes.includes(i.code)
+  );
   const sum = summarizeIssues(issues);
   const area = `Modelde ${sum.count} tutarsızlık var (${sum.categories.join(', ')}).`;
   if (hintCount <= 0) {

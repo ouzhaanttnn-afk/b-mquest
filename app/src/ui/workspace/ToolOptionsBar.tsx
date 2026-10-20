@@ -32,6 +32,7 @@ export interface ToolOptionsBarProps {
   onFinish: () => void;
   onCreateFloor: () => void;
   onCreateRoof: () => void;
+  onElevation: (dir: 'N' | 'S' | 'E' | 'W') => void;
 }
 
 const Num: React.FC<{
@@ -65,6 +66,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   onFinish,
   onCreateFloor,
   onCreateRoof,
+  onElevation,
 }) => {
   if (activeTool === 'select') return null;
   const def = TOOL_DEFS.find((t) => t.id === activeTool);
@@ -142,6 +144,19 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
             <Num label="Yükseklik" name="riserHeight" opts={opts} setOpts={setOpts} />
           </>
         )}
+
+        {activeTool === 'elevation' &&
+          (['N', 'S', 'E', 'W'] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              className="bq-chip-btn bq-chip-accent"
+              data-testid={`tool-elev-${d}`}
+              onClick={() => onElevation(d)}
+            >
+              {d === 'N' ? 'K (Kuzey)' : d === 'S' ? 'G (Güney)' : d === 'E' ? 'D (Doğu)' : 'B (Batı)'}
+            </button>
+          ))}
 
         {(activeTool === 'floor' || activeTool === 'roof') && (
           <button

@@ -6,7 +6,7 @@ import type {
   WindowElement,
   WallElement,
 } from '../domain/types';
-import { PlanBelowLayers, PlanWindows } from './PlanLayers';
+import { PlanAnnotations, PlanBelowLayers, PlanWindows } from './PlanLayers';
 import { lockAxis, projectOnWall, snapPoint, type SnapKind } from './snap';
 import type { ToolId } from '../ui/workspace/toolActions';
 import { roomBoundary } from '../domain/derived';
@@ -49,6 +49,10 @@ export interface PlanViewportProps {
   pickedWallIds?: Set<string>;
   /** Red marker where a Room boundary is open. */
   roomGap?: [number, number] | null;
+  /** View whose crop region / cut plane the plan shows. */
+  activeViewId?: string | null;
+  cropEditable?: boolean;
+  onCropRect?: (rect: { minX: number; maxX: number; minZ: number; maxZ: number }) => void;
   canDragOpenings?: boolean;
   canMoveOpening?: (id: string, offset: number) => boolean;
   onMoveOpening?: (id: string, offset: number) => void;
@@ -65,6 +69,9 @@ export type PlanToolProps = Pick<
   | 'chainStart'
   | 'pickedWallIds'
   | 'roomGap'
+  | 'activeViewId'
+  | 'cropEditable'
+  | 'onCropRect'
   | 'canDragOpenings'
   | 'canMoveOpening'
   | 'onMoveOpening'
@@ -125,6 +132,9 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
   chainStart = null,
   pickedWallIds,
   roomGap = null,
+  activeViewId = null,
+  cropEditable = false,
+  onCropRect,
   canDragOpenings = false,
   canMoveOpening,
   onMoveOpening,
@@ -138,6 +148,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
   const [pan, setPan] = useState<{ x: number; z: number }>({ x: 0, z: 0 });
   const [hoverSnap, setHoverSnap] = useState<[number, number] | null>(null);
   const [hoverKind, setHoverKind] = useState<SnapKind>('grid');
+  const [cropDrag, setCropDrag] = useState<{ corner: 'min' | 'max'; rect: { minX: number; maxX: number; minZ: number; maxZ: number } } | null>(null);
   const [dragOpening, setDragOpening] = useState<{ id: string; offset: number; valid: boolean } | null>(null);
   const [draggingHandle, setDraggingHandle] = useState<{
     wallId: string;
@@ -227,6 +238,22 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
       return;
     }
 
+    if (cropDrag) {
+      const pt = clientToPlanMm(e.clientX, e.clientY);
+      if (pt) {
+        const r = { ...cropDrag.rect };
+        if (cropDrag.corner === 'min') {
+          r.minX = Math.min(pt[0], r.maxX - 500);
+          r.minZ = Math.min(pt[1], r.maxZ - 500);
+        } else {
+          r.maxX = Math.max(pt[0], r.minX + 500);
+          r.maxZ = Math.max(pt[1], r.minZ + 500);
+        }
+        setCropDrag({ ...cropDrag, rect: r });
+      }
+      return;
+    }
+
     if (dragOpening) {
       const pt = clientToPlanMm(e.clientX, e.clientY);
       const op = model.elements.find((el) => el.id === dragOpening.id);
@@ -258,6 +285,10 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
   const handleSvgPointerUp = () => {
     if (draggingHandle) {
       setDraggingHandle(null);
+    }
+    if (cropDrag) {
+      onCropRect?.(cropDrag.rect);
+      setCropDrag(null);
     }
     if (dragOpening) {
       const op = model.elements.find((el) => el.id === dragOpening.id);
@@ -301,7 +332,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
     if (activeTool !== 'select' && onToolPoint) {
       const pt = clientToPlanMm(e.clientX, e.clientY);
       if (!pt) return;
-      if (['door', 'window', 'floor', 'roof'].includes(activeTool)) {
+      if (['door', 'window', 'floor', 'roof', 'dimension'].includes(activeTool)) {
         onToolPoint(pt, { wallId: wall.id, along: projectOnWall(wall, pt) });
       } else {
         onToolPoint(pt);
@@ -881,8 +912,61 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           );
         })}
 
+        <PlanAnnotations
+          model={
+            cropDrag && activeViewId
+              ? {
+                  ...model,
+                  elements: model.elements.map((el) =>
+                    el.id === activeViewId && el.type === 'view'
+                      ? {
+                          ...el,
+                          cropMinX: cropDrag.rect.minX,
+                          cropMaxX: cropDrag.rect.maxX,
+                          cropMinZ: cropDrag.rect.minZ,
+                          cropMaxZ: cropDrag.rect.maxZ,
+                        }
+                      : el
+                  ),
+                }
+              : model
+          }
+          selectedId={selectedId}
+          failedElementIds={failedElementIds}
+          showLabels={showLabels}
+          isDark={isDark}
+          interactive={activeTool === 'select'}
+          onSelect={onSelect}
+          activeViewId={activeViewId}
+          onCropHandleDown={
+            cropEditable
+              ? (corner) => {
+                  const v = model.elements.find((el) => el.id === activeViewId && el.type === 'view');
+                  if (
+                    v &&
+                    v.type === 'view' &&
+                    v.cropMinX !== undefined &&
+                    v.cropMaxX !== undefined &&
+                    v.cropMinZ !== undefined &&
+                    v.cropMaxZ !== undefined
+                  ) {
+                    setCropDrag({
+                      corner,
+                      rect: { minX: v.cropMinX, maxX: v.cropMaxX, minZ: v.cropMinZ, maxZ: v.cropMaxZ },
+                    });
+                  }
+                }
+              : undefined
+          }
+        />
+
         <PlanWindows
           model={model}
+          cutPlane={(() => {
+            const v = model.elements.find((el) => el.id === activeViewId && el.type === 'view');
+            if (!v || v.type !== 'view' || v.kind !== 'plan') return null;
+            return (model.levels.find((l) => l.id === v.levelId)?.elevation ?? 0) + (v.cutHeight ?? 1200);
+          })()}
           selectedId={selectedId}
           failedElementIds={failedElementIds}
           showLabels={showLabels}

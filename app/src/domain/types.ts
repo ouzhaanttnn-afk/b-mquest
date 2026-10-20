@@ -30,7 +30,16 @@ export type EditableField =
   | 'footprint'
   | 'typeParams'
   | 'boundary'
-  | 'flip';
+  | 'flip'
+  | 'scale'
+  | 'cutHeight'
+  | 'cropMinX'
+  | 'cropMaxX'
+  | 'cropMinZ'
+  | 'cropMaxZ'
+  | 'wallA'
+  | 'wallB'
+  | 'placements';
 
 export type CreatableElementType =
   | 'wall'
@@ -40,7 +49,11 @@ export type CreatableElementType =
   | 'roof'
   | 'stair'
   | 'room'
-  | 'grid';
+  | 'grid'
+  | 'view'
+  | 'dimension'
+  | 'tag'
+  | 'sheet';
 
 export type ElementCategory = CreatableElementType;
 export type Point = [number, number];
@@ -152,7 +165,71 @@ export interface GridElement {
   end: Point;
 }
 
+export type ViewKind = 'plan' | 'section' | 'elevation';
+export type CompassDir = 'N' | 'S' | 'E' | 'W';
+
+/** A Revit view: floor plan, section or elevation. */
+export interface ViewElement {
+  id: string;
+  type: 'view';
+  name: string;
+  kind: ViewKind;
+  levelId?: string;
+  /** Section only: the cut line (axis-parallel). */
+  cutLine?: [Point, Point];
+  /** Section only: which way the section looks, perpendicular to the cut. */
+  lookDir?: StairDirection;
+  /** Elevation only: facade shown. */
+  direction?: CompassDir;
+  /** Drawing scale denominator (1:scale). */
+  scale: number;
+  /** Plan only: View Range cut plane height above the level (mm). */
+  cutHeight?: number;
+  /** Crop region; all four set = cropped. */
+  cropMinX?: number;
+  cropMaxX?: number;
+  cropMinZ?: number;
+  cropMaxZ?: number;
+}
+
+/** Aligned dimension between two parallel walls (centre lines). */
+export interface DimensionElement {
+  id: string;
+  type: 'dimension';
+  name: string;
+  wallA: string;
+  wallB: string;
+}
+
+/** Tag on a door, window or room. */
+export interface TagElement {
+  id: string;
+  type: 'tag';
+  name: string;
+  targetId: string;
+}
+
+export interface SheetPlacement {
+  viewId: string;
+  /** Top-left corner on the sheet, paper millimetres. */
+  x: number;
+  z: number;
+}
+
+export interface SheetElement {
+  id: string;
+  type: 'sheet';
+  name: string;
+  number: string;
+  size: 'A3';
+  placements: SheetPlacement[];
+}
+
 export type BimElement =
+  | ViewElement
+  | DimensionElement
+  | TagElement
+  | SheetElement
   | WallElement
   | DoorElement
   | WindowElement
@@ -223,7 +300,13 @@ export interface PropertyCriterion {
     | 'treadDepth'
     | 'topLevelId'
     | 'name'
-    | 'direction';
+    | 'direction'
+    | 'scale'
+    | 'cutHeight'
+    | 'cropMinX'
+    | 'cropMaxX'
+    | 'cropMinZ'
+    | 'cropMaxZ';
   expected: number | string;
   tolerance: number;
   message: string;
