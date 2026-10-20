@@ -1,4 +1,5 @@
 import React from 'react';
+import { TOOL_DEFS, type ToolId } from './toolActions';
 import type { MissionSessionState } from '../../domain/commands';
 import type { SubmittedEvaluation, MissionTask } from '../../domain/types';
 import { undoCommand, redoCommand } from '../../domain/commands';
@@ -9,11 +10,12 @@ export interface TopBarProps {
   onBackToDashboard: () => void;
   task: MissionTask;
   liveProgress: { passed: number; total: number; pct: number; allPass: boolean; };
-  activeTool: "select" | "wall" | "door";
-  setActiveTool: React.Dispatch<React.SetStateAction<"select" | "wall" | "door">>;
+  activeTool: ToolId;
+  setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
+  onOpenLevels: () => void;
+  showLevels: boolean;
   setFieldError: React.Dispatch<React.SetStateAction<string | null>>;
   setMobileDrawerTab: React.Dispatch<React.SetStateAction<"brief" | "inspector" | "check">>;
-  setMobileSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
   session: MissionSessionState;
   onSessionChange: (next: MissionSessionState, passingEvaluation?: SubmittedEvaluation) => void;
   resetTriggerBtnRef: React.RefObject<HTMLButtonElement | null>;
@@ -31,9 +33,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   liveProgress,
   activeTool,
   setActiveTool,
+  onOpenLevels,
+  showLevels,
   setFieldError,
   setMobileDrawerTab,
-  setMobileSheetOpen,
   session,
   onSessionChange,
   resetTriggerBtnRef,
@@ -95,43 +98,40 @@ export const TopBar: React.FC<TopBarProps> = ({
             <span>Seç</span>
           </button>
 
-          {task.permissions.creatableTypes.includes('wall') && (
+          {TOOL_DEFS.filter((t) =>
+            task.permissions.creatableTypes.includes(t.id as never)
+          ).map((t) => (
             <button
+              key={t.id}
               type="button"
-              className={`bq-tool-btn ${activeTool === 'wall' ? 'active' : ''}`}
-              data-testid="tool-wall-btn"
+              className={`bq-tool-btn ${activeTool === t.id ? 'active' : ''}`}
+              data-testid={`tool-${t.id}-btn`}
               onClick={() => {
-                setActiveTool((t) => (t === 'wall' ? 'select' : 'wall'));
+                setActiveTool((cur) => (cur === t.id ? 'select' : t.id));
                 setMobileDrawerTab('inspector');
-                setMobileSheetOpen(true);
                 setFieldError(null);
               }}
-              aria-pressed={activeTool === 'wall'}
+              aria-pressed={activeTool === t.id}
+              title={t.group}
             >
-              <svg width="18" height="18" aria-hidden="true">
-                <use href="./assets/ui/icons.svg#wall" />
-              </svg>
-              <span>Duvar Oluştur</span>
+              {t.id === 'wall' || t.id === 'door' ? (
+                <svg width="18" height="18" aria-hidden="true">
+                  <use href={`./assets/ui/icons.svg#${t.id}`} />
+                </svg>
+              ) : null}
+              <span>{t.label}</span>
             </button>
-          )}
+          ))}
 
-          {task.permissions.creatableTypes.includes('door') && (
+          {showLevels && (
             <button
               type="button"
-              className={`bq-tool-btn ${activeTool === 'door' ? 'active' : ''}`}
-              data-testid="tool-door-btn"
-              onClick={() => {
-                setActiveTool((t) => (t === 'door' ? 'select' : 'door'));
-                setMobileDrawerTab('inspector');
-                setMobileSheetOpen(true);
-                setFieldError(null);
-              }}
-              aria-pressed={activeTool === 'door'}
+              className="bq-tool-btn"
+              data-testid="levels-btn"
+              onClick={onOpenLevels}
+              title="Referans · Katlar"
             >
-              <svg width="18" height="18" aria-hidden="true">
-                <use href="./assets/ui/icons.svg#door" />
-              </svg>
-              <span>Kapı Oluştur</span>
+              <span>Katlar</span>
             </button>
           )}
 

@@ -2,6 +2,7 @@ import { type CommandError, FIELD_LABELS_TR, normalizeTextField, parseStrictInte
 export { type CommandError, normalizeTextField, parseStrictIntegerMm } from './validation';
 import { modelErrors, permissionErrors, wallLength } from './evaluator';
 import {
+  addLevelOp,
   assignTypeOp,
   cloneModelDeep,
   createFloorOp,
@@ -214,7 +215,11 @@ export function updateElementProperty(
   }
 
   const isSeed = state.task.initialModel.elements.some((e) => e.id === elementId);
-  if (isSeed && !state.task.permissions.editableSeedIds.includes(elementId)) {
+  if (
+    field !== 'flip' &&
+    isSeed &&
+    !state.task.permissions.editableSeedIds.includes(elementId)
+  ) {
     return {
       ok: false,
       state,
@@ -226,7 +231,7 @@ export function updateElementProperty(
     };
   }
 
-  if (!state.task.permissions.editableFields.includes(field)) {
+  if (field !== 'flip' && !state.task.permissions.editableFields.includes(field)) {
     return {
       ok: false,
       state,
@@ -1068,3 +1073,21 @@ export function updateTypeParamCommand(
 }
 
 export { assignTypeOp };
+
+/** Adds a new Level (needs the elevation permission). */
+export function addLevelCommand(state: MissionSessionState): CommandResult {
+  if (!state.task.permissions.editableFields.includes('elevation')) {
+    return {
+      ok: false,
+      state,
+      error: {
+        code: 'E_PERMISSION_FIELD',
+        field: 'elevation',
+        message: 'Bu görevde yeni kat ekleme izniniz yok.',
+      },
+    };
+  }
+  const op = addLevelOp(state.model);
+  if (!op.ok) return { ok: false, state, error: op.error };
+  return commitModelTransaction(state, op.model);
+}

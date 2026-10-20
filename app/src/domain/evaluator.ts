@@ -195,14 +195,14 @@ export function taskErrors(task: unknown): string[] {
 
 export function permissionErrors(task: MissionTask, model: BimModel): string[] {
   const errors: string[] = [];
-  const stripElevation = (levels: BimModel['levels']) =>
-    levels.map(({ id, name }) => ({ id, name }));
   const elevationEditable = task.permissions.editableFields.includes('elevation');
-  if (
-    elevationEditable
-      ? !same(stripElevation(task.initialModel.levels), stripElevation(model.levels))
-      : !same(task.initialModel.levels, model.levels)
-  ) {
+  if (elevationEditable) {
+    // Elevations may change and levels may be added, never removed or renamed.
+    const now = new Map(model.levels.map((l) => [l.id, l.name]));
+    if (task.initialModel.levels.some((l) => now.get(l.id) !== l.name)) {
+      errors.push('E_LEVELS_IMMUTABLE');
+    }
+  } else if (!same(task.initialModel.levels, model.levels)) {
     errors.push('E_LEVELS_IMMUTABLE');
   }
 
@@ -229,6 +229,7 @@ export function permissionErrors(task: MissionTask, model: BimModel): string[] {
     const keys = new Set([...Object.keys(oldRecord), ...Object.keys(nowRecord)]);
     for (const key of keys) {
       if (same(oldRecord[key], nowRecord[key])) continue;
+      if (key === 'flip') continue; // swing side is cosmetic
       // Values that follow from an allowed relationship edit are allowed too:
       // a Top Constraint / Level change drives height, a Type edit drives
       // the numeric type parameters.

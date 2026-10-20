@@ -87,6 +87,14 @@ export const GameDock: React.FC<GameDockProps> = ({
 
                   {selectedElement.type === 'door' && (
                     <>
+                      <button
+                        type="button"
+                        className="bq-chip-btn"
+                        data-testid="hud-flip-door"
+                        onClick={() => commitSingleField('flip', !selectedElement.flip)}
+                      >
+                        ⇄ Yönü çevir
+                      </button>
                       {isFieldEditable('offset') && (
                         <>
                           

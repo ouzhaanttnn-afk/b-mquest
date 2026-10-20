@@ -26,6 +26,21 @@ import { StageViewports } from './workspace/StageViewports';
 import { isSoundMuted, playSound } from './sound';
 import { buildDraftsForElement } from './workspace/drafts';
 import { TopBar } from './workspace/TopBar';
+import { LevelsSheet } from './workspace/LevelsSheet';
+import { ToolOptionsBar, type ToolOptions } from './workspace/ToolOptionsBar';
+import {
+  EMPTY_CHAIN,
+  canMoveOpening,
+  floorFromWalls,
+  gridTap,
+  placeOpening,
+  placeRoomAt,
+  roofFromWalls,
+  stairAt,
+  wallChainTap,
+  type ChainState,
+  type ToolId,
+} from './workspace/toolActions';
 import { MissionPanel } from './workspace/MissionPanel';
 import { GameDock } from './workspace/GameDock';
 import { PropertyInspector } from './workspace/PropertyInspector';
@@ -69,7 +84,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const { task, model, selectedId, lastEvaluation, revealedHints } = session;
 
   // Tool mode: 'select' | 'wall' | 'door'
-  const [activeTool, setActiveTool] = useState<'select' | 'wall' | 'door'>('select');
+  const [activeTool, setActiveTool] = useState<ToolId>('select');
   // Center viewport layout: 'split' | 'plan' | '3d'
   const [viewMode, setViewMode] = useState<'split' | 'plan' | '3d'>('split');
   // Mobile/Tablet active drawer tab: 'brief' | 'inspector' | 'check'
@@ -135,7 +150,31 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     height: '3000',
     thickness: '200',
   });
-  const [wallPickStep, setWallPickStep] = useState<'start' | 'end'>('start');
+  // Tap-to-model tool state (Faz 2)
+  const [chain, setChain] = useState<ChainState>(EMPTY_CHAIN);
+  const [gridStart, setGridStart] = useState<[number, number] | null>(null);
+  const [pickedWalls, setPickedWalls] = useState<Set<string>>(new Set());
+  const [roomGap, setRoomGap] = useState<[number, number] | null>(null);
+  const [activeLevelIdRaw, setActiveLevelId] = useState<string>(
+    session.model.levels[0]?.id ?? 'l0'
+  );
+  const [levelsOpen, setLevelsOpen] = useState(false);
+  const [toolOpts, setToolOpts] = useState<ToolOptions>({
+    winWidth: '1200',
+    winHeight: '1200',
+    winSill: '900',
+    doorWidth: '900',
+    doorHeight: '2100',
+    doorSill: '0',
+    wallHeight: '3000',
+    wallThickness: '200',
+    slope: '25',
+    overhang: '500',
+    risers: '17',
+    riserHeight: '175',
+    direction: 'x+',
+    topLevelId: session.model.levels[session.model.levels.length - 1]?.id ?? 'l0',
+  });
 
   // Door Creation Form State
   const wallsInModel = useMemo(
@@ -482,30 +521,107 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     };
   }, [activeTool, doorForm]);
 
-  const handlePlanPickWallCoord = (x: number, z: number) => {
-    if (wallPickStep === 'start') {
-      setWallForm((prev) => ({
-        ...prev,
-        startX: String(x),
-        startZ: String(z),
-      }));
-      setWallPickStep('end');
-    } else {
-      setWallForm((prev) => ({
-        ...prev,
-        endX: String(x),
-        endZ: String(z),
-      }));
-      setWallPickStep('start');
+  const activeLevelId = model.levels.some((l) => l.id === activeLevelIdRaw)
+    ? activeLevelIdRaw
+    : model.levels[0].id;
+
+  const resetToolState = () => {
+    setChain(EMPTY_CHAIN);
+    setGridStart(null);
+    setPickedWalls(new Set());
+    setRoomGap(null);
+  };
+
+  useEffect(() => {
+    resetToolState();
+  }, [activeTool, task.id]);
+
+  const num = (v: string, fallback: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const handleToolPoint = (
+    pt: [number, number],
+    hit?: { wallId: string; along: number }
+  ) => {
+    setRoomGap(null);
+    if (activeTool === 'wall') {
+      const o = wallChainTap(session, chain, pt, {
+        baseLevelId: activeLevelId,
+        height: num(toolOpts.wallHeight, 3000),
+        thickness: num(toolOpts.wallThickness, 200),
+      });
+      setChain(o.next);
+      if (o.result) applyResult(o.result);
+      if (o.toast) setStatusToast(o.toast);
+    } else if (activeTool === 'door' || activeTool === 'window') {
+      const wall = wallsInModel.find((w) => w.id === hit?.wallId);
+      if (!hit || !wall) {
+        setStatusToast('Bir duvara dokun: ' + (activeTool === 'door' ? 'kapı' : 'pencere') + ' duvarın üzerine yerleşir.');
+        return;
+      }
+      const win = activeTool === 'window';
+      applyResult(
+        placeOpening(session, activeTool, wall, hit.along, {
+          width: num(win ? toolOpts.winWidth : toolOpts.doorWidth, 900),
+          height: num(win ? toolOpts.winHeight : toolOpts.doorHeight, 2100),
+          sill: num(win ? toolOpts.winSill : toolOpts.doorSill, 0),
+          mark: doorForm.mark,
+          fireRating: doorForm.fireRating,
+        })
+      );
+    } else if (activeTool === 'floor' || activeTool === 'roof') {
+      if (!hit) return;
+      setPickedWalls((prev) => {
+        const next = new Set(prev);
+        if (next.has(hit.wallId)) next.delete(hit.wallId);
+        else next.add(hit.wallId);
+        return next;
+      });
+    } else if (activeTool === 'room') {
+      const r = placeRoomAt(session, activeLevelId, pt);
+      if (r.result) {
+        applyResult(r.result);
+      } else {
+        setRoomGap(r.gapAt ?? pt);
+        setStatusToast('Alan kapalı değil: kırmızı işaretli boşluğu duvarla kapat.');
+        playSound('error');
+      }
+    } else if (activeTool === 'grid') {
+      const o = gridTap(session, gridStart, pt);
+      setGridStart(o.next);
+      if (o.result) applyResult(o.result);
+      if (o.toast) setStatusToast(o.toast);
+    } else if (activeTool === 'stair') {
+      applyResult(
+        stairAt(session, pt, {
+          baseLevelId: activeLevelId,
+          topLevelId: toolOpts.topLevelId,
+          direction: toolOpts.direction,
+          risers: num(toolOpts.risers, 17),
+          riserHeight: num(toolOpts.riserHeight, 175),
+        })
+      );
     }
   };
 
-  const handlePlanPickDoorOffset = (hostWallId: string, offsetMm: number) => {
-    setDoorForm((prev) => ({
-      ...prev,
-      hostWallId,
-      offset: String(offsetMm),
-    }));
+  const handleCreateFloorTool = () => {
+    applyResult(floorFromWalls(session, activeLevelId, [...pickedWalls]));
+    setPickedWalls(new Set());
+  };
+
+  const handleCreateRoofTool = () => {
+    applyResult(
+      roofFromWalls(
+        session,
+        activeLevelId,
+        [...pickedWalls],
+        num(toolOpts.slope, 25),
+        num(toolOpts.overhang, 500)
+      )
+    );
+    setPickedWalls(new Set());
   };
 
   const isFieldEditable = (field: EditableField): boolean => {
@@ -576,9 +692,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           liveProgress={liveProgress}
           activeTool={activeTool}
           setActiveTool={setActiveTool}
+          onOpenLevels={() => setLevelsOpen(true)}
+          showLevels={
+            model.levels.length > 1 ||
+            task.permissions.editableFields.includes('elevation')
+          }
           setFieldError={setFieldError}
           setMobileDrawerTab={setMobileDrawerTab}
-          setMobileSheetOpen={setMobileSheetOpen}
           session={session}
           onSessionChange={onSessionChange}
           resetTriggerBtnRef={resetTriggerBtnRef}
@@ -661,6 +781,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           data-tour="viewport-area"
           aria-label="Model Görünüm Alanı"
         >
+        <ToolOptionsBar
+          activeTool={activeTool}
+          model={model}
+          activeLevelId={activeLevelId}
+          setActiveLevelId={setActiveLevelId}
+          opts={toolOpts}
+          setOpts={setToolOpts}
+          drawing={Boolean(chain.start) || Boolean(gridStart)}
+          pickedCount={pickedWalls.size}
+          onFinish={resetToolState}
+          onCreateFloor={handleCreateFloorTool}
+          onCreateRoof={handleCreateRoofTool}
+        />
         <StageViewports
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -674,8 +807,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           theme={theme}
           isFieldEditable={isFieldEditable}
           handleSelectElement={handleSelectElement}
-          handlePlanPickWallCoord={handlePlanPickWallCoord}
-          handlePlanPickDoorOffset={handlePlanPickDoorOffset}
+          planTools={{
+            onToolPoint: handleToolPoint,
+            chainStart: activeTool === 'grid' ? gridStart : chain.start,
+            pickedWallIds: pickedWalls,
+            roomGap,
+            canDragOpenings:
+              activeTool === 'select' &&
+              (selectedElement?.type === 'door' || selectedElement?.type === 'window') &&
+              isFieldEditable('offset'),
+            canMoveOpening: (id, offset) => canMoveOpening(session, id, offset),
+            onMoveOpening: (id, offset) =>
+              applyResult(updateElementProperty(session, id, 'offset', offset)),
+          }}
           session={session}
           onSessionChange={onSessionChange}
           setStatusToast={setStatusToast}
@@ -789,7 +933,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onGoToNextMission={onGoToNextMission}
         />
 
-        <InfoModal
+        <LevelsSheet
+        open={levelsOpen}
+        session={session}
+        activeLevelId={activeLevelId}
+        setActiveLevelId={setActiveLevelId}
+        applyResult={applyResult}
+        onClose={() => setLevelsOpen(false)}
+      />
+      <InfoModal
           infoModalOpen={infoModalOpen}
           setInfoModalOpen={setInfoModalOpen}
           task={task}

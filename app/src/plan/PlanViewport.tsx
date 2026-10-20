@@ -7,6 +7,8 @@ import type {
   WallElement,
 } from '../domain/types';
 import { PlanBelowLayers, PlanWindows } from './PlanLayers';
+import { lockAxis, projectOnWall, snapPoint, type SnapKind } from './snap';
+import type { ToolId } from '../ui/workspace/toolActions';
 import { roomBoundary } from '../domain/derived';
 import {
   computeWallPlanSegments,
@@ -33,20 +35,40 @@ export interface PlanViewportProps {
   model: BimModel;
   selectedId: string | null;
   failedElementIds: Set<string>;
-  activeTool: 'select' | 'wall' | 'door';
+  activeTool: ToolId;
   theme?: 'light' | 'dark';
   canDragWallEndpoints?: boolean;
   wallPreview?: WallDraftPreview | null;
   doorPreview?: DoorDraftPreview | null;
   onSelect: (id: string | null) => void;
-  onPickWallCoord?: (x: number, z: number) => void;
-  onPickDoorOffset?: (hostWallId: string, offsetMm: number) => void;
+  /** Any tap while a drawing tool is active (already snapped, mm). */
+  onToolPoint?: (pt: [number, number], hit?: { wallId: string; along: number }) => void;
+  /** Where the running wall chain / grid line starts. */
+  chainStart?: [number, number] | null;
+  /** Walls picked for Floor / Roof (Pick Walls). */
+  pickedWallIds?: Set<string>;
+  /** Red marker where a Room boundary is open. */
+  roomGap?: [number, number] | null;
+  canDragOpenings?: boolean;
+  canMoveOpening?: (id: string, offset: number) => boolean;
+  onMoveOpening?: (id: string, offset: number) => void;
   onDragWallEndpoint?: (
     wallId: string,
     which: 'start' | 'end',
     newCoord: [number, number]
   ) => void;
 }
+
+export type PlanToolProps = Pick<
+  PlanViewportProps,
+  | 'onToolPoint'
+  | 'chainStart'
+  | 'pickedWallIds'
+  | 'roomGap'
+  | 'canDragOpenings'
+  | 'canMoveOpening'
+  | 'onMoveOpening'
+>;
 
 const DEFAULT_VIEWBOX = {
   minX: -850,
@@ -99,16 +121,24 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
   wallPreview,
   doorPreview,
   onSelect,
-  onPickWallCoord,
-  onPickDoorOffset,
+  onToolPoint,
+  chainStart = null,
+  pickedWallIds,
+  roomGap = null,
+  canDragOpenings = false,
+  canMoveOpening,
+  onMoveOpening,
   onDragWallEndpoint,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const lastKindRef = useRef<SnapKind>('grid');
   const [showGrid, setShowGrid] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<{ x: number; z: number }>({ x: 0, z: 0 });
   const [hoverSnap, setHoverSnap] = useState<[number, number] | null>(null);
+  const [hoverKind, setHoverKind] = useState<SnapKind>('grid');
+  const [dragOpening, setDragOpening] = useState<{ id: string; offset: number; valid: boolean } | null>(null);
   const [draggingHandle, setDraggingHandle] = useState<{
     wallId: string;
     which: 'start' | 'end';
@@ -169,11 +199,13 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
     const rawX = vbMinX + (clientX - rect.left - offsetX) / scale;
     const rawZ = vbMinZ + (clientY - rect.top - offsetY) / scale;
 
-    const snapX = Math.round(rawX / 100) * 100;
-    const snapZ = Math.round(rawZ / 100) * 100;
+    const snapped = snapPoint([rawX, rawZ], model, {
+      tolerance: Math.round(260 / zoom),
+    });
+    lastKindRef.current = snapped.kind;
     return [
-      Math.max(-100000, Math.min(100000, snapX)),
-      Math.max(-100000, Math.min(100000, snapZ)),
+      Math.max(-100000, Math.min(100000, snapped.point[0])),
+      Math.max(-100000, Math.min(100000, snapped.point[1])),
     ];
   };
 
@@ -195,9 +227,29 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
       return;
     }
 
-    if (activeTool === 'wall') {
+    if (dragOpening) {
+      const pt = clientToPlanMm(e.clientX, e.clientY);
+      const op = model.elements.find((el) => el.id === dragOpening.id);
+      const host =
+        op && (op.type === 'door' || op.type === 'window')
+          ? walls.find((w) => w.id === op.hostWallId)
+          : undefined;
+      if (pt && op && host && (op.type === 'door' || op.type === 'window')) {
+        const along = projectOnWall(host, pt);
+        const offset = Math.round((along - op.width / 2) / 50) * 50;
+        setDragOpening({
+          id: op.id,
+          offset,
+          valid: canMoveOpening ? canMoveOpening(op.id, offset) : true,
+        });
+      }
+      return;
+    }
+
+    if (activeTool !== 'select') {
       const pt = clientToPlanMm(e.clientX, e.clientY);
       setHoverSnap(pt);
+      setHoverKind(lastKindRef.current);
     } else if (hoverSnap) {
       setHoverSnap(null);
     }
@@ -207,6 +259,27 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
     if (draggingHandle) {
       setDraggingHandle(null);
     }
+    if (dragOpening) {
+      const op = model.elements.find((el) => el.id === dragOpening.id);
+      if (
+        dragOpening.valid &&
+        op &&
+        (op.type === 'door' || op.type === 'window') &&
+        op.offset !== dragOpening.offset
+      ) {
+        onMoveOpening?.(dragOpening.id, dragOpening.offset);
+      }
+      setDragOpening(null);
+    }
+  };
+
+  const handleSvgPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    // Touch has no hover: show the crosshair as soon as the finger lands.
+    if (activeTool !== 'select') {
+      const pt = clientToPlanMm(e.clientX, e.clientY);
+      setHoverSnap(pt);
+      setHoverKind(lastKindRef.current);
+    }
   };
 
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -214,9 +287,9 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
       e.target === svgRef.current ||
       (e.target as Element).getAttribute('data-bg') === 'true'
     ) {
-      if (activeTool === 'wall' && onPickWallCoord) {
+      if (activeTool !== 'select' && onToolPoint) {
         const pt = clientToPlanMm(e.clientX, e.clientY);
-        if (pt) onPickWallCoord(pt[0], pt[1]);
+        if (pt) onToolPoint(pt);
         return;
       }
       onSelect(null);
@@ -225,29 +298,15 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
 
   const handleWallClick = (e: React.MouseEvent, wall: WallElement) => {
     e.stopPropagation();
-    if (activeTool === 'wall' && onPickWallCoord) {
+    if (activeTool !== 'select' && onToolPoint) {
       const pt = clientToPlanMm(e.clientX, e.clientY);
-      if (pt) onPickWallCoord(pt[0], pt[1]);
-      return;
-    }
-    if (activeTool === 'door' && onPickDoorOffset) {
-      const pt = clientToPlanMm(e.clientX, e.clientY);
-      if (pt) {
-        const [dx, dz] = getWallDirection(wall);
-        const len = getWallLengthMm(wall);
-        const proj =
-          (pt[0] - wall.start[0]) * dx + (pt[1] - wall.start[1]) * dz;
-        const defaultDoorW = doorPreview?.width ?? 900;
-        const clampedOffset = Math.max(
-          0,
-          Math.min(
-            len - defaultDoorW,
-            Math.round((proj - defaultDoorW / 2) / 50) * 50
-          )
-        );
-        onPickDoorOffset(wall.id, clampedOffset);
-        return;
+      if (!pt) return;
+      if (['door', 'window', 'floor', 'roof'].includes(activeTool)) {
+        onToolPoint(pt, { wallId: wall.id, along: projectOnWall(wall, pt) });
+      } else {
+        onToolPoint(pt);
       }
+      return;
     }
     onSelect(wall.id);
   };
@@ -360,6 +419,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label={`${task.title} 2B Ortografik Plan Görünümü`}
+        onPointerDown={handleSvgPointerDown}
         onPointerMove={handleSvgPointerMove}
         onPointerUp={handleSvgPointerUp}
         onClick={handleSvgClick}
@@ -537,6 +597,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           failedElementIds={failedElementIds}
           showLabels={showLabels}
           isDark={isDark}
+          interactive={activeTool === 'select'}
           onSelect={onSelect}
         />
 
@@ -722,8 +783,9 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           const startZ = host.start[1] + dz * door.offset;
           const endX = host.start[0] + dx * (door.offset + door.width);
           const endZ = host.start[1] + dz * (door.offset + door.width);
-          const swingTipX = startX + nx * door.width;
-          const swingTipZ = startZ + nz * door.width;
+          const side = door.flip ? -1 : 1;
+          const swingTipX = startX + nx * door.width * side;
+          const swingTipZ = startZ + nz * door.width * side;
           const midX = (startX + endX) / 2;
           const midZ = (startZ + endZ) / 2;
 
@@ -737,9 +799,15 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
             <g
               key={door.id}
               data-testid={`plan-door-${door.id}`}
+              pointerEvents={activeTool === 'select' ? undefined : 'none'}
               onClick={(e) => {
                 e.stopPropagation();
                 onSelect(door.id);
+              }}
+              onPointerDown={() => {
+                if (canDragOpenings && selectedId === door.id) {
+                  setDragOpening({ id: door.id, offset: door.offset, valid: true });
+                }
               }}
               style={{ cursor: 'pointer' }}
             >
@@ -819,7 +887,18 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           failedElementIds={failedElementIds}
           showLabels={showLabels}
           isDark={isDark}
+          interactive={activeTool === 'select'}
           onSelect={onSelect}
+          onOpeningPointerDown={
+            canDragOpenings
+              ? (id) => {
+                  const op = model.elements.find((el) => el.id === id);
+                  if (op && (op.type === 'window' || op.type === 'door')) {
+                    setDragOpening({ id, offset: op.offset, valid: true });
+                  }
+                }
+              : undefined
+          }
         />
 
         {/* Live Wall Creation Preview */}
@@ -882,25 +961,105 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
             );
           })()}
 
-        {/* Snap Cursor Indicator in Wall Tool */}
-        {activeTool === 'wall' && hoverSnap && (
+        {/* Walls picked for Floor / Roof */}
+        {pickedWallIds &&
+          walls
+            .filter((w) => pickedWallIds.has(w.id))
+            .map((w) => (
+              <line
+                key={`picked-${w.id}`}
+                data-testid={`plan-picked-${w.id}`}
+                x1={w.start[0]}
+                y1={w.start[1]}
+                x2={w.end[0]}
+                y2={w.end[1]}
+                stroke="#22C55E"
+                strokeWidth={w.thickness + 120}
+                opacity={0.55}
+                pointerEvents="none"
+              />
+            ))}
+
+        {/* Running chain / grid rubber band */}
+        {chainStart && (
+          <g pointerEvents="none" data-testid="plan-chain-start">
+            <circle cx={chainStart[0]} cy={chainStart[1]} r={110} fill="#22C55E" stroke="#FFFFFF" strokeWidth={26} />
+            {hoverSnap && (
+              <line
+                x1={chainStart[0]}
+                y1={chainStart[1]}
+                x2={lockAxis(chainStart, hoverSnap)[0]}
+                y2={lockAxis(chainStart, hoverSnap)[1]}
+                stroke="#22C55E"
+                strokeWidth={60}
+                strokeDasharray="120 70"
+                opacity={0.8}
+              />
+            )}
+          </g>
+        )}
+
+        {/* Open Room boundary marker */}
+        {roomGap && (
+          <g pointerEvents="none" data-testid="plan-room-gap-marker">
+            <circle cx={roomGap[0]} cy={roomGap[1]} r={240} fill="rgba(239,68,68,0.25)" stroke="#EF4444" strokeWidth={36} strokeDasharray="70 45" />
+            <text x={roomGap[0] + 300} y={roomGap[1] - 160} fill="#EF4444" fontSize={140} fontWeight="800">
+              Alan kapalı değil
+            </text>
+          </g>
+        )}
+
+        {/* Opening drag preview (red when illegal) */}
+        {dragOpening &&
+          (() => {
+            const op = model.elements.find((el) => el.id === dragOpening.id);
+            if (!op || (op.type !== 'door' && op.type !== 'window')) return null;
+            const host = walls.find((w) => w.id === op.hostWallId);
+            if (!host) return null;
+            const [dx, dz] = getWallDirection(host);
+            const sx = host.start[0] + dx * dragOpening.offset;
+            const sz = host.start[1] + dz * dragOpening.offset;
+            const ex = host.start[0] + dx * (dragOpening.offset + op.width);
+            const ez = host.start[1] + dz * (dragOpening.offset + op.width);
+            return (
+              <line
+                data-testid="plan-opening-drag-preview"
+                x1={sx}
+                y1={sz}
+                x2={ex}
+                y2={ez}
+                stroke={dragOpening.valid ? '#38BDF8' : '#EF4444'}
+                strokeWidth={host.thickness + 140}
+                strokeDasharray="90 50"
+                opacity={0.8}
+                pointerEvents="none"
+              />
+            );
+          })()}
+
+        {/* Snap crosshair for every drawing tool */}
+        {activeTool !== 'select' && hoverSnap && (
           <g pointerEvents="none">
+            <line x1={hoverSnap[0] - 700} y1={hoverSnap[1]} x2={hoverSnap[0] + 700} y2={hoverSnap[1]} stroke="#38BDF8" strokeWidth={10} opacity={0.7} />
+            <line x1={hoverSnap[0]} y1={hoverSnap[1] - 700} x2={hoverSnap[0]} y2={hoverSnap[1] + 700} stroke="#38BDF8" strokeWidth={10} opacity={0.7} />
             <circle
               cx={hoverSnap[0]}
               cy={hoverSnap[1]}
-              r={85}
-              fill="rgba(56, 189, 248, 0.35)"
-              stroke="#38BDF8"
+              r={hoverKind === 'endpoint' ? 130 : 85}
+              fill={hoverKind === 'endpoint' ? 'rgba(34,197,94,0.35)' : 'rgba(56, 189, 248, 0.35)'}
+              stroke={hoverKind === 'endpoint' ? '#22C55E' : '#38BDF8'}
               strokeWidth={22}
             />
             <text
-              x={hoverSnap[0] + 130}
-              y={hoverSnap[1] - 110}
+              x={hoverSnap[0] + 190}
+              y={hoverSnap[1] - 190}
               fill={labelTextDefault}
-              fontSize={130}
+              fontSize={140}
               fontWeight="700"
+              data-testid="plan-snap-label"
             >
               ({hoverSnap[0]}, {hoverSnap[1]})
+              {hoverKind === 'endpoint' ? ' · uç nokta' : hoverKind === 'gridline' ? ' · aks' : ''}
             </text>
           </g>
         )}

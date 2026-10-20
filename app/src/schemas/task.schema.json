@@ -77,7 +77,8 @@
               "elevation",
               "footprint",
               "boundary",
-              "typeParams"
+              "typeParams",
+              "flip"
             ]
           },
           "minItems": 0,
@@ -850,6 +851,9 @@
                   "typeId": {
                     "type": "string",
                     "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+                  },
+                  "flip": {
+                    "type": "boolean"
                   }
                 },
                 "required": [

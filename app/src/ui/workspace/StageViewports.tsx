@@ -1,7 +1,8 @@
 import React from 'react';
 import type { MissionTask, BimModel, EditableField, SubmittedEvaluation } from '../../domain/types';
 import type { MissionSessionState } from '../../domain/commands';
-import type { DoorDraftPreview, WallDraftPreview } from '../../plan/PlanViewport';
+import type { DoorDraftPreview, PlanToolProps, WallDraftPreview } from '../../plan/PlanViewport';
+import type { ToolId } from './toolActions';
 import { PlanViewport } from '../../plan/PlanViewport';
 import { updateElementProperty } from '../../domain/commands';
 import { SceneViewport } from '../../scene/SceneViewport';
@@ -13,14 +14,13 @@ export interface StageViewportsProps {
   model: BimModel;
   selectedId: string | null;
   failedElementIds: Set<string>;
-  activeTool: "select" | "wall" | "door";
+  activeTool: ToolId;
   wallPreview: WallDraftPreview | null;
   doorPreview: DoorDraftPreview | null;
   theme: "light" | "dark";
   isFieldEditable: (field: EditableField) => boolean;
   handleSelectElement: (id: string | null) => void;
-  handlePlanPickWallCoord: (x: number, z: number) => void;
-  handlePlanPickDoorOffset: (hostWallId: string, offsetMm: number) => void;
+  planTools: PlanToolProps;
   session: MissionSessionState;
   onSessionChange: (next: MissionSessionState, passingEvaluation?: SubmittedEvaluation) => void;
   setStatusToast: React.Dispatch<React.SetStateAction<string | null>>;
@@ -40,8 +40,7 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
   theme,
   isFieldEditable,
   handleSelectElement,
-  handlePlanPickWallCoord,
-  handlePlanPickDoorOffset,
+  planTools,
   session,
   onSessionChange,
   setStatusToast,
@@ -97,8 +96,7 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
                     isFieldEditable('start') && isFieldEditable('end')
                   }
                   onSelect={handleSelectElement}
-                  onPickWallCoord={handlePlanPickWallCoord}
-                  onPickDoorOffset={handlePlanPickDoorOffset}
+                  {...planTools}
                   onDragWallEndpoint={(wallId, which, coord) => {
                     const res = updateElementProperty(
                       session,

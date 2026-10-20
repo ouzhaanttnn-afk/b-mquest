@@ -2333,3 +2333,46 @@ select:focus-visible,
   gap: 6px;
   margin-top: 6px;
 }
+
+/* Faz 2 — tool options bar & scrollable tool row */
+.bq-tool-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-2, rgba(15, 23, 42, 0.6));
+  margin-bottom: 6px;
+}
+.bq-tool-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.bq-tool-opt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-end;
+}
+.bq-tool-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.7rem;
+}
+.bq-tool-opt input,
+.bq-tool-opt select {
+  width: 84px;
+  min-height: 32px;
+}
+@media (max-width: 640px) {
+  .bq-ws-tools {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bq-ws-tools .bq-tool-btn {
+    flex: 0 0 auto;
+  }
+}

@@ -20,6 +20,9 @@ interface LayerProps {
   showLabels: boolean;
   isDark: boolean;
   onSelect: (id: string | null) => void;
+  /** false while a drawing tool is active: taps fall through to the plan. */
+  interactive?: boolean;
+  onOpeningPointerDown?: (id: string) => void;
 }
 
 const SEL = '#38BDF8';
@@ -80,6 +83,7 @@ export const PlanBelowLayers: React.FC<LayerProps> = ({
   showLabels,
   isDark,
   onSelect,
+  interactive = true,
 }) => {
   const labelBg = isDark ? 'rgba(15,23,42,0.94)' : 'rgba(255,255,255,0.95)';
   const labelFg = isDark ? '#E2E8F0' : '#0F172A';
@@ -93,7 +97,7 @@ export const PlanBelowLayers: React.FC<LayerProps> = ({
   const grids = model.elements.filter((e): e is GridElement => e.type === 'grid');
 
   return (
-    <g data-testid="plan-below-layers">
+    <g data-testid="plan-below-layers" pointerEvents={interactive ? undefined : 'none'}>
       {floors.map((f) => (
         <g
           key={f.id}
@@ -306,11 +310,13 @@ export const PlanWindows: React.FC<LayerProps> = ({
   failedElementIds,
   showLabels,
   onSelect,
+  interactive = true,
+  onOpeningPointerDown,
 }) => {
   const walls = model.elements.filter((e): e is WallElement => e.type === 'wall');
   const windows = model.elements.filter((e): e is WindowElement => e.type === 'window');
   return (
-    <g data-testid="plan-windows">
+    <g data-testid="plan-windows" pointerEvents={interactive ? undefined : 'none'}>
       {windows.map((w) => {
         const host = walls.find((x) => x.id === w.hostWallId);
         if (!host || w.offset + w.width > wallLengthMm(host)) return null;
@@ -340,6 +346,9 @@ export const PlanWindows: React.FC<LayerProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               onSelect(w.id);
+            }}
+            onPointerDown={() => {
+              if (selectedId === w.id) onOpeningPointerDown?.(w.id);
             }}
             style={{ cursor: 'pointer' }}
           >

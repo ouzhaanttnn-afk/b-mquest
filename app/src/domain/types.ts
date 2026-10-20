@@ -29,7 +29,8 @@ export type EditableField =
   | 'elevation'
   | 'footprint'
   | 'typeParams'
-  | 'boundary';
+  | 'boundary'
+  | 'flip';
 
 export type CreatableElementType =
   | 'wall'
@@ -79,6 +80,8 @@ export interface DoorElement {
   mark: string;
   fireRating: FireRating;
   typeId?: string;
+  /** Mirrors the swing side (plan symbol only). */
+  flip?: boolean;
 }
 
 export interface WindowElement {

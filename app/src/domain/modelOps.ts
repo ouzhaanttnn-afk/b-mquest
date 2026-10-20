@@ -421,7 +421,7 @@ export function hostedIds(model: BimModel, wallId: string): string[] {
 
 // ---- generic field edits for the new element kinds --------------------------
 
-const TOP_FIELDS = new Set(['topConstraint', 'topOffset', 'typeId']);
+const TOP_FIELDS = new Set(['topConstraint', 'topOffset', 'typeId', 'flip']);
 
 /** Fields handled here instead of the original wall/door code path. */
 export const isExtendedEdit = (el: BimElement, field: string): boolean =>
@@ -557,6 +557,11 @@ export function updateExtendedFieldOp(
       const synced = syncConstrainedWalls(next);
       return synced;
     }
+    case 'flip': {
+      if (el.type !== 'door') return bad('Yön çevirme yalnızca kapılar içindir.');
+      rec.flip = raw === undefined ? !rec.flip : Boolean(raw);
+      break;
+    }
     case 'typeId': {
       if (typeof raw !== 'string') return bad('Geçerli bir tip seçilmelidir.');
       return assignTypeOp(model, elementId, raw);
@@ -589,3 +594,17 @@ export function updateExtendedFieldOp(
   return { ok: true, model: next };
 }
 
+
+/** Adds a Level 3000 mm above the highest one (Project Browser → Levels). */
+export function addLevelOp(model: BimModel): OpResult {
+  if (model.levels.length >= 16) {
+    return fail('E_MAX_LEVELS', 'Bir modelde en fazla 16 kat olabilir.');
+  }
+  const used = new Set(model.levels.map((l) => l.id));
+  let n = model.levels.length;
+  while (used.has(`l${n}`)) n++;
+  const top = Math.max(...model.levels.map((l) => l.elevation));
+  const next = cloneModelDeep(model);
+  next.levels.push({ id: `l${n}`, name: `Kat ${n}`, elevation: top + 3000 });
+  return { ok: true, model: next, createdId: `l${n}` };
+}

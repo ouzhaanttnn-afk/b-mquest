@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ToolId } from './toolActions';
 import type { CommandResult, MissionSessionState } from '../../domain/commands';
 import {
   CreateExtraPanel,
@@ -24,12 +25,12 @@ export interface PropertyInspectorProps {
   setMobileSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setRightCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   fieldError: string | null;
-  activeTool: "select" | "wall" | "door";
+  activeTool: ToolId;
   task: MissionTask;
   session: MissionSessionState;
   applyResult: (res: CommandResult) => void;
   handleCreateWallSubmit: (e: React.FormEvent) => void;
-  setActiveTool: React.Dispatch<React.SetStateAction<"select" | "wall" | "door">>;
+  setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
   setWallForm: React.Dispatch<React.SetStateAction<{ name: string; baseLevelId: string; startX: string; startZ: string; endX: string; endZ: string; height: string; thickness: string; }>>;
   wallForm: { name: string; baseLevelId: string; startX: string; startZ: string; endX: string; endZ: string; height: string; thickness: string; };
   model: BimModel;
