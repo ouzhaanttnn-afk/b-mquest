@@ -2414,3 +2414,57 @@ select:focus-visible,
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* Phone simplification: goal first, everything else out of the way */
+.bq-mobile-only {
+  display: none;
+}
+.bq-mission-card {
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid #38bdf8;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  margin-bottom: 6px;
+}
+.bq-mission-goal {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.bq-mission-checklist {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.bq-mission-checklist li.done {
+  opacity: 0.7;
+}
+@media (max-width: 640px) {
+  .bq-mobile-only {
+    display: block;
+  }
+  .bq-hide-mobile,
+  .bq-pedagogy-bar,
+  .bq-plan-footer,
+  .bq-chief-bar,
+  .bq-live-progress-pill {
+    display: none !important;
+  }
+  .bq-plan-svg {
+    height: 52vh;
+    min-height: 300px;
+  }
+}
+
+.bq-tool-error {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  font-size: 0.85rem;
+}

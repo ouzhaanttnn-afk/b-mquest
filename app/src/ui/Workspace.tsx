@@ -31,6 +31,7 @@ import { TopBar } from './workspace/TopBar';
 import { LevelsSheet } from './workspace/LevelsSheet';
 import { ProjectBrowser, SheetEditor } from './workspace/DocumentationPanels';
 import { ProjectDelivery } from './workspace/ProjectDelivery';
+import { MissionCard } from './workspace/MissionCard';
 import { WarningsSheet } from './workspace/WarningsSheet';
 import { checkModel, checkOptionsFor } from '../domain/modelCheck';
 import { getChapterForMissionId } from '../content/curriculum';
@@ -98,7 +99,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   // Tool mode: 'select' | 'wall' | 'door'
   const [activeTool, setActiveTool] = useState<ToolId>('select');
   // Center viewport layout: 'split' | 'plan' | '3d'
-  const [viewMode, setViewMode] = useState<'split' | 'plan' | '3d'>('split');
+  // Phones start with the plan only: one clear picture instead of two cramped ones.
+  const [viewMode, setViewMode] = useState<'split' | 'plan' | '3d'>(() =>
+    typeof window !== 'undefined' && window.matchMedia?.('(max-width: 640px)').matches
+      ? 'plan'
+      : 'split'
+  );
   // Mobile/Tablet active drawer tab: 'brief' | 'inspector' | 'check'
   const [mobileDrawerTab, setMobileDrawerTab] = useState<'brief' | 'inspector' | 'check'>('inspector');
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -131,7 +137,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     const passed = res.criteria.filter((c) => c.pass).length;
     const total = res.criteria.length;
     const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
-    return { passed, total, pct, allPass: res.pass };
+    return { passed, total, pct, allPass: res.pass, criteria: res.criteria };
   }, [task, model, revealedHints.length]);
 
   // Local text drafts for selected element editing (synced synchronously on selection/revision change)
@@ -671,6 +677,28 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
   };
 
+  // Press-drag-release: one wall / grid / section per gesture.
+  const handleToolDrag = (start: [number, number], end: [number, number]) => {
+    setRoomGap(null);
+    if (activeTool === 'wall') {
+      const o = wallChainTap(session, { start, origin: start }, end, {
+        baseLevelId: activeLevelId,
+        height: num(toolOpts.wallHeight, 3000),
+        thickness: num(toolOpts.wallThickness, 200),
+      });
+      setChain(EMPTY_CHAIN);
+      if (o.result) applyResult(o.result);
+    } else if (activeTool === 'grid') {
+      const o = gridTap(session, start, end);
+      setGridStart(null);
+      if (o.result) applyResult(o.result);
+    } else if (activeTool === 'section') {
+      const o = sectionTap(session, start, end);
+      setGridStart(null);
+      if (o.result) applyResult(o.result);
+    }
+  };
+
   const handleCreateFloorTool = () => {
     applyResult(floorFromWalls(session, activeLevelId, [...pickedWalls]));
     setPickedWalls(new Set());
@@ -857,6 +885,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           data-tour="viewport-area"
           aria-label="Model Görünüm Alanı"
         >
+        <MissionCard objective={task.objective} criteria={liveProgress.criteria} />
+        {fieldError && (
+          <div className="bq-tool-error bq-mobile-only" role="alert" data-testid="tool-error-banner">
+            ⚠️ {fieldError}
+          </div>
+        )}
         <ToolOptionsBar
           activeTool={activeTool}
           model={model}
@@ -888,6 +922,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onBackToPlan={() => setActiveViewId(null)}
           planTools={{
             onToolPoint: handleToolPoint,
+            onToolDrag: handleToolDrag,
             chainStart: activeTool === 'grid' || activeTool === 'section' ? gridStart : chain.start,
             pickedWallIds: dimFirst ? new Set([dimFirst]) : pickedWalls,
             activeViewId: activePlanView?.id ?? null,

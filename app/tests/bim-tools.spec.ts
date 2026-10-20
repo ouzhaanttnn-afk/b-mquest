@@ -149,3 +149,41 @@ test.describe('Faz 2 — dokunarak modelleme', () => {
     await page.screenshot({ path: path.join(SHOTS, 'faz2-320-tools.png') });
   });
 });
+
+test.describe('Geri bildirim — sürükleyerek duvar çizme', () => {
+  test('m02: köşeden tutup sürükleyerek 4 duvar çiz (telefon boyutu)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openMission(page, 'm02', 1);
+    await expect(page.getByTestId('mission-card')).toBeVisible();
+    await page.getByTestId('tool-wall-btn').click();
+    const at = (mx: number, mz: number) =>
+      page.evaluate(
+        ([x, z]) => {
+          const svg = document.querySelector('.bq-plan-svg') as SVGSVGElement;
+          const vb = (svg.getAttribute('viewBox') as string).split(' ').map(Number);
+          const r = svg.getBoundingClientRect();
+          const scale = Math.min(r.width / vb[2], r.height / vb[3]);
+          const ox = (r.width - vb[2] * scale) / 2;
+          const oy = (r.height - vb[3] * scale) / 2;
+          return { x: r.left + ox + (x - vb[0]) * scale, y: r.top + oy + (z - vb[1]) * scale };
+        },
+        [mx, mz]
+      );
+    const drag = async (a: [number, number], b: [number, number]) => {
+      const p = await at(...a);
+      const q = await at(...b);
+      await page.mouse.move(p.x, p.y);
+      await page.mouse.down();
+      await page.mouse.move((p.x + q.x) / 2, (p.y + q.y) / 2, { steps: 3 });
+      await page.mouse.move(q.x + 2, q.y + 2, { steps: 3 }); // a finger is never exact
+      await page.mouse.up();
+    };
+    await drag([0, 0], [6000, 0]);
+    await drag([6000, 0], [6000, 4000]);
+    await drag([6000, 4000], [0, 4000]);
+    await drag([0, 4000], [0, 0]);
+    await expect(page.getByTestId('plan-wall-w4')).toBeAttached();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+});

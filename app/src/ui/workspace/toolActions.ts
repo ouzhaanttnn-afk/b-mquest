@@ -43,15 +43,15 @@ export interface ToolDef {
 
 /** Revit-style tabs: Architecture and Datum, shown as one scrollable row. */
 export const TOOL_DEFS: ToolDef[] = [
-  { id: 'wall', label: 'Duvar', group: 'Mimari', hint: 'Plana dokun: başlangıç, sonra her dokunuş zincire yeni duvar ekler. "Bitir" ile durdur.' },
+  { id: 'wall', label: 'Duvar', group: 'Mimari', hint: 'Başlangıç noktasına parmağını bas, bitiş noktasına sürükleyip bırak. (İki noktaya sırayla dokunmak da olur.)' },
   { id: 'door', label: 'Kapı', group: 'Mimari', hint: 'Bir duvara dokun: kapı oraya yerleşir. Seçip duvar boyunca sürükleyerek kaydır.' },
   { id: 'window', label: 'Pencere', group: 'Mimari', hint: 'Bir duvara dokun: pencere oraya yerleşir. Seçip duvar boyunca sürükleyerek kaydır.' },
   { id: 'floor', label: 'Döşeme', group: 'Mimari', hint: 'Duvarlara dokunarak seç (Pick Walls), sonra "Döşeme Oluştur".' },
   { id: 'roof', label: 'Çatı', group: 'Mimari', hint: 'Duvarlara dokunarak seç, katı/eğimi/çıkmayı belirle, sonra "Çatı Oluştur".' },
   { id: 'room', label: 'Oda', group: 'Mimari', hint: 'Kapalı bir alanın içine dokun. Alan kapalı değilse boşluk kırmızı işaretlenir.' },
   { id: 'stair', label: 'Merdiven', group: 'Mimari', hint: 'Merdivenin başlangıç noktasına dokun.' },
-  { id: 'grid', label: 'Aks', group: 'Referans', hint: 'İki noktaya dokun: aks çizgisi oluşur, adı otomatik verilir.' },
-  { id: 'section', label: 'Kesit', group: 'Görünüm', hint: 'İki noktaya dokun: kesit çizgisi oluşur. Bakış yönünü Properties’ten çevirebilirsin.' },
+  { id: 'grid', label: 'Aks', group: 'Referans', hint: 'Başlangıçtan bitişe sürükleyip bırak: aks oluşur, adı otomatik verilir.' },
+  { id: 'section', label: 'Kesit', group: 'Görünüm', hint: 'Başlangıçtan bitişe sürükleyip bırak: kesit çizgisi oluşur. Yönü sonra çevirebilirsin.' },
   { id: 'elevation', label: 'Cephe', group: 'Görünüm', hint: 'Bir yön seç (K / G / D / B): o cephenin görünümü eklenir.' },
   { id: 'dimension', label: 'Ölçü', group: 'Açıklama', hint: 'Birbirine paralel iki duvara dokun: aralarındaki ölçü çizilir ve model değişince güncellenir.' },
   { id: 'tag', label: 'Etiket', group: 'Açıklama', hint: 'Bir kapıya, pencereye veya odaya dokun: etiketi eklenir.' },

@@ -43,6 +43,8 @@ export interface PlanViewportProps {
   onSelect: (id: string | null) => void;
   /** Any tap while a drawing tool is active (already snapped, mm). */
   onToolPoint?: (pt: [number, number], hit?: { wallId: string; along: number }) => void;
+  /** Press-drag-release with a line tool (Wall, Grid, Section). */
+  onToolDrag?: (start: [number, number], end: [number, number]) => void;
   /** Where the running wall chain / grid line starts. */
   chainStart?: [number, number] | null;
   /** Walls picked for Floor / Roof (Pick Walls). */
@@ -66,6 +68,7 @@ export interface PlanViewportProps {
 export type PlanToolProps = Pick<
   PlanViewportProps,
   | 'onToolPoint'
+  | 'onToolDrag'
   | 'chainStart'
   | 'pickedWallIds'
   | 'roomGap'
@@ -129,6 +132,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
   doorPreview,
   onSelect,
   onToolPoint,
+  onToolDrag,
   chainStart = null,
   pickedWallIds,
   roomGap = null,
@@ -142,6 +146,8 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const lastKindRef = useRef<SnapKind>('grid');
+  const suppressClick = useRef(false);
+  const [drawDrag, setDrawDrag] = useState<{ start: [number, number]; end: [number, number] } | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [zoom, setZoom] = useState(1);
@@ -211,7 +217,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
     const rawZ = vbMinZ + (clientY - rect.top - offsetY) / scale;
 
     const snapped = snapPoint([rawX, rawZ], model, {
-      tolerance: Math.round(260 / zoom),
+      tolerance: Math.max(150, Math.round(28 / scale)),
     });
     lastKindRef.current = snapped.kind;
     return [
@@ -234,6 +240,16 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         if (alignedCoord[0] !== anchor[0] || alignedCoord[1] !== anchor[1]) {
           onDragWallEndpoint(w.id, draggingHandle.which, alignedCoord);
         }
+      }
+      return;
+    }
+
+    if (drawDrag) {
+      const pt = clientToPlanMm(e.clientX, e.clientY);
+      if (pt) {
+        setDrawDrag({ ...drawDrag, end: pt });
+        setHoverSnap(pt);
+        setHoverKind(lastKindRef.current);
       }
       return;
     }
@@ -286,6 +302,18 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
     if (draggingHandle) {
       setDraggingHandle(null);
     }
+    if (drawDrag) {
+      const dist = Math.hypot(drawDrag.end[0] - drawDrag.start[0], drawDrag.end[1] - drawDrag.start[1]);
+      if (dist >= 400) {
+        onToolDrag?.(drawDrag.start, drawDrag.end);
+        // The click that follows the release must not start a second tap-line.
+        suppressClick.current = true;
+        setTimeout(() => {
+          suppressClick.current = false;
+        }, 0);
+      }
+      setDrawDrag(null);
+    }
     if (cropDrag) {
       onCropRect?.(cropDrag.rect);
       setCropDrag(null);
@@ -310,10 +338,15 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
       const pt = clientToPlanMm(e.clientX, e.clientY);
       setHoverSnap(pt);
       setHoverKind(lastKindRef.current);
+      if (pt && ['wall', 'grid', 'section'].includes(activeTool) && onToolDrag) {
+        setDrawDrag({ start: pt, end: pt });
+        svgRef.current?.setPointerCapture?.(e.pointerId);
+      }
     }
   };
 
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (suppressClick.current) return;
     if (
       e.target === svgRef.current ||
       (e.target as Element).getAttribute('data-bg') === 'true'
@@ -329,6 +362,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
 
   const handleWallClick = (e: React.MouseEvent, wall: WallElement) => {
     e.stopPropagation();
+    if (suppressClick.current) return;
     if (activeTool !== 'select' && onToolPoint) {
       const pt = clientToPlanMm(e.clientX, e.clientY);
       if (!pt) return;
@@ -390,13 +424,13 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         role="toolbar"
         aria-label="2B Plan Araçları"
       >
-        <span className="bq-viewport-badge bq-badge-2d">
+        <span className="bq-viewport-badge bq-badge-2d bq-hide-mobile">
           📐 2B MİMARİ KAT PLANI (ÜSTTEN GÖRÜNÜŞ · mm)
         </span>
         <div className="bq-viewport-controls">
           <button
             type="button"
-            className={`bq-chip-btn ${showGrid ? 'active' : ''}`}
+            className={`bq-chip-btn bq-hide-mobile ${showGrid ? 'active' : ''}`}
             onClick={() => setShowGrid((v) => !v)}
             aria-pressed={showGrid}
             title="100/1000 mm Izgarayı Aç/Kapat"
@@ -405,7 +439,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           </button>
           <button
             type="button"
-            className={`bq-chip-btn ${showLabels ? 'active' : ''}`}
+            className={`bq-chip-btn bq-hide-mobile ${showLabels ? 'active' : ''}`}
             onClick={() => setShowLabels((v) => !v)}
             aria-pressed={showLabels}
             title="Ölçü ve Kimlik Etiketlerini Aç/Kapat"
@@ -434,7 +468,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           </button>
           <button
             type="button"
-            className="bq-chip-btn"
+            className="bq-chip-btn bq-hide-mobile"
             onClick={resetPlanCamera}
             aria-label="Plan Görünümünü Merkezle"
           >
@@ -732,7 +766,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
               />
 
               {/* Interactive Endpoint Drag Handles when selected & editable */}
-              {isSelected && canDragWallEndpoints && (
+              {isSelected && canDragWallEndpoints && activeTool === 'select' && (
                 <>
                   <circle
                     cx={wall.start[0]}
@@ -1067,6 +1101,33 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
                 pointerEvents="none"
               />
             ))}
+
+        {/* Press-drag-release preview */}
+        {drawDrag &&
+          Math.hypot(drawDrag.end[0] - drawDrag.start[0], drawDrag.end[1] - drawDrag.start[1]) > 100 &&
+          (() => {
+            const end = lockAxis(drawDrag.start, drawDrag.end);
+            const len = Math.abs(end[0] - drawDrag.start[0]) + Math.abs(end[1] - drawDrag.start[1]);
+            return (
+              <g pointerEvents="none" data-testid="plan-draw-drag">
+                <line
+                  x1={drawDrag.start[0]}
+                  y1={drawDrag.start[1]}
+                  x2={end[0]}
+                  y2={end[1]}
+                  stroke="#F97316"
+                  strokeWidth={activeTool === 'wall' ? 200 : 40}
+                  strokeLinecap="round"
+                  opacity={0.7}
+                />
+                <circle cx={drawDrag.start[0]} cy={drawDrag.start[1]} r={110} fill="#22C55E" stroke="#FFFFFF" strokeWidth={26} />
+                <circle cx={end[0]} cy={end[1]} r={110} fill="#F97316" stroke="#FFFFFF" strokeWidth={26} />
+                <text x={(drawDrag.start[0] + end[0]) / 2 + 160} y={(drawDrag.start[1] + end[1]) / 2 - 160} fill={labelTextDefault} fontSize={170} fontWeight={800}>
+                  {len} mm
+                </text>
+              </g>
+            );
+          })()}
 
         {/* Running chain / grid rubber band */}
         {chainStart && (
