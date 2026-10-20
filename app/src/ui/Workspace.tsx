@@ -36,6 +36,7 @@ import { getWallLengthMm } from '../plan/geometry';
 import { SceneViewport } from '../scene/SceneViewport';
 import { isSoundMuted, playSound, setSoundMuted } from './sound';
 import { startMission1Tutorial } from './tutorial';
+import { MmStepperField } from './MmStepperField';
 
 export interface WorkspaceProps {
   session: MissionSessionState;
@@ -648,6 +649,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     return task.permissions.editableFields.includes(field);
   };
 
+  const numericProp = (field: string): number => {
+    const v = (selectedElement as unknown as Record<string, unknown> | null)?.[
+      field
+    ];
+    return typeof v === 'number' ? v : 0;
+  };
+
   const canDeleteSelected = useMemo(() => {
     if (!selectedElement) return false;
     const isSeed = task.initialModel.elements.some(
@@ -1235,16 +1243,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   {selectedElement.type === 'wall' &&
                     isFieldEditable('height') && (
                       <>
-                        {selectedElement.height !== 3000 && (
-                          <button
-                            type="button"
-                            className="bq-chip-btn bq-chip-accent"
-                            data-testid="hud-quick-height-3000"
-                            onClick={() => commitSingleField('height', 3000)}
-                          >
-                            ⚡ Y: 3000 mm Yap
-                          </button>
-                        )}
+                        
                         <button
                           type="button"
                           className="bq-chip-btn"
@@ -1276,16 +1275,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     <>
                       {isFieldEditable('offset') && (
                         <>
-                          {selectedElement.offset !== 2550 && (
-                            <button
-                              type="button"
-                              className="bq-chip-btn bq-chip-accent"
-                              data-testid="hud-quick-door-center"
-                              onClick={() => commitSingleField('offset', 2550)}
-                            >
-                              🎯 Ortala (2550 mm)
-                            </button>
-                          )}
+                          
                           <button
                             type="button"
                             className="bq-chip-btn"
@@ -1312,16 +1302,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           </button>
                         </>
                       )}
-                      {isFieldEditable('width') &&
-                        selectedElement.width !== 900 && (
-                          <button
-                            type="button"
-                            className="bq-chip-btn bq-chip-accent"
-                            onClick={() => commitSingleField('width', 900)}
-                          >
-                            ⚡ G: 900 mm Yap
-                          </button>
-                        )}
+                      
                     </>
                   )}
 
@@ -1897,65 +1878,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           <em className="bq-primary-field-tag">★ Aktif Parametre</em>
                         )}
                       </span>
-                      <div className="bq-input-with-unit">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          data-testid="prop-input-height"
-                          disabled={!isFieldEditable('height')}
-                          value={editDrafts.height ?? ''}
-                          onChange={(e) =>
-                            setEditDrafts({
-                              ...editDrafts,
-                              height: e.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            if (isFieldEditable('height')) {
-                              commitSingleField('height', editDrafts.height);
-                            }
-                          }}
-                          onKeyDown={(e) =>
-                            handleFieldKeyDown(e, 'height', () =>
-                              commitSingleField('height', editDrafts.height)
-                            )
-                          }
-                        />
-                        <span className="bq-unit-tag">mm</span>
-                      </div>
-                      {isFieldEditable('height') && (
-                        <div className="bq-quick-steppers-row" style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                          <button
-                            type="button"
-                            className="bq-chip-btn bq-chip-accent"
-                            onClick={() => {
-                              commitSingleField('height', 3000);
-                            }}
-                          >
-                            ⚡ 3000 mm Yap
-                          </button>
-                          <button
-                            type="button"
-                            className="bq-chip-btn"
-                            onClick={() => {
-                              const curr = Number(editDrafts.height || selectedElement.height);
-                              commitSingleField('height', curr + 100);
-                            }}
-                          >
-                            +100 mm
-                          </button>
-                          <button
-                            type="button"
-                            className="bq-chip-btn"
-                            onClick={() => {
-                              const curr = Number(editDrafts.height || selectedElement.height);
-                              commitSingleField('height', Math.max(500, curr - 100));
-                            }}
-                          >
-                            −100 mm
-                          </button>
-                        </div>
-                      )}
+                      <MmStepperField
+                        testId="prop-input-height"
+                        draft={editDrafts.height ?? ''}
+                        current={numericProp('height')}
+                        min={500}
+                        disabled={!isFieldEditable('height')}
+                        onDraftChange={(v) => setEditDrafts({ ...editDrafts, height: v })}
+                        onCommit={(v) => commitSingleField('height', v)}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, 'height', () =>
+                            commitSingleField('height', editDrafts.height)
+                          )
+                        }
+                      />
+                      
                     </label>
 
                     {/* Wall Thickness */}
@@ -1972,38 +1909,20 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                           <em className="bq-primary-field-tag">★ Aktif Parametre</em>
                         )}
                       </span>
-                      <div className="bq-input-with-unit">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          data-testid="prop-input-thickness"
-                          disabled={!isFieldEditable('thickness')}
-                          value={editDrafts.thickness ?? ''}
-                          onChange={(e) =>
-                            setEditDrafts({
-                              ...editDrafts,
-                              thickness: e.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            if (isFieldEditable('thickness')) {
-                              commitSingleField(
-                                'thickness',
-                                editDrafts.thickness
-                              );
-                            }
-                          }}
-                          onKeyDown={(e) =>
-                            handleFieldKeyDown(e, 'thickness', () =>
-                              commitSingleField(
-                                'thickness',
-                                editDrafts.thickness
-                              )
-                            )
-                          }
-                        />
-                        <span className="bq-unit-tag">mm</span>
-                      </div>
+                      <MmStepperField
+                        testId="prop-input-thickness"
+                        draft={editDrafts.thickness ?? ''}
+                        current={numericProp('thickness')}
+                        min={50}
+                        disabled={!isFieldEditable('thickness')}
+                        onDraftChange={(v) => setEditDrafts({ ...editDrafts, thickness: v })}
+                        onCommit={(v) => commitSingleField('thickness', v)}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, 'thickness', () =>
+                            commitSingleField('thickness', editDrafts.thickness)
+                          )
+                        }
+                      />
                     </label>
 
                     {/* Start X / Z */}
@@ -2256,107 +2175,71 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     <div className="bq-form-grid-2">
                       <label className="bq-field">
                         <span>Ofset (mm)</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          data-testid="prop-input-offset"
-                          disabled={!isFieldEditable('offset')}
-                          value={editDrafts.offset ?? ''}
-                          onChange={(e) =>
-                            setEditDrafts({
-                              ...editDrafts,
-                              offset: e.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            if (isFieldEditable('offset')) {
-                              commitSingleField('offset', editDrafts.offset);
-                            }
-                          }}
-                          onKeyDown={(e) =>
-                            handleFieldKeyDown(e, 'offset', () =>
-                              commitSingleField('offset', editDrafts.offset)
-                            )
-                          }
-                        />
+                        <MmStepperField
+                        testId="prop-input-offset"
+                        draft={editDrafts.offset ?? ''}
+                        current={numericProp('offset')}
+                        min={0}
+                        disabled={!isFieldEditable('offset')}
+                        onDraftChange={(v) => setEditDrafts({ ...editDrafts, offset: v })}
+                        onCommit={(v) => commitSingleField('offset', v)}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, 'offset', () =>
+                            commitSingleField('offset', editDrafts.offset)
+                          )
+                        }
+                      />
                       </label>
                       <label className="bq-field">
                         <span>Genişlik (mm)</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          data-testid="prop-input-width"
-                          disabled={!isFieldEditable('width')}
-                          value={editDrafts.width ?? ''}
-                          onChange={(e) =>
-                            setEditDrafts({
-                              ...editDrafts,
-                              width: e.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            if (isFieldEditable('width')) {
-                              commitSingleField('width', editDrafts.width);
-                            }
-                          }}
-                          onKeyDown={(e) =>
-                            handleFieldKeyDown(e, 'width', () =>
-                              commitSingleField('width', editDrafts.width)
-                            )
-                          }
-                        />
+                        <MmStepperField
+                        testId="prop-input-width"
+                        draft={editDrafts.width ?? ''}
+                        current={numericProp('width')}
+                        min={300}
+                        disabled={!isFieldEditable('width')}
+                        onDraftChange={(v) => setEditDrafts({ ...editDrafts, width: v })}
+                        onCommit={(v) => commitSingleField('width', v)}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, 'width', () =>
+                            commitSingleField('width', editDrafts.width)
+                          )
+                        }
+                      />
                       </label>
                       <label className="bq-field">
                         <span>Yükseklik (mm)</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          data-testid="prop-input-height"
-                          disabled={!isFieldEditable('height')}
-                          value={editDrafts.height ?? ''}
-                          onChange={(e) =>
-                            setEditDrafts({
-                              ...editDrafts,
-                              height: e.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            if (isFieldEditable('height')) {
-                              commitSingleField('height', editDrafts.height);
-                            }
-                          }}
-                          onKeyDown={(e) =>
-                            handleFieldKeyDown(e, 'height', () =>
-                              commitSingleField('height', editDrafts.height)
-                            )
-                          }
-                        />
+                        <MmStepperField
+                        testId="prop-input-height"
+                        draft={editDrafts.height ?? ''}
+                        current={numericProp('height')}
+                        min={500}
+                        disabled={!isFieldEditable('height')}
+                        onDraftChange={(v) => setEditDrafts({ ...editDrafts, height: v })}
+                        onCommit={(v) => commitSingleField('height', v)}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, 'height', () =>
+                            commitSingleField('height', editDrafts.height)
+                          )
+                        }
+                      />
                       </label>
                       <label className="bq-field">
                         <span>Eşik / Sill (mm)</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          data-testid="prop-input-sill"
-                          disabled={!isFieldEditable('sill')}
-                          value={editDrafts.sill ?? ''}
-                          onChange={(e) =>
-                            setEditDrafts({
-                              ...editDrafts,
-                              sill: e.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            if (isFieldEditable('sill')) {
-                              commitSingleField('sill', editDrafts.sill);
-                            }
-                          }}
-                          onKeyDown={(e) =>
-                            handleFieldKeyDown(e, 'sill', () =>
-                              commitSingleField('sill', editDrafts.sill)
-                            )
-                          }
-                        />
+                        <MmStepperField
+                        testId="prop-input-sill"
+                        draft={editDrafts.sill ?? ''}
+                        current={numericProp('sill')}
+                        min={0}
+                        disabled={!isFieldEditable('sill')}
+                        onDraftChange={(v) => setEditDrafts({ ...editDrafts, sill: v })}
+                        onCommit={(v) => commitSingleField('sill', v)}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, 'sill', () =>
+                            commitSingleField('sill', editDrafts.sill)
+                          )
+                        }
+                      />
                       </label>
                     </div>
 

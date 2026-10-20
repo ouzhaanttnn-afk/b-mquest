@@ -2326,3 +2326,10 @@ select:focus-visible,
 
 
 
+
+.bq-mm-steppers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
