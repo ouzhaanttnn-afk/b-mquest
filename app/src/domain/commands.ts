@@ -1,6 +1,30 @@
+import { type CommandError, FIELD_LABELS_TR, normalizeTextField, parseStrictIntegerMm } from './validation';
+export { type CommandError, normalizeTextField, parseStrictIntegerMm } from './validation';
 import { modelErrors, permissionErrors, wallLength } from './evaluator';
+import {
+  assignTypeOp,
+  cloneModelDeep,
+  createFloorOp,
+  createGridOp,
+  createRoofOp,
+  createRoomOp,
+  createStairOp,
+  createWindowOp,
+  hostedIds,
+  isExtendedEdit,
+  setLevelElevationOp,
+  setTypeParamOp,
+  updateExtendedFieldOp,
+  type CreateFloorInput,
+  type CreateGridInput,
+  type CreateRoofInput,
+  type CreateRoomInput,
+  type CreateStairInput,
+  type CreateWindowInput,
+  type OpResult,
+} from './modelOps';
+import { elementTypeOf } from './derived';
 import type {
-  BimElement,
   BimModel,
   DoorElement,
   EditableField,
@@ -9,12 +33,6 @@ import type {
   SubmittedEvaluation,
   WallElement,
 } from './types';
-
-export interface CommandError {
-  code: string;
-  field?: string;
-  message: string;
-}
 
 export interface MissionSessionState {
   task: MissionTask;
@@ -58,14 +76,7 @@ export type CommandResult =
   | { ok: false; state: MissionSessionState; error: CommandError };
 
 export function cloneModel(model: BimModel): BimModel {
-  return {
-    levels: model.levels.map((l) => ({ ...l })),
-    elements: model.elements.map((e) =>
-      e.type === 'wall'
-        ? { ...e, start: [e.start[0], e.start[1]], end: [e.end[0], e.end[1]] }
-        : { ...e }
-    ),
-  };
+  return cloneModelDeep(model);
 }
 
 export function createInitialSession(
@@ -93,150 +104,6 @@ export function createInitialSession(
   };
 }
 
-const FIELD_LABELS_TR: Record<string, string> = {
-  height: 'Yükseklik',
-  thickness: 'Kalınlık',
-  width: 'Genişlik',
-  offset: 'Başlangıç Ofseti',
-  sill: 'Eşik Yüksekliği',
-  startX: 'Başlangıç X',
-  startZ: 'Başlangıç Z',
-  endX: 'Bitiş X',
-  endZ: 'Bitiş Z',
-  start: 'Başlangıç Koordinatı',
-  end: 'Bitiş Koordinatı',
-  name: 'Ad',
-  mark: 'Kapı İşareti (Mark)',
-  fireRating: 'Yangın Sınıfı',
-  baseLevelId: 'Kat Referansı',
-  hostWallId: 'Taşıyıcı Duvar',
-};
-
-export function parseStrictIntegerMm(
-  raw: unknown,
-  fieldKey: string,
-  min: number,
-  max: number
-): { ok: true; value: number } | { ok: false; error: CommandError } {
-  const label = FIELD_LABELS_TR[fieldKey] ?? fieldKey;
-
-  if (typeof raw === 'number') {
-    if (!Number.isFinite(raw) || !Number.isInteger(raw)) {
-      return {
-        ok: false,
-        error: {
-          code: 'E_INVALID_INTEGER',
-          field: fieldKey,
-          message: `${label} alanı tam sayı (mm) olmalıdır.`,
-        },
-      };
-    }
-    if (raw < min || raw > max) {
-      return {
-        ok: false,
-        error: {
-          code: 'E_OUT_OF_RANGE',
-          field: fieldKey,
-          message: `${label} alanı ${min} ile ${max} mm arasında olmalıdır.`,
-        },
-      };
-    }
-    return { ok: true, value: raw };
-  }
-
-  if (typeof raw !== 'string') {
-    return {
-      ok: false,
-      error: {
-        code: 'E_INVALID_INTEGER',
-        field: fieldKey,
-        message: `${label} alanı geçerli bir tam sayı (mm) olmalıdır.`,
-      },
-    };
-  }
-
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) {
-    return {
-      ok: false,
-      error: {
-        code: 'E_EMPTY_FIELD',
-        field: fieldKey,
-        message: `${label} alanı boş bırakılamaz.`,
-      },
-    };
-  }
-
-  if (
-    trimmed.includes(',') ||
-    trimmed.includes('.') ||
-    trimmed.toLowerCase().includes('e') ||
-    !/^-?\d+$/.test(trimmed)
-  ) {
-    return {
-      ok: false,
-      error: {
-        code: 'E_NON_INTEGER',
-        field: fieldKey,
-        message: `${label} alanı ondalık veya bilimsel gösterim içeremez; tam sayı mm girin.`,
-      },
-    };
-  }
-
-  const parsed = Number(trimmed);
-  if (!Number.isSafeInteger(parsed)) {
-    return {
-      ok: false,
-      error: {
-        code: 'E_INVALID_INTEGER',
-        field: fieldKey,
-        message: `${label} alanı geçerli sınırlar dışında.`,
-      },
-    };
-  }
-
-  if (parsed < min || parsed > max) {
-    return {
-      ok: false,
-      error: {
-        code: 'E_OUT_OF_RANGE',
-        field: fieldKey,
-        message: `${label} alanı ${min} ile ${max} mm arasında olmalıdır.`,
-      },
-    };
-  }
-
-  return { ok: true, value: parsed };
-}
-
-export function normalizeTextField(
-  raw: unknown,
-  fieldKey: string
-): { ok: true; value: string } | { ok: false; error: CommandError } {
-  const label = FIELD_LABELS_TR[fieldKey] ?? fieldKey;
-  if (typeof raw !== 'string') {
-    return {
-      ok: false,
-      error: {
-        code: 'E_INVALID_TEXT',
-        field: fieldKey,
-        message: `${label} alanı metin olmalıdır.`,
-      },
-    };
-  }
-  const normalized = raw.trim().normalize('NFC');
-  if (normalized.length < 1 || normalized.length > 80) {
-    return {
-      ok: false,
-      error: {
-        code: 'E_TEXT_LENGTH',
-        field: fieldKey,
-        message: `${label} alanı 1–80 karakter arasında olmalıdır.`,
-      },
-    };
-  }
-  return { ok: true, value: normalized };
-}
 
 function translateIntegrityCode(code: string): string {
   if (code.startsWith('E_WALL_AXIS:')) {
@@ -262,6 +129,18 @@ function translateIntegrityCode(code: string): string {
   }
   if (code.startsWith('E_CREATE_TYPE:')) {
     return 'Bu görevde bu türde yeni nesne oluşturma izniniz yok.';
+  }
+  if (code.startsWith('E_TYPE:')) {
+    return 'Nesnenin tipi modelde bulunamadı ya da kategorisi uyuşmuyor.';
+  }
+  if (code === 'E_TYPES_IMMUTABLE') {
+    return 'Bu görevde Type parametrelerini değiştirme izniniz yok.';
+  }
+  if (code.startsWith('E_STAIR_LEVELS:')) {
+    return 'Merdivenin üst katı alt katından yüksek olmalıdır.';
+  }
+  if (code === 'E_LEVELS_IMMUTABLE') {
+    return 'Bu görevde kat kotlarını değiştirme izniniz yok.';
   }
   return `Model bütünlük hatası (${code}).`;
 }
@@ -368,7 +247,47 @@ export function updateElementProperty(
           end: [current.end[0], current.end[1]] as [number, number],
         }
       : { ...current }
-  ) as BimElement;
+  ) as WallElement | DoorElement;
+
+  if (current.type === 'wall' || current.type === 'door') {
+    const type = elementTypeOf(state.model, current);
+    if (
+      type &&
+      field in type.params &&
+      ['thickness', 'width', 'height'].includes(field)
+    ) {
+      return {
+        ok: false,
+        state,
+        error: {
+          code: 'E_TYPE_PARAMETER',
+          field,
+          message: `${FIELD_LABELS_TR[field] ?? field}, "${type.name}" tipinin parametresidir; nesne (Instance) üzerinden değil Edit Type ile değiştirilir.`,
+        },
+      };
+    }
+    if (current.type === 'wall' && current.topConstraint && field === 'height') {
+      return {
+        ok: false,
+        state,
+        error: {
+          code: 'E_CONSTRAINED_HEIGHT',
+          field,
+          message:
+            'Duvarın üstü bir kata bağlı (Top Constraint); yüksekliği Top Offset ile ayarla.',
+        },
+      };
+    }
+  }
+
+  if (isExtendedEdit(current, field)) {
+    const op = updateExtendedFieldOp(state.model, elementId, field, rawValue);
+    if (!op.ok) return { ok: false, state, error: op.error };
+    if (JSON.stringify(op.model) === JSON.stringify(state.model)) {
+      return { ok: true, state };
+    }
+    return commitModelTransaction(state, op.model);
+  }
 
   if (field === 'height') {
     const parsed = parseStrictIntegerMm(rawValue, 'height', 1, 20000);
@@ -772,7 +691,8 @@ export function createDoorCommand(
 
 export function deleteElementCommand(
   state: MissionSessionState,
-  elementId: string
+  elementId: string,
+  opts?: { cascade?: boolean }
 ): CommandResult {
   const target = state.model.elements.find((e) => e.id === elementId);
   if (!target) {
@@ -811,9 +731,11 @@ export function deleteElementCommand(
 
   if (target.type === 'wall') {
     const dependentDoor = state.model.elements.find(
-      (e): e is DoorElement => e.type === 'door' && e.hostWallId === elementId
+      (e) =>
+        (e.type === 'door' || e.type === 'window') &&
+        e.hostWallId === elementId
     );
-    if (dependentDoor) {
+    if (dependentDoor && !opts?.cascade) {
       return {
         ok: false,
         state,
@@ -826,7 +748,11 @@ export function deleteElementCommand(
   }
 
   const nextModel = cloneModel(state.model);
-  nextModel.elements = nextModel.elements.filter((e) => e.id !== elementId);
+  const removed = new Set([
+    elementId,
+    ...(opts?.cascade ? hostedIds(state.model, elementId) : []),
+  ]);
+  nextModel.elements = nextModel.elements.filter((e) => !removed.has(e.id));
 
   return commitModelTransaction(state, nextModel, {
     selectedId: state.selectedId === elementId ? null : state.selectedId,
@@ -1001,3 +927,144 @@ export function resetMissionSession(
 ): MissionSessionState {
   return createInitialSession(state.task);
 }
+
+// ---- Faz 1: yeni nesne türleri ve ilişkiler ---------------------------------
+
+const noPermission = (
+  state: MissionSessionState,
+  type: string,
+  label: string
+): CommandResult | null =>
+  state.task.permissions.creatableTypes.includes(type as never)
+    ? null
+    : {
+        ok: false,
+        state,
+        error: {
+          code: `E_PERMISSION_CREATE_${type.toUpperCase()}`,
+          message: `Bu görevde yeni ${label} oluşturma izniniz yok.`,
+        },
+      };
+
+function commitCreate(state: MissionSessionState, op: OpResult): CommandResult {
+  if (!op.ok) return { ok: false, state, error: op.error };
+  return commitModelTransaction(
+    state,
+    op.model,
+    op.createdId ? { selectedId: op.createdId } : undefined,
+    op.createdId
+  );
+}
+
+export function createWindowCommand(
+  state: MissionSessionState,
+  input: CreateWindowInput
+): CommandResult {
+  return (
+    noPermission(state, 'window', 'pencere') ??
+    commitCreate(state, createWindowOp(state.model, input))
+  );
+}
+
+export function createFloorCommand(
+  state: MissionSessionState,
+  input: CreateFloorInput
+): CommandResult {
+  return (
+    noPermission(state, 'floor', 'döşeme') ??
+    commitCreate(state, createFloorOp(state.model, input))
+  );
+}
+
+export function createRoomCommand(
+  state: MissionSessionState,
+  input: CreateRoomInput
+): CommandResult {
+  return (
+    noPermission(state, 'room', 'oda') ??
+    commitCreate(state, createRoomOp(state.model, input))
+  );
+}
+
+export function createGridCommand(
+  state: MissionSessionState,
+  input: CreateGridInput
+): CommandResult {
+  return (
+    noPermission(state, 'grid', 'aks') ??
+    commitCreate(state, createGridOp(state.model, input))
+  );
+}
+
+export function createRoofCommand(
+  state: MissionSessionState,
+  input: CreateRoofInput
+): CommandResult {
+  return (
+    noPermission(state, 'roof', 'çatı') ??
+    commitCreate(state, createRoofOp(state.model, input))
+  );
+}
+
+export function createStairCommand(
+  state: MissionSessionState,
+  input: CreateStairInput
+): CommandResult {
+  return (
+    noPermission(state, 'stair', 'merdiven') ??
+    commitCreate(state, createStairOp(state.model, input))
+  );
+}
+
+/** Level elevation edit; constrained walls follow automatically. */
+export function setLevelElevationCommand(
+  state: MissionSessionState,
+  levelId: string,
+  rawElevation: unknown
+): CommandResult {
+  if (!state.task.permissions.editableFields.includes('elevation')) {
+    return {
+      ok: false,
+      state,
+      error: {
+        code: 'E_PERMISSION_FIELD',
+        field: 'elevation',
+        message: 'Bu görevde kat kotunu değiştirme izniniz yok.',
+      },
+    };
+  }
+  const op = setLevelElevationOp(state.model, levelId, rawElevation);
+  if (!op.ok) return { ok: false, state, error: op.error };
+  if (JSON.stringify(op.model) === JSON.stringify(state.model)) {
+    return { ok: true, state };
+  }
+  return commitModelTransaction(state, op.model);
+}
+
+/** Edit Type: one change, every instance of the Type follows. */
+export function updateTypeParamCommand(
+  state: MissionSessionState,
+  typeId: string,
+  param: string,
+  rawValue: unknown
+): CommandResult {
+  if (!state.task.permissions.editableFields.includes('typeParams')) {
+    return {
+      ok: false,
+      state,
+      error: {
+        code: 'E_PERMISSION_FIELD',
+        field: 'typeParams',
+        message: 'Bu görevde Type parametrelerini değiştirme izniniz yok.',
+      },
+    };
+  }
+  const op = setTypeParamOp(state.model, typeId, param, rawValue);
+  if (!op.ok) return { ok: false, state, error: op.error };
+  if (JSON.stringify(op.model) === JSON.stringify(state.model)) {
+    return { ok: true, state };
+  }
+  return commitModelTransaction(state, op.model);
+}
+
+export { assignTypeOp };

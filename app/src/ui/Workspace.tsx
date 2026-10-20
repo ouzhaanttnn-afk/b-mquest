@@ -7,6 +7,7 @@ import {
   redoCommand,
   undoCommand,
   updateElementProperty,
+  type CommandResult,
   type MissionSessionState,
 } from '../domain/commands';
 import { capBadgeForWalkthrough, evaluate } from '../domain/evaluator';
@@ -518,6 +519,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     return task.permissions.editableFields.includes(field);
   };
 
+  const applyResult = (res: CommandResult) => {
+    if (!res.ok) {
+      playSound('error');
+      setFieldError(res.error.message);
+      return;
+    }
+    setFieldError(null);
+    if (res.state !== session) {
+      playSound('snap');
+      onSessionChange(res.state);
+    }
+  };
+
   const numericProp = (field: string): number => {
     const v = (selectedElement as unknown as Record<string, unknown> | null)?.[
       field
@@ -686,6 +700,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
         {/* RIGHT PANEL: Object List, Property Editor & Guided Creation Forms */}
         <PropertyInspector
+          session={session}
+          applyResult={applyResult}
           rightCollapsed={rightCollapsed}
           mobileDrawerTab={mobileDrawerTab}
           mobileSheetOpen={mobileSheetOpen}

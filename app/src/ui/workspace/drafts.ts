@@ -15,16 +15,27 @@ export function buildDraftsForElement(
       endX: String(el.end[0]),
       endZ: String(el.end[1]),
       baseLevelId: el.baseLevelId,
+      topOffset: String(el.topOffset ?? 0),
     };
   }
-  return {
-    name: el.name,
-    hostWallId: el.hostWallId,
-    offset: String(el.offset),
-    width: String(el.width),
-    height: String(el.height),
-    sill: String(el.sill),
-    mark: el.mark,
-    fireRating: el.fireRating,
-  };
+  if (el.type === 'door') {
+    return {
+      name: el.name,
+      hostWallId: el.hostWallId,
+      offset: String(el.offset),
+      width: String(el.width),
+      height: String(el.height),
+      sill: String(el.sill),
+      mark: el.mark,
+      fireRating: el.fireRating,
+    };
+  }
+  // window / floor / roof / stair / room / grid: every scalar field.
+  const drafts: Record<string, string> = {};
+  for (const [key, value] of Object.entries(el)) {
+    if (typeof value === 'number' || typeof value === 'string') {
+      drafts[key] = String(value);
+    }
+  }
+  return drafts;
 }

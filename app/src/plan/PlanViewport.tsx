@@ -3,8 +3,11 @@ import type {
   BimModel,
   DoorElement,
   MissionTask,
+  WindowElement,
   WallElement,
 } from '../domain/types';
+import { PlanBelowLayers, PlanWindows } from './PlanLayers';
+import { roomBoundary } from '../domain/derived';
 import {
   computeWallPlanSegments,
   getWallDirection,
@@ -52,56 +55,37 @@ const DEFAULT_VIEWBOX = {
   height: 5600,
 };
 
-function detectClosedRectRoomStats(
-  walls: WallElement[]
-): { areaM2: string; volumeM3: string; avgHeightMm: number } | null {
-  if (walls.length < 4) return null;
-  const near = (a: number, b: number) => Math.abs(a - b) <= 20;
-  const matchesSeg = (
-    w: WallElement,
-    p1: [number, number],
-    p2: [number, number]
-  ) =>
-    (near(w.start[0], p1[0]) &&
-      near(w.start[1], p1[1]) &&
-      near(w.end[0], p2[0]) &&
-      near(w.end[1], p2[1])) ||
-    (near(w.end[0], p1[0]) &&
-      near(w.end[1], p1[1]) &&
-      near(w.start[0], p2[0]) &&
-      near(w.start[1], p2[1]));
-
-  const edges: Array<[[number, number], [number, number]]> = [
-    [
-      [0, 0],
-      [6000, 0],
-    ],
-    [
-      [6000, 0],
-      [6000, 4000],
-    ],
-    [
-      [6000, 4000],
-      [0, 4000],
-    ],
-    [
-      [0, 4000],
-      [0, 0],
-    ],
-  ];
-
-  const matchedWalls = edges
-    .map((e) => walls.find((w) => matchesSeg(w, e[0], e[1])))
-    .filter((w): w is WallElement => Boolean(w));
-
-  if (matchedWalls.length < 4) return null;
-
-  const avgHeightMm = Math.round(
-    matchedWalls.reduce((sum, w) => sum + w.height, 0) / 4
+/**
+ * Closed region enclosed by the walls around the centre of their bounding box.
+ * Shown as a gentle hint until the player places a real Room.
+ */
+function detectEnclosedRegion(
+  model: BimModel
+): { areaM2: string; volumeM3: string; avgHeightMm: number; cx: number; cz: number } | null {
+  const walls = model.elements.filter((e): e is WallElement => e.type === 'wall');
+  if (walls.length < 4 || model.elements.some((e) => e.type === 'room')) return null;
+  const xs = walls.flatMap((w) => [w.start[0], w.end[0]]);
+  const zs = walls.flatMap((w) => [w.start[1], w.end[1]]);
+  const cx = Math.round((Math.min(...xs) + Math.max(...xs)) / 2);
+  const cz = Math.round((Math.min(...zs) + Math.max(...zs)) / 2);
+  const level = model.levels[0]?.id ?? 'l0';
+  const probe = roomBoundary(
+    { id: 'probe', type: 'room', name: '', number: '', levelId: level, seedPoint: [cx, cz] },
+    model
   );
-  const areaM2 = (6 * 4).toFixed(1);
-  const volumeM3 = (24 * (avgHeightMm / 1000)).toFixed(1);
-  return { areaM2, volumeM3, avgHeightMm };
+  if (probe.open || probe.area <= 0) return null;
+  const inLevel = walls.filter((w) => w.baseLevelId === level);
+  const avgHeightMm = Math.round(
+    inLevel.reduce((sum, w) => sum + w.height, 0) / Math.max(1, inLevel.length)
+  );
+  const area = probe.area / 1_000_000;
+  return {
+    areaM2: area.toFixed(1),
+    volumeM3: (area * (avgHeightMm / 1000)).toFixed(1),
+    avgHeightMm,
+    cx,
+    cz,
+  };
 }
 
 export const PlanViewport: React.FC<PlanViewportProps> = ({
@@ -143,12 +127,16 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
     () => model.elements.filter((e): e is WallElement => e.type === 'wall'),
     [model.elements]
   );
+  const openings = useMemo(
+    () => model.elements.filter((e): e is DoorElement | WindowElement => e.type === 'door' || e.type === 'window'),
+    [model.elements]
+  );
   const doors = useMemo(
     () => model.elements.filter((e): e is DoorElement => e.type === 'door'),
     [model.elements]
   );
 
-  const roomStats = useMemo(() => detectClosedRectRoomStats(walls), [walls]);
+  const roomStats = useMemo(() => detectEnclosedRegion(model), [model]);
 
   const viewBoxStr = useMemo(() => {
     const w = DEFAULT_VIEWBOX.width / zoom;
@@ -408,23 +396,12 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         {/* Grid */}
         {gridLines}
 
-        {/* Live Closed Room Area & Volume Stamp (when 4 walls enclose room) */}
+        {/* Enclosed-region hint (real geometry) until a Room element exists */}
         {roomStats && (
           <g data-testid="plan-room-stamp" pointerEvents="none">
             <rect
-              x={100}
-              y={100}
-              width={5800}
-              height={3800}
-              fill={
-                isDark
-                  ? 'rgba(56, 189, 248, 0.09)'
-                  : 'rgba(14, 165, 233, 0.09)'
-              }
-            />
-            <rect
-              x={1850}
-              y={1700}
+              x={roomStats.cx - 1150}
+              y={roomStats.cz - 300}
               width={2300}
               height={600}
               rx={90}
@@ -433,18 +410,18 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
               strokeWidth={24}
             />
             <text
-              x={3000}
-              y={1960}
+              x={roomStats.cx}
+              y={roomStats.cz - 40}
               textAnchor="middle"
               fill="#38BDF8"
               fontSize={145}
               fontWeight="800"
             >
-              MAHAL 101 · {roomStats.areaM2} m²
+              KAPALI ALAN · {roomStats.areaM2} m²
             </text>
             <text
-              x={3000}
-              y={2170}
+              x={roomStats.cx}
+              y={roomStats.cz + 170}
               textAnchor="middle"
               fill={isDark ? '#E2E8F0' : '#475569'}
               fontSize={120}
@@ -554,11 +531,20 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           )}
         </g>
 
+        <PlanBelowLayers
+          model={model}
+          selectedId={selectedId}
+          failedElementIds={failedElementIds}
+          showLabels={showLabels}
+          isDark={isDark}
+          onSelect={onSelect}
+        />
+
         {/* Walls */}
         {walls.map((wall) => {
           const isSelected = selectedId === wall.id;
           const isFailed = failedElementIds.has(wall.id);
-          const hostedDoors = doors.filter((d) => d.hostWallId === wall.id);
+          const hostedDoors = openings.filter((d) => d.hostWallId === wall.id);
           const segments = computeWallPlanSegments(wall, hostedDoors);
           const [dx, dz] = getWallDirection(wall);
           const nx = -dz;
@@ -826,6 +812,15 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
             </g>
           );
         })}
+
+        <PlanWindows
+          model={model}
+          selectedId={selectedId}
+          failedElementIds={failedElementIds}
+          showLabels={showLabels}
+          isDark={isDark}
+          onSelect={onSelect}
+        />
 
         {/* Live Wall Creation Preview */}
         {activeTool === 'wall' && wallPreview && (

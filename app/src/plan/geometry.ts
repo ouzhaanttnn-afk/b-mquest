@@ -1,4 +1,4 @@
-import type { BimModel, DoorElement, WallElement } from '../domain/types';
+import type { BimModel, DoorElement, WallElement, WindowElement } from '../domain/types';
 
 export interface WallSegmentSpan {
   fromOffset: number;
@@ -35,7 +35,7 @@ export function getWallDirection(wall: WallElement): [number, number] {
  */
 export function computeWallPlanSegments(
   wall: WallElement,
-  doorsOnWall: DoorElement[]
+  doorsOnWall: Array<{ offset: number; width: number }>
 ): WallSegmentSpan[] {
   const totalLen = getWallLengthMm(wall);
   if (totalLen <= 0) return [];
@@ -79,8 +79,8 @@ export function buildWallBoxes3D(
 
   const hostedDoors = model.elements
     .filter(
-      (e): e is DoorElement =>
-        e.type === 'door' &&
+      (e): e is DoorElement | WindowElement =>
+        (e.type === 'door' || e.type === 'window') &&
         e.hostWallId === wall.id &&
         e.offset >= 0 &&
         e.offset + e.width <= totalLen &&

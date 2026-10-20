@@ -1,4 +1,13 @@
 import React from 'react';
+import type { CommandResult, MissionSessionState } from '../../domain/commands';
+import {
+  CreateExtraPanel,
+  GenericElementForm,
+  LevelsPanel,
+  TypePanel,
+  WallRelationFields,
+} from './ExtendedPanels';
+import { elementLabelTr, elementMetaTr } from './elementLabels';
 import type { WallElement } from '../../domain/types';
 import type { LearningConceptInfo } from '../../domain/pedagogy';
 import type { MissionTask, BimModel, BimElement, EditableField } from '../../domain/types';
@@ -17,6 +26,8 @@ export interface PropertyInspectorProps {
   fieldError: string | null;
   activeTool: "select" | "wall" | "door";
   task: MissionTask;
+  session: MissionSessionState;
+  applyResult: (res: CommandResult) => void;
   handleCreateWallSubmit: (e: React.FormEvent) => void;
   setActiveTool: React.Dispatch<React.SetStateAction<"select" | "wall" | "door">>;
   setWallForm: React.Dispatch<React.SetStateAction<{ name: string; baseLevelId: string; startX: string; startZ: string; endX: string; endZ: string; height: string; thickness: string; }>>;
@@ -54,6 +65,8 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
   fieldError,
   activeTool,
   task,
+  session,
+  applyResult,
   handleCreateWallSubmit,
   setActiveTool,
   setWallForm,
@@ -438,6 +451,11 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   </form>
                 )}
 
+              <CreateExtraPanel model={model} session={session} applyResult={applyResult} />
+              {task.permissions.editableFields.includes('elevation') && (
+                <LevelsPanel model={model} session={session} applyResult={applyResult} />
+              )}
+
               {/* DOM OBJECT LIST (Keyboard-Operable Selection Alternative) */}
               <div
                 className="bq-object-list-section"
@@ -497,12 +515,10 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                               {el.id}
                             </span>
                             <span className="bq-obj-type">
-                              {el.type === 'wall' ? 'Duvar' : 'Kapı'}
+                              {elementLabelTr(el)}
                             </span>
                             <span className="bq-obj-meta">
-                              {el.type === 'wall'
-                                ? `Y:${el.height} · K:${el.thickness} mm`
-                                : `Host:${el.hostWallId} · ${el.mark}`}
+                              {elementMetaTr(el)}
                             </span>
                           </button>
                         </li>
@@ -551,6 +567,24 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                         </span>
                       </strong>
                     </div>
+
+                    <WallRelationFields
+                      wall={selectedElement}
+                      model={model}
+                      selectedElement={selectedElement}
+                      editDrafts={editDrafts}
+                      setEditDrafts={setEditDrafts}
+                      isFieldEditable={isFieldEditable}
+                      commitSingleField={commitSingleField}
+                      handleFieldKeyDown={handleFieldKeyDown}
+                    />
+                    <TypePanel
+                      model={model}
+                      selectedElement={selectedElement}
+                      session={session}
+                      canEditType={task.permissions.editableFields.includes('typeParams')}
+                      applyResult={applyResult}
+                    />
 
                     {/* Base Constraint (Level) */}
                     <label
@@ -859,7 +893,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : selectedElement.type === 'door' ? (
                   /* Door Property Inspector */
                   <div
                     className="bq-prop-form"
@@ -1017,6 +1051,16 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                       </label>
                     </div>
                   </div>
+                ) : (
+                  <GenericElementForm
+                    model={model}
+                    selectedElement={selectedElement}
+                    editDrafts={editDrafts}
+                    setEditDrafts={setEditDrafts}
+                    isFieldEditable={isFieldEditable}
+                    commitSingleField={commitSingleField}
+                    handleFieldKeyDown={handleFieldKeyDown}
+                  />
                 )}
               </div>
             </div>

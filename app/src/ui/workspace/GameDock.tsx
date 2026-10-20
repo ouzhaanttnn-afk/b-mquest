@@ -1,4 +1,5 @@
 import React from 'react';
+import { elementIcon, elementMetaTr } from './elementLabels';
 import type { MissionSessionState } from '../../domain/commands';
 import type { LearningConceptInfo } from '../../domain/pedagogy';
 import type { BimElement, EditableField } from '../../domain/types';
@@ -39,7 +40,7 @@ export const GameDock: React.FC<GameDockProps> = ({
               <div className="bq-quick-hud" data-testid="quick-action-hud">
                 <div className="bq-quick-hud-info">
                   <span className="bq-quick-hud-badge">
-                    {selectedElement.type === 'wall' ? '🧱' : '🚪'}{' '}
+                    {elementIcon(selectedElement)}{' '}
                     {selectedElement.id}
                   </span>
                   <strong className="bq-quick-hud-name">
@@ -47,8 +48,8 @@ export const GameDock: React.FC<GameDockProps> = ({
                   </strong>
                   <span className="bq-quick-hud-meta">
                     {selectedElement.type === 'wall'
-                      ? `U:${getWallLengthMm(selectedElement)} · Y:${selectedElement.height} · K:${selectedElement.thickness} mm`
-                      : `Duvar:${selectedElement.hostWallId} · Ofset:${selectedElement.offset} · ${selectedElement.width}×${selectedElement.height} mm`}
+                      ? `U:${getWallLengthMm(selectedElement)} · ${elementMetaTr(selectedElement)}`
+                      : elementMetaTr(selectedElement)}
                   </span>
                 </div>
 

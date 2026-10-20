@@ -1,10 +1,16 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import taskSchemaJson from '../schemas/task.schema.json';
+import {
+  fieldValue,
+  isOpening,
+  roomBoundary,
+  wallsOf,
+} from './derived';
 import type {
   BimModel,
   CriterionEvidence,
-  DoorElement,
   EvaluationResult,
+  TaskCriterion,
   MissionTask,
   RectangleCriterion,
   WallElement,
@@ -48,16 +54,29 @@ export function modelErrors(model: unknown): string[] {
     }
   }
 
+  const typeIds = new Map((m.types ?? []).map((t) => [t.id, t]));
+  if (typeIds.size !== (m.types ?? []).length) errors.push('E_DUPLICATE_ID');
+
+  const needLevel = (id: string, levelId: string) => {
+    if (!levels.has(levelId)) errors.push(`E_LEVEL:${id}`);
+  };
+
   for (const e of m.elements) {
+    const typeId = (e as { typeId?: string }).typeId;
+    if (typeId !== undefined) {
+      const t = typeIds.get(typeId);
+      if (!t || t.category !== e.type) errors.push(`E_TYPE:${e.id}`);
+    }
     if (e.type === 'wall') {
-      if (!levels.has(e.baseLevelId)) errors.push(`E_LEVEL:${e.id}`);
+      needLevel(e.id, e.baseLevelId);
+      if (e.topConstraint) needLevel(e.id, e.topConstraint);
       if (
         (e.start[0] !== e.end[0] && e.start[1] !== e.end[1]) ||
         same(e.start, e.end)
       ) {
         errors.push(`E_WALL_AXIS:${e.id}`);
       }
-    } else {
+    } else if (e.type === 'door' || e.type === 'window') {
       const host = elements.get(e.hostWallId);
       if (!host || host.type !== 'wall') {
         errors.push(`E_HOST:${e.id}`);
@@ -69,17 +88,33 @@ export function modelErrors(model: unknown): string[] {
       ) {
         errors.push(`E_OPENING_BOUNDS:${e.id}`);
       }
+    } else if (e.type === 'floor') {
+      needLevel(e.id, e.levelId);
+    } else if (e.type === 'roof') {
+      needLevel(e.id, e.baseLevelId);
+    } else if (e.type === 'room') {
+      needLevel(e.id, e.levelId);
+    } else if (e.type === 'stair') {
+      needLevel(e.id, e.baseLevelId);
+      needLevel(e.id, e.topLevelId);
+      const lo = levels.get(e.baseLevelId);
+      const hi = levels.get(e.topLevelId);
+      if (lo && hi && hi.elevation <= lo.elevation) {
+        errors.push(`E_STAIR_LEVELS:${e.id}`);
+      }
+    } else if (e.type === 'grid') {
+      if (same(e.start, e.end)) errors.push(`E_GRID_DEGENERATE:${e.id}`);
     }
   }
 
-  const doors = m.elements
-    .filter((e): e is DoorElement => e.type === 'door')
+  const openings = m.elements
+    .filter(isOpening)
     .sort((a, b) => a.id.localeCompare(b.id, 'en'));
 
-  for (let i = 0; i < doors.length; i++) {
-    for (let j = i + 1; j < doors.length; j++) {
-      const a = doors[i];
-      const b = doors[j];
+  for (let i = 0; i < openings.length; i++) {
+    for (let j = i + 1; j < openings.length; j++) {
+      const a = openings[i];
+      const b = openings[j];
       if (
         a.hostWallId === b.hostWallId &&
         Math.max(a.offset, b.offset) <
@@ -126,9 +161,19 @@ export function taskErrors(task: unknown): string[] {
       errors.push('E_CRITERION_LEVEL');
     }
     if (c.type === 'property') {
-      const numeric = ['height', 'thickness', 'width', 'offset', 'sill'].includes(
-        c.field
-      );
+      const numeric = [
+        'height',
+        'thickness',
+        'width',
+        'offset',
+        'sill',
+        'topOffset',
+        'slope',
+        'overhang',
+        'risers',
+        'riserHeight',
+        'treadDepth',
+      ].includes(c.field);
       if (
         numeric !== (typeof c.expected === 'number') ||
         (!numeric && c.tolerance !== 0)
@@ -150,8 +195,22 @@ export function taskErrors(task: unknown): string[] {
 
 export function permissionErrors(task: MissionTask, model: BimModel): string[] {
   const errors: string[] = [];
-  if (!same(task.initialModel.levels, model.levels)) {
+  const stripElevation = (levels: BimModel['levels']) =>
+    levels.map(({ id, name }) => ({ id, name }));
+  const elevationEditable = task.permissions.editableFields.includes('elevation');
+  if (
+    elevationEditable
+      ? !same(stripElevation(task.initialModel.levels), stripElevation(model.levels))
+      : !same(task.initialModel.levels, model.levels)
+  ) {
     errors.push('E_LEVELS_IMMUTABLE');
+  }
+
+  if (
+    !task.permissions.editableFields.includes('typeParams') &&
+    !same(task.initialModel.types ?? [], model.types ?? [])
+  ) {
+    errors.push('E_TYPES_IMMUTABLE');
   }
 
   const initial = new Map(task.initialModel.elements.map((e) => [e.id, e]));
@@ -165,12 +224,24 @@ export function permissionErrors(task: MissionTask, model: BimModel): string[] {
     }
     const oldRecord = old as unknown as Record<string, unknown>;
     const nowRecord = now as unknown as Record<string, unknown>;
-    for (const key of Object.keys(oldRecord)) {
-      if (
-        !same(oldRecord[key], nowRecord[key]) &&
-        (!task.permissions.editableSeedIds.includes(id) ||
-          !task.permissions.editableFields.includes(key as never))
-      ) {
+    const editable = task.permissions.editableFields as string[];
+    const seedEditable = task.permissions.editableSeedIds.includes(id);
+    const keys = new Set([...Object.keys(oldRecord), ...Object.keys(nowRecord)]);
+    for (const key of keys) {
+      if (same(oldRecord[key], nowRecord[key])) continue;
+      // Values that follow from an allowed relationship edit are allowed too:
+      // a Top Constraint / Level change drives height, a Type edit drives
+      // the numeric type parameters.
+      const constrained =
+        key === 'height' &&
+        (now as { topConstraint?: string | null }).topConstraint &&
+        ['elevation', 'topOffset', 'topConstraint'].some((f) => editable.includes(f));
+      const typed =
+        ['thickness', 'width', 'height'].includes(key) &&
+        (now as { typeId?: string }).typeId &&
+        ['typeParams', 'typeId'].some((f) => editable.includes(f));
+      if (constrained || typed) continue;
+      if (!seedEditable || !editable.includes(key)) {
         errors.push(`E_SEED_FIELD:${id}:${key}`);
       }
     }
@@ -241,6 +312,102 @@ function rectangle(model: BimModel, c: RectangleCriterion): boolean {
   return match(0, new Set());
 }
 
+const evidence = (
+  c: TaskCriterion,
+  pass: boolean,
+  actual: unknown,
+  expected: unknown,
+  tolerance = 0
+): CriterionEvidence => ({
+  id: c.id,
+  pass,
+  actual,
+  expected,
+  tolerance,
+  message: c.message,
+});
+
+/** Criteria that look at relationships between elements, not one field. */
+function evaluateExtended(c: TaskCriterion, m: BimModel): CriterionEvidence | null {
+  if (c.type === 'exists') {
+    const where = Object.entries(c.where ?? {});
+    const hits = m.elements.filter(
+      (e) =>
+        e.type === c.category &&
+        where.every(([k, v]) => fieldValue(e, k, m) === v)
+    );
+    return evidence(c, hits.length >= 1, hits.length, '≥ 1 nesne');
+  }
+  if (c.type === 'hosted') {
+    const need = c.min ?? 1;
+    const ids = new Set(wallsOf(m).map((w) => w.id));
+    const n = m.elements.filter(
+      (e) => isOpening(e) && e.type === c.category && ids.has(e.hostWallId)
+    ).length;
+    return evidence(c, n >= need, n, `≥ ${need} duvara bağlı`);
+  }
+  if (c.type === 'constraint') {
+    const targets = c.elementId
+      ? wallsOf(m).filter((w) => w.id === c.elementId)
+      : wallsOf(m);
+    const wrong = targets.filter((w) => w.topConstraint !== c.topConstraint);
+    return evidence(
+      c,
+      targets.length > 0 && wrong.length === 0,
+      wrong.length ? `Bağlı değil: ${wrong.map((w) => w.id).join(', ')}` : 'Tamam',
+      `Top Constraint = ${c.topConstraint}`
+    );
+  }
+  if (c.type === 'roomClosed') {
+    const rooms = m.elements.filter(
+      (e) => e.type === 'room' && (!c.roomId || e.id === c.roomId)
+    );
+    const open = rooms.filter((r) => r.type === 'room' && roomBoundary(r, m).open);
+    return evidence(
+      c,
+      rooms.length > 0 && open.length === 0,
+      rooms.length === 0
+        ? 'Room yok'
+        : open.length
+        ? `Açık: ${open.map((r) => r.id).join(', ')}`
+        : 'Kapalı',
+      'Kapalı sınır'
+    );
+  }
+  if (c.type === 'typeUsage') {
+    const all = m.elements.filter((e) => e.type === c.category);
+    const used = all.filter((e) => (e as { typeId?: string }).typeId === c.typeId);
+    const pass =
+      c.count !== undefined
+        ? used.length === c.count
+        : all.length > 0 && used.length === all.length;
+    return evidence(
+      c,
+      pass,
+      `${used.length}/${all.length}`,
+      c.count !== undefined ? `${c.count} adet ${c.typeId}` : `Hepsi ${c.typeId}`
+    );
+  }
+  if (c.type === 'allEqual') {
+    const all = m.elements.filter((e) => e.type === c.category);
+    const values = [...new Set(all.map((e) => String(fieldValue(e, c.field, m))))];
+    return evidence(c, all.length > 0 && values.length === 1, values.join(' / ') || '—', 'Hepsi aynı');
+  }
+  if (c.type === 'compare') {
+    const a = m.elements.find((e) => e.id === c.elementId);
+    const b = m.elements.find((e) => e.id === c.otherElementId);
+    const va = a ? fieldValue(a, c.field, m) : null;
+    const vb = b ? fieldValue(b, c.otherField, m) : null;
+    const pass =
+      va !== null && vb !== null &&
+      (typeof va === 'number' && typeof vb === 'number'
+        ? Math.abs(va - vb) <= c.tolerance
+        : va === vb);
+    return evidence(c, pass, `${c.elementId}: ${va ?? '—'}`, `${c.otherElementId}: ${vb ?? '—'}`, c.tolerance);
+  }
+  return null;
+}
+
 export function evaluate(
   task: unknown,
   model: unknown,
@@ -269,6 +436,8 @@ export function evaluate(
   const results: CriterionEvidence[] = [...t.criteria]
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .map((c) => {
+      const extended = evaluateExtended(c, m);
+      if (extended) return extended;
       let actual: unknown;
       let pass: boolean;
       if (c.type === 'count') {

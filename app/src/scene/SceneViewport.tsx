@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SceneExtras } from './SceneExtras';
 import { Canvas } from '@react-three/fiber';
 import { Edges, Grid, Html, Line, OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -429,6 +430,15 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
           </group>
         );
       })}
+
+      <SceneExtras
+        model={model}
+        selectedId={selectedId}
+        failedElementIds={failedElementIds}
+        xrayMode={xrayMode}
+        isDark={isDark}
+        onSelect={onSelect}
+      />
     </>
   );
 };
