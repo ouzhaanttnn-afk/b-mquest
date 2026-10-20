@@ -638,6 +638,49 @@
               "tolerance",
               "message"
             ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "type": {
+                "const": "modelClean"
+              },
+              "codes": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "ROOM_OPEN_BOUNDARY",
+                    "ROOM_NOT_PLACED",
+                    "WALL_WRONG_LEVEL",
+                    "WALL_TOP_MISMATCH",
+                    "HOST_MISSING",
+                    "OPENING_OUT_OF_WALL",
+                    "TYPE_INCONSISTENT",
+                    "SILL_INCONSISTENT",
+                    "ROOM_DATA_MISSING",
+                    "TAG_MISSING",
+                    "DIMENSION_MISSING"
+                  ]
+                },
+                "maxItems": 11,
+                "uniqueItems": true
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "message"
+            ]
           }
         ]
       },

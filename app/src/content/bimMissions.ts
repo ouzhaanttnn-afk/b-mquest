@@ -2,6 +2,7 @@ import type {
   BimElement,
   BimModel,
   CreatableElementType,
+  DoorElement,
   EditableField,
   ElementType,
   MissionTask,
@@ -61,6 +62,40 @@ const window1 = (
   mark: `W-${id.slice(3)}`,
   ...extra,
 });
+
+const door1 = (
+  id: string,
+  host: string,
+  offset: number,
+  extra: Partial<DoorElement> = {}
+): DoorElement => ({
+  id,
+  type: 'door',
+  name: 'Kapı',
+  hostWallId: host,
+  offset,
+  width: 900,
+  height: 2100,
+  sill: 0,
+  mark: `D-${id.slice(1).padStart(2, '0')}`,
+  fireRating: 'none',
+  ...extra,
+});
+
+const DT900: ElementType = {
+  id: 'dt900',
+  category: 'door',
+  family: 'Single-Flush',
+  name: '900 x 2100mm',
+  params: { width: 900, height: 2100 },
+};
+const DT800: ElementType = {
+  id: 'dt800',
+  category: 'door',
+  family: 'Single-Flush',
+  name: '800 x 2100mm',
+  params: { width: 800, height: 2100 },
+};
 
 interface Spec {
   lesson: Partial<RevitLessonMeta> & Pick<RevitLessonMeta, 'objective' | 'hintLevels' | 'primaryFields'>;
@@ -361,7 +396,7 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
   },
 
   // ---- Bölüm 6: Model QA --------------------------------------------------
-  m34: {
+  m38: {
     lesson: {
       objective: 'Salon (r1) odası "sınır kapalı değil" uyarısı veriyor. Boşluğu bul ve duvarla kapat.',
       hintLevels: hints(
@@ -385,6 +420,138 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
     criteria: [
       { id: 'c_cl', type: 'roomClosed', roomId: 'r1', message: 'r1 odasının sınırı kapalı olmalı.' },
       { id: 'c_n', type: 'count', elementType: 'wall', expected: 4, message: 'Duvar sayısı 4 kalmalı.' },
+      { id: 'c_clean', type: 'modelClean', codes: ['ROOM_OPEN_BOUNDARY'], message: 'Oda sınırı uyarısı kalmamalı.' },
+    ],
+  },
+  m39: {
+    lesson: {
+      objective: 'Model kontrolü, bir duvarın diğerlerinden farklı bir kata bağlandığını söylüyor. Sorunu bul ve düzelt.',
+      hintLevels: hints(
+        'Duvarların hepsi aynı yüksekliğe oturmuyor; 3B sahnede kayan bir duvar var.',
+        'Dört duvardan yalnızca biri farklı bir kata bağlı.',
+        'Duvarın alt kat bağlantısı (Base Constraint) diğerlerinden farklı.',
+        '1) Kayan duvarı bul. 2) Base Constraint değerini diğerleriyle aynı yap. 3) Kontrol Et.'
+      ),
+      primaryFields: ['baseLevelId'],
+    },
+    levels: [L0, l1(3000)],
+    elements: [
+      wall('w1', [0, 0], [6000, 0]),
+      wall('w2', [6000, 0], [6000, 4000]),
+      wall('w3', [6000, 4000], [0, 4000]),
+      wall('w4', [0, 4000], [0, 0], { baseLevelId: 'l1' }),
+    ],
+    editable: ['baseLevelId'],
+    seeds: ['w4'],
+    criteria: [
+      { id: 'c_clean', type: 'modelClean', codes: ['WALL_WRONG_LEVEL'], message: 'Duvar kat bağlantısı tutarlı olmalı.' },
+      { id: 'c_w4', type: 'property', elementId: 'w4', field: 'baseLevelId', expected: 'l0', tolerance: 0, message: 'w4 Zemin Kat’a bağlı olmalı.' },
+    ],
+  },
+  m40: {
+    lesson: {
+      objective: 'Üç kapıdan biri diğerlerinden farklı tipte (800 mm). Hepsini aynı standart tipe (900 × 2100) getir.',
+      hintLevels: hints(
+        'Kapıların biri diğerlerinden dar görünüyor.',
+        'Üç kapıdan yalnızca biri farklı tipte.',
+        'Kapı genişliği tipten gelir; örnek (Instance) üzerinden değil, tip atayarak çöz.',
+        '1) Dar kapıyı seç. 2) Tip seçiciden 900 x 2100mm tipini ata. 3) Kontrol Et.'
+      ),
+      primaryFields: ['typeId'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 500, { typeId: 'dt900' }),
+      door1('d2', 'w1', 2500, { typeId: 'dt900' }),
+      door1('d3', 'w1', 4500, { typeId: 'dt800', width: 800 }),
+    ],
+    types: [DT900, DT800],
+    editable: ['typeId'],
+    seeds: ['d1', 'd2', 'd3'],
+    criteria: [
+      { id: 'c_clean', type: 'modelClean', codes: ['TYPE_INCONSISTENT'], message: 'Kapı tipleri tutarlı olmalı.' },
+      { id: 'c_t', type: 'typeUsage', category: 'door', typeId: 'dt900', message: 'Tüm kapılar 900 x 2100mm olmalı.' },
+    ],
+  },
+  m41: {
+    lesson: {
+      objective: 'Güney cephesinde dört pencereden birinin parapeti diğerlerinden farklı. Cephe hizasını düzelt.',
+      hintLevels: hints(
+        'Cepheye yandan bakınca pencere alt kenarları aynı hizada olmalı.',
+        'Dört pencereden biri farklı bir parapet yüksekliğinde.',
+        'Sill Height değerlerini karşılaştır.',
+        '1) Hizadan çıkan pencereyi bul. 2) Sill Height değerini diğerleriyle eşitle. 3) Kontrol Et.'
+      ),
+      primaryFields: ['sill'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      window1('win1', 'w1', 500),
+      window1('win2', 'w1', 2000),
+      window1('win3', 'w1', 3500, { sill: 600 }),
+      window1('win4', 'w1', 4800, { width: 900 }),
+    ],
+    editable: ['sill'],
+    seeds: ['win1', 'win2', 'win3', 'win4'],
+    criteria: [
+      { id: 'c_clean', type: 'modelClean', codes: ['SILL_INCONSISTENT'], message: 'Parapet yükseklikleri tutarlı olmalı.' },
+      { id: 'c_eq', type: 'allEqual', category: 'window', field: 'sill', message: 'Tüm pencere parapetleri eşit olmalı.' },
+    ],
+  },
+  m42: {
+    lesson: {
+      objective: 'İki oda var; birinin numarası boş. Pafta ve metraj için numarasını (102) gir.',
+      hintLevels: hints(
+        'Odalardan birinde veri eksik; planda etiketine bak.',
+        'İki odadan yalnızca biri eksik.',
+        'Kimlik verisi (Identity Data) alanlarından Number boş.',
+        '1) Numarasız odayı seç. 2) Numarasını 102 yap. 3) Kontrol Et.'
+      ),
+      primaryFields: ['number'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      wall('w5', [3000, 0], [3000, 4000]),
+      { id: 'r1', type: 'room', name: 'Salon', number: '101', levelId: 'l0', seedPoint: [1500, 2000] },
+      { id: 'r2', type: 'room', name: 'Yatak Odası', number: '', levelId: 'l0', seedPoint: [4500, 2000] },
+    ],
+    editable: ['number'],
+    seeds: ['r2'],
+    criteria: [
+      { id: 'c_clean', type: 'modelClean', codes: ['ROOM_DATA_MISSING'], message: 'Oda verisi eksiksiz olmalı.' },
+      { id: 'c_n', type: 'exists', category: 'room', where: { number: '102' }, message: '102 numaralı oda gerekli.' },
+    ],
+  },
+  m43: {
+    lesson: {
+      objective: 'Baş Mimar denetimi: modelde birden fazla gizli sorun var. Hepsini bul ve sıfır uyarıya ulaş.',
+      hintLevels: hints(
+        'Üç ayrı kategoride tutarsızlık var; Uyarılar özetine bak.',
+        'Duvar, pencere ve oda nesnelerini gözden geçir.',
+        'Üst kot, parapet ve numara alanlarını komşularıyla karşılaştır.',
+        '1) Alçak duvarı 3000 mm yap. 2) Farklı parapetli pencereyi eşitle. 3) Boş oda numarasını doldur. 4) Kontrol Et.'
+      ),
+      primaryFields: ['height', 'sill', 'number'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0]),
+      wall('w2', [6000, 0], [6000, 4000]),
+      wall('w3', [6000, 4000], [0, 4000], { height: 2600 }),
+      wall('w4', [0, 4000], [0, 0]),
+      window1('win1', 'w1', 800),
+      window1('win2', 'w1', 3000),
+      window1('win3', 'w1', 4500, { sill: 700, width: 900 }),
+      { id: 'r1', type: 'room', name: 'Salon', number: '', levelId: 'l0', seedPoint: [3000, 2000] },
+    ],
+    editable: ['height', 'sill', 'number'],
+    seeds: ['w3', 'win3', 'r1'],
+    minutes: 10,
+    criteria: [
+      { id: 'c_clean', type: 'modelClean', message: 'Modelde hiç uyarı kalmamalı.' },
     ],
   },
 };

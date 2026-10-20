@@ -14,6 +14,9 @@ export interface TopBarProps {
   setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
   onOpenLevels: () => void;
   showLevels: boolean;
+  /** null = hide the button. */
+  warningCount: number | null;
+  onOpenWarnings: () => void;
   setFieldError: React.Dispatch<React.SetStateAction<string | null>>;
   setMobileDrawerTab: React.Dispatch<React.SetStateAction<"brief" | "inspector" | "check">>;
   session: MissionSessionState;
@@ -35,6 +38,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   setActiveTool,
   onOpenLevels,
   showLevels,
+  warningCount,
+  onOpenWarnings,
   setFieldError,
   setMobileDrawerTab,
   session,
@@ -122,6 +127,18 @@ export const TopBar: React.FC<TopBarProps> = ({
               <span>{t.label}</span>
             </button>
           ))}
+
+          {warningCount !== null && (
+            <button
+              type="button"
+              className="bq-tool-btn"
+              data-testid="warnings-btn"
+              onClick={onOpenWarnings}
+              title="Model uyarıları"
+            >
+              <span>Uyarılar ({warningCount})</span>
+            </button>
+          )}
 
           {showLevels && (
             <button

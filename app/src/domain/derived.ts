@@ -74,32 +74,45 @@ export interface RoomBoundary {
   area: number;
 }
 
+interface WallGrid {
+  xs: number[];
+  zs: number[];
+  nx: number;
+  nz: number;
+  /** vBlock "i:j": wall between cell (i-1,j) and (i,j). */
+  vBlock: Set<string>;
+  /** hBlock "i:j": wall between cell (i,j-1) and (i,j). */
+  hBlock: Set<string>;
+}
+
 /**
- * Finds the region around a room's seed point that is closed by walls on the
- * room's level. Walls are axis-aligned centre-lines, so the plane is split
- * into a coordinate grid and flood-filled from the seed cell.
+ * Splits the plane into a coordinate grid from the wall centre-lines (plus
+ * optional extra coordinates) and records which cell borders are walls.
  */
-export function roomBoundary(room: RoomElement, model: BimModel): RoomBoundary {
-  const walls = wallsOf(model).filter((w) => w.baseLevelId === room.levelId);
-  const [sx0, sz0] = room.seedPoint;
-  const xsSet = new Set<number>([sx0]);
-  const zsSet = new Set<number>([sz0]);
+function buildWallGrid(
+  walls: WallElement[],
+  extraX: number[] = [],
+  extraZ: number[] = []
+): WallGrid {
+  const xsSet = new Set<number>(extraX);
+  const zsSet = new Set<number>(extraZ);
   for (const w of walls) {
     xsSet.add(w.start[0]);
     xsSet.add(w.end[0]);
     zsSet.add(w.start[1]);
     zsSet.add(w.end[1]);
   }
+  if (xsSet.size === 0) xsSet.add(0);
+  if (zsSet.size === 0) zsSet.add(0);
   const xs = [...xsSet].sort((a, b) => a - b);
   const zs = [...zsSet].sort((a, b) => a - b);
+  // A free outer ring marks "outside the building".
   xs.unshift(xs[0] - 1000);
   xs.push(xs[xs.length - 1] + 1000);
   zs.unshift(zs[0] - 1000);
   zs.push(zs[zs.length - 1] + 1000);
   const nx = xs.length - 1;
   const nz = zs.length - 1;
-
-  // Barriers: key "v:xIndex:zCell" blocks between cell x-1 and x in row z.
   const vBlock = new Set<string>();
   const hBlock = new Set<string>();
   for (const w of walls) {
@@ -121,56 +134,74 @@ export function roomBoundary(room: RoomElement, model: BimModel): RoomBoundary {
       }
     }
   }
+  return { xs, zs, nx, nz, vBlock, hBlock };
+}
 
-  // Seed cell (nudge seeds lying exactly on a wall line by +1 mm).
+const onRing = (g: WallGrid, i: number, j: number) =>
+  i === 0 || j === 0 || i === g.nx - 1 || j === g.nz - 1;
+
+/** Neighbour cells reachable from (i,j) without crossing a wall. */
+function openMoves(g: WallGrid, i: number, j: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  if (!g.vBlock.has(`${i + 1}:${j}`)) out.push([i + 1, j]);
+  if (!g.vBlock.has(`${i}:${j}`)) out.push([i - 1, j]);
+  if (!g.hBlock.has(`${i}:${j + 1}`)) out.push([i, j + 1]);
+  if (!g.hBlock.has(`${i}:${j}`)) out.push([i, j - 1]);
+  return out;
+}
+
+/**
+ * Finds the region around a room's seed point that is closed by walls on the
+ * room's level. Walls are axis-aligned centre-lines, so the plane is split
+ * into a coordinate grid and flood-filled from the seed cell.
+ */
+export function roomBoundary(room: RoomElement, model: BimModel): RoomBoundary {
+  const walls = wallsOf(model).filter((w) => w.baseLevelId === room.levelId);
+  const [sx0, sz0] = room.seedPoint;
+  const g = buildWallGrid(walls, [sx0], [sz0]);
+  const { xs, zs } = g;
+  const onLine = (v: number, arr: number[]) => arr.includes(v);
+
+  // Seed cell (a seed lying exactly on a wall line is nudged by +1 mm).
   const cellOf = (v: number, arr: number[]): number => {
     for (let i = 0; i < arr.length - 1; i++) {
       if (v >= arr[i] && v < arr[i + 1]) return i;
     }
     return -1;
   };
-  let si = cellOf(sx0 + (xsSet.has(sx0) ? 1 : 0), xs);
-  let sj = cellOf(sz0 + (zsSet.has(sz0) ? 1 : 0), zs);
+  const wallLineX = walls.some((w) => w.start[0] === sx0 && w.end[0] === sx0);
+  const wallLineZ = walls.some((w) => w.start[1] === sz0 && w.end[1] === sz0);
+  let si = cellOf(sx0 + (wallLineX && onLine(sx0, xs) ? 1 : 0), xs);
+  let sj = cellOf(sz0 + (wallLineZ && onLine(sz0, zs) ? 1 : 0), zs);
   if (si < 0) si = 0;
   if (sj < 0) sj = 0;
 
   const seen = new Set<string>([`${si}:${sj}`]);
   const queue: Array<[number, number]> = [[si, sj]];
   let gapAt: Point | undefined;
-  const leak = (i: number, j: number, ni: number, nj: number) => {
-    if (gapAt) return;
-    const edgeX = ni !== i ? (ni > i ? xs[i + 1] : xs[i]) : (xs[i] + xs[i + 1]) / 2;
-    const edgeZ = nj !== j ? (nj > j ? zs[j + 1] : zs[j]) : (zs[j] + zs[j + 1]) / 2;
-    gapAt = [Math.round(edgeX), Math.round(edgeZ)];
-  };
-  const onRing = (i: number, j: number) =>
-    i === 0 || j === 0 || i === nx - 1 || j === nz - 1;
-
   while (queue.length) {
     const [i, j] = queue.shift()!;
-    if (onRing(i, j)) {
+    if (onRing(g, i, j)) {
       if (!gapAt) gapAt = [Math.round(sx0), Math.round(sz0)];
       continue;
     }
-    const moves: Array<[number, number, boolean]> = [
-      [i + 1, j, vBlock.has(`${i + 1}:${j}`)],
-      [i - 1, j, vBlock.has(`${i}:${j}`)],
-      [i, j + 1, hBlock.has(`${i}:${j + 1}`)],
-      [i, j - 1, hBlock.has(`${i}:${j}`)],
-    ];
-    for (const [ni, nj, blocked] of moves) {
-      if (blocked) continue;
+    for (const [ni, nj] of openMoves(g, i, j)) {
       const key = `${ni}:${nj}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (onRing(ni, nj)) leak(i, j, ni, nj);
+      if (onRing(g, ni, nj) && !gapAt) {
+        // The unblocked edge between (i,j) and the outside is the gap.
+        const ex = ni !== i ? (ni > i ? xs[i + 1] : xs[i]) : (xs[i] + xs[i + 1]) / 2;
+        const ez = nj !== j ? (nj > j ? zs[j + 1] : zs[j]) : (zs[j] + zs[j + 1]) / 2;
+        gapAt = [Math.round(ex), Math.round(ez)];
+      }
       queue.push([ni, nj]);
     }
   }
 
   const reachedRing = [...seen].some((k) => {
     const [i, j] = k.split(':').map(Number);
-    return onRing(i, j);
+    return onRing(g, i, j);
   });
   if (reachedRing) return { open: true, gapAt, rects: [], area: 0 };
 
@@ -182,6 +213,65 @@ export function roomBoundary(room: RoomElement, model: BimModel): RoomBoundary {
     area += (xs[i + 1] - xs[i]) * (zs[j + 1] - zs[j]);
   }
   return { open: false, rects, area };
+}
+
+export interface EnclosedRegion {
+  rects: Rect[];
+  area: number;
+  /** A point inside the region, usable as a Room seed. */
+  seed: Point;
+}
+
+/** Every region on a level that the walls close completely. */
+export function enclosedRegions(model: BimModel, levelId: string): EnclosedRegion[] {
+  const walls = wallsOf(model).filter((w) => w.baseLevelId === levelId);
+  if (walls.length < 3) return [];
+  const g = buildWallGrid(walls);
+  const outside = new Set<string>();
+  const queue: Array<[number, number]> = [[0, 0]];
+  outside.add('0:0');
+  while (queue.length) {
+    const [i, j] = queue.shift()!;
+    for (const [ni, nj] of openMoves(g, i, j)) {
+      if (ni < 0 || nj < 0 || ni >= g.nx || nj >= g.nz) continue;
+      const key = `${ni}:${nj}`;
+      if (outside.has(key)) continue;
+      outside.add(key);
+      queue.push([ni, nj]);
+    }
+  }
+  const visited = new Set<string>();
+  const regions: EnclosedRegion[] = [];
+  for (let i = 0; i < g.nx; i++) {
+    for (let j = 0; j < g.nz; j++) {
+      const key = `${i}:${j}`;
+      if (outside.has(key) || visited.has(key)) continue;
+      const comp: Array<[number, number]> = [];
+      const stack: Array<[number, number]> = [[i, j]];
+      visited.add(key);
+      while (stack.length) {
+        const [ci, cj] = stack.pop()!;
+        comp.push([ci, cj]);
+        for (const [ni, nj] of openMoves(g, ci, cj)) {
+          const nk = `${ni}:${nj}`;
+          if (outside.has(nk) || visited.has(nk)) continue;
+          visited.add(nk);
+          stack.push([ni, nj]);
+        }
+      }
+      const rects = comp.map(
+        ([ci, cj]): Rect => [g.xs[ci], g.zs[cj], g.xs[ci + 1], g.zs[cj + 1]]
+      );
+      const area = rects.reduce((s, q) => s + (q[2] - q[0]) * (q[3] - q[1]), 0);
+      const first = rects[0];
+      regions.push({
+        rects,
+        area,
+        seed: [Math.round((first[0] + first[2]) / 2), Math.round((first[1] + first[3]) / 2)],
+      });
+    }
+  }
+  return regions;
 }
 
 /** Room area in m² (0 for an open room). */

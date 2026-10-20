@@ -27,6 +27,9 @@ import { isSoundMuted, playSound } from './sound';
 import { buildDraftsForElement } from './workspace/drafts';
 import { TopBar } from './workspace/TopBar';
 import { LevelsSheet } from './workspace/LevelsSheet';
+import { WarningsSheet } from './workspace/WarningsSheet';
+import { checkModel } from '../domain/modelCheck';
+import { getChapterForMissionId } from '../content/curriculum';
 import { ToolOptionsBar, type ToolOptions } from './workspace/ToolOptionsBar';
 import {
   EMPTY_CHAIN,
@@ -159,6 +162,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     session.model.levels[0]?.id ?? 'l0'
   );
   const [levelsOpen, setLevelsOpen] = useState(false);
+  const [warningsOpen, setWarningsOpen] = useState(false);
   const [toolOpts, setToolOpts] = useState<ToolOptions>({
     winWidth: '1200',
     winHeight: '1200',
@@ -276,6 +280,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   }, [activeTool, onSessionChange, recapModalOpen, resetModalOpen, session]);
 
   // Determine which element IDs have failed criteria in the last evaluation
+  const hideDiagnostics =
+    Number(getChapterForMissionId(task.id)?.id.slice(2) ?? 0) >= 6;
   const failedElementIds = useMemo(() => {
     const set = new Set<string>();
     if (!lastEvaluation || lastEvaluation.stale) return set;
@@ -285,10 +291,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         if (taskCrit && taskCrit.type === 'property') {
           set.add(taskCrit.elementId);
         }
+        // Chapters 1-5 may point at the offending elements; 6-7 must find them.
+        if (taskCrit && taskCrit.type === 'modelClean' && !hideDiagnostics) {
+          for (const issue of checkModel(model)) {
+            if (!taskCrit.codes || taskCrit.codes.includes(issue.code)) {
+              issue.elementIds.forEach((id) => set.add(id));
+            }
+          }
+        }
       }
     }
     return set;
-  }, [lastEvaluation, task.criteria]);
+  }, [lastEvaluation, task.criteria, model, hideDiagnostics]);
 
   const handleSelectElement = useCallback(
     (id: string | null) => {
@@ -457,6 +471,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   };
 
   const learningGuide = useMemo(() => getMissionLearningGuide(task), [task]);
+
+  // Model checks (Faz 3): chapters 6-7 hide the detailed list.
+  const modelIssues = useMemo(() => checkModel(model), [model]);
+  const advancedChapter = hideDiagnostics;
+  const hasModelCheckGoal = task.criteria.some((c) => c.type === 'modelClean');
   const pedagogicalSteps = useMemo(
     () => getPedagogicalFlowSteps(session.revision, lastEvaluation),
     [session.revision, lastEvaluation]
@@ -693,6 +712,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           activeTool={activeTool}
           setActiveTool={setActiveTool}
           onOpenLevels={() => setLevelsOpen(true)}
+          warningCount={
+            hasModelCheckGoal || modelIssues.length > 0 ? modelIssues.length : null
+          }
+          onOpenWarnings={() => setWarningsOpen(true)}
           showLevels={
             model.levels.length > 1 ||
             task.permissions.editableFields.includes('elevation')
@@ -894,6 +917,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           setRecapModalOpen={setRecapModalOpen}
           handleCriterionClick={handleCriterionClick}
           task={task}
+          revealedHintCount={revealedHints.length}
           model={model}
         />
 
@@ -933,7 +957,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onGoToNextMission={onGoToNextMission}
         />
 
-        <LevelsSheet
+        <WarningsSheet
+        open={warningsOpen}
+        issues={modelIssues}
+        advanced={advancedChapter}
+        evaluated={lastEvaluation !== null}
+        onFocus={(id) => handleSelectElement(id)}
+        onClose={() => setWarningsOpen(false)}
+      />
+      <LevelsSheet
         open={levelsOpen}
         session={session}
         activeLevelId={activeLevelId}

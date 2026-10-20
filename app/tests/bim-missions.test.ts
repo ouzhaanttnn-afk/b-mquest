@@ -61,7 +61,7 @@ const solutions: Record<string, Array<(s: MissionSessionState) => CommandResult>
   m22: [(s) => createRoomCommand(s, { levelId: 'l0', seedPoint: [3000, 2000], name: 'Salon', number: '101' })],
   m24: [(s) => updateTypeParamCommand(s, 'wn900', 'width', 1200)],
   m25: [(s) => updateElementProperty(s, 'w3', 'typeId', 'wt200')],
-  m34: [(s) => updateElementProperty(s, 'w3', 'end', [0, 4000])],
+  m38: [(s) => updateElementProperty(s, 'w3', 'end', [0, 4000])],
 };
 
 describe('Faz 1 — gerçek BIM nesnelerine bağlı görevler', () => {
@@ -94,8 +94,8 @@ describe('Faz 1 — gerçek BIM nesnelerine bağlı görevler', () => {
     expect(r.ok).toBe(false);
   });
 
-  it('m34: sınır açıkken oda hatası boşluk yerini içerir', () => {
-    const s = createInitialSession(missions.m34);
+  it('m38: sınır açıkken oda hatası boşluk yerini içerir', () => {
+    const s = createInitialSession(missions.m38);
     const res = evaluate(s.task, s.model, 0);
     expect(res.criteria.find((c) => c.id === 'c_cl')?.actual).toContain('r1');
   });

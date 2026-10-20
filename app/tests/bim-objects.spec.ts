@@ -130,9 +130,9 @@ test.describe('Faz 1 — gerçek BIM nesneleriyle oynanış', () => {
     await expect(page.getByTestId('results-recap-modal')).toBeVisible();
   });
 
-  test('m34: açık oda sınırı planda kırmızı işaretlenir', async ({ page }) => {
+  test('m38: açık oda sınırı planda kırmızı işaretlenir', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await openMission(page, 'm34', 33);
+    await openMission(page, 'm38', 37);
     await expect(page.getByTestId('plan-room-gap-r1')).toBeVisible();
   });
 
@@ -144,5 +144,29 @@ test.describe('Faz 1 — gerçek BIM nesneleriyle oynanış', () => {
     await page.getByTestId('create-room-btn').click();
     await noHorizontalOverflow(page);
     await page.screenshot({ path: path.join(SHOTS, 'faz1-320-room-form.png') });
+  });
+});
+
+test.describe('Faz 3 — model kontrolü', () => {
+  test('m39: teşhis listesi gizli; Kontrol Et sonrası yalnızca sayı ve kategori', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openMission(page, 'm39', 38);
+    await page.getByTestId('warnings-btn').click();
+    await expect(page.getByTestId('warnings-hidden')).toBeVisible();
+    await expect(page.locator('[data-testid^="warning-row-"]')).toHaveCount(0);
+    await page.getByTestId('close-warnings-btn').click();
+
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('criterion-remediation-c_clean')).toContainText('1 tutarsızlık');
+    await expect(page.getByTestId('criterion-remediation-c_clean')).not.toContainText('w4');
+    await page.getByTestId('warnings-btn').click();
+    await expect(page.getByTestId('warnings-count')).toContainText('1 sorun · Kat bağlantısı');
+    await page.getByTestId('close-warnings-btn').click();
+
+    // fix it: select w4 and set its Base Constraint
+    await page.getByTestId('object-row-w4').click();
+    await page.getByTestId('prop-input-baseLevelId').selectOption('l0');
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
   });
 });

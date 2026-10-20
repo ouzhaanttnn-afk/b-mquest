@@ -3,6 +3,7 @@ import type { ToolId } from './toolActions';
 import type { CommandResult, MissionSessionState } from '../../domain/commands';
 import {
   CreateExtraPanel,
+  FieldRow,
   GenericElementForm,
   LevelsPanel,
   TypePanel,
@@ -1051,6 +1052,23 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                         </select>
                       </label>
                     </div>
+                    <FieldRow
+                      model={model}
+                      selectedElement={selectedElement}
+                      editDrafts={editDrafts}
+                      setEditDrafts={setEditDrafts}
+                      isFieldEditable={isFieldEditable}
+                      commitSingleField={commitSingleField}
+                      handleFieldKeyDown={handleFieldKeyDown}
+                      spec={{ field: 'typeId', label: 'Tip (Type)', kind: 'type' }}
+                    />
+                    <TypePanel
+                      model={model}
+                      selectedElement={selectedElement}
+                      session={session}
+                      canEditType={task.permissions.editableFields.includes('typeParams')}
+                      applyResult={applyResult}
+                    />
                   </div>
                 ) : (
                   <>

@@ -302,7 +302,16 @@ export interface CompareCriterion {
   message: string;
 }
 
+export interface ModelCleanCriterion {
+  id: string;
+  type: 'modelClean';
+  /** Issue codes that must be absent; omitted = every check. */
+  codes?: string[];
+  message: string;
+}
+
 export type TaskCriterion =
+  | ModelCleanCriterion
   | CountCriterion
   | PropertyCriterion
   | RectangleCriterion

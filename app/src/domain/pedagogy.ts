@@ -1,3 +1,5 @@
+import { roomBoundary } from './derived';
+import { checkModel, ISSUE_ELEMENT_KIND_TR, summarizeIssues } from './modelCheck';
 import type {
   BimModel,
   CriterionEvidence,
@@ -175,10 +177,49 @@ export function calculateTotalPlayerXp(
  * Generates an actionable, educational Turkish diagnostic explanation for any failed criterion.
  * Explains BOTH why the current state is wrong AND gives a concise Revit-oriented direction without spoiling everything.
  */
+const CATEGORY_TR: Record<string, { noun: string; tool: string }> = {
+  wall: { noun: 'duvar (Wall)', tool: 'Duvar Oluştur' },
+  door: { noun: 'kapı (Door)', tool: 'Kapı Oluştur' },
+  window: { noun: 'pencere (Window)', tool: 'Pencere' },
+  floor: { noun: 'döşeme (Floor)', tool: 'Döşeme' },
+  roof: { noun: 'çatı (Roof)', tool: 'Çatı' },
+  stair: { noun: 'merdiven (Stair)', tool: 'Merdiven' },
+  room: { noun: 'oda (Room)', tool: 'Oda' },
+  grid: { noun: 'aks (Grid)', tool: 'Aks' },
+};
+
+/**
+ * Hint-ladder feedback for model checks: the more hints the player has
+ * opened, the more precise the diagnosis (area → category → element → fix).
+ */
+function explainModelClean(
+  rule: Extract<MissionTask['criteria'][number], { type: 'modelClean' }>,
+  model: BimModel,
+  hintCount: number
+): string {
+  const issues = checkModel(model).filter((i) => !rule.codes || rule.codes.includes(i.code));
+  const sum = summarizeIssues(issues);
+  const area = `Modelde ${sum.count} tutarsızlık var (${sum.categories.join(', ')}).`;
+  if (hintCount <= 0) {
+    return `Neden Yanlış: ${area} Nasıl Düzeltilir: Plan ve 3B görünümde hangi bölgede sorun olduğunu ara; ipucu açarak daraltabilirsin.`;
+  }
+  const kinds = [...new Set(issues.map((i) => ISSUE_ELEMENT_KIND_TR[i.code]))].join(', ');
+  if (hintCount === 1) {
+    return `Neden Yanlış: ${area} Sorun ${kinds} nesnelerinde. Nasıl Düzeltilir: Bu türdeki nesneleri tek tek karşılaştır.`;
+  }
+  const detail = issues.map((i) => i.message).join(' ');
+  if (hintCount === 2) {
+    return `Neden Yanlış: ${detail} Nasıl Düzeltilir: Belirtilen nesneyi seçip Properties panelini komşularıyla karşılaştır.`;
+  }
+  const hints = [...new Set(issues.map((i) => i.revitHint))].join(' ');
+  return `Neden Yanlış: ${detail} Nasıl Düzeltilir: ${hints}`;
+}
+
 export function explainCriterionFailureTr(
   task: MissionTask,
   model: BimModel,
-  ev: CriterionEvidence
+  ev: CriterionEvidence,
+  hintCount = 0
 ): string {
   if (ev.pass) {
     return 'Doğrulandı: Bu kural model verileriyle tam uyumlu.';
@@ -251,11 +292,11 @@ export function explainCriterionFailureTr(
   }
 
   if (rule.type === 'count') {
-    const typeTr = rule.elementType === 'wall' ? 'duvar (Wall)' : 'kapı/açıklık (Door/Opening)';
+    const typeTr = CATEGORY_TR[rule.elementType]?.noun ?? rule.elementType;
     const currentCount = Number(ev.actual ?? 0);
     const targetCount = rule.expected;
     if (currentCount < targetCount) {
-      return `Neden Yanlış: Modelde şu anda ${currentCount} adet ${typeTr} var, ancak proje tam olarak ${targetCount} adet gerektiriyor. Nasıl Düzeltilir: Architecture sekmesinden "${rule.elementType === 'wall' ? 'Duvar Oluştur' : 'Kapı Oluştur'}" aracını kullanarak eksik ${targetCount - currentCount} elemanı yerleştir.`;
+      return `Neden Yanlış: Modelde şu anda ${currentCount} adet ${typeTr} var, ancak proje tam olarak ${targetCount} adet gerektiriyor. Nasıl Düzeltilir: Architecture sekmesinden "${CATEGORY_TR[rule.elementType]?.tool ?? rule.elementType}" aracını kullanarak eksik ${targetCount - currentCount} elemanı yerleştir.`;
     }
     return `Neden Yanlış: Modelde şu anda ${currentCount} adet ${typeTr} bulunuyor (Hedef: ${targetCount}). Fazladan eklenen ${currentCount - targetCount} eleman Room Boundary / model topolojisini bozuyor. Nasıl Düzeltilir: Fazla elemanı seç → Modify → Delete (Sil) komutuyla kaldır.`;
   }
@@ -316,6 +357,44 @@ export function explainCriterionFailureTr(
         ? issues.join('; ')
         : 'Duvarlar kesintisiz kapalı oda sınırını (Room Bounding) oluşturmuyor'
     }. Nasıl Düzeltilir: 2B Planda açık kalan kenarı kontrol et → Architecture → Wall (Duvar Oluştur) veya Properties panelinden köşe koordinatlarını (${rule.width}×${rule.depth} mm, Height:${rule.wallHeight}, Thickness:${rule.thickness}) hizala.`;
+  }
+
+  if (rule.type === 'modelClean') {
+    return explainModelClean(rule, model, hintCount);
+  }
+
+  if (rule.type === 'exists') {
+    const c = CATEGORY_TR[rule.category];
+    return `Neden Yanlış: Modelde aranan ${c.noun} henüz yok ya da özellikleri istenenle uyuşmuyor. Nasıl Düzeltilir: Architecture → ${c.tool} aracıyla ekle, sonra Properties panelinde özellikleri kontrol et.`;
+  }
+
+  if (rule.type === 'hosted') {
+    return `Neden Yanlış: ${rule.category === 'door' ? 'Kapı' : 'Pencere'} bir duvara bağlı (hosted) olmalı; şu an ${ev.actual} adet bağlı eleman var. Nasıl Düzeltilir: Aracı seç ve doğrudan bir duvarın üzerine yerleştir.`;
+  }
+
+  if (rule.type === 'constraint') {
+    return `Neden Yanlış: ${ev.actual}. Duvarların üstü ${rule.topConstraint} seviyesine bağlı olmalı. Nasıl Düzeltilir: Duvarı seç → Properties → Constraints → Top Constraint.`;
+  }
+
+  if (rule.type === 'roomClosed') {
+    const rooms = model.elements.filter((e) => e.type === 'room');
+    const open = rooms.filter((r) => r.type === 'room' && roomBoundary(r, model).open);
+    const gap = open[0] && open[0].type === 'room' ? roomBoundary(open[0], model).gapAt : undefined;
+    return rooms.length === 0
+      ? 'Neden Yanlış: Modelde henüz bir oda yok. Nasıl Düzeltilir: Architecture → Room ile kapalı alanın içine bir oda yerleştir.'
+      : `Neden Yanlış: Oda sınırı kapalı değil${gap ? ` (boşluk ≈ ${gap[0]}, ${gap[1]} mm)` : ''}. Nasıl Düzeltilir: Boşluğa denk gelen duvarın ucunu köşeye uzat (Trim/Extend).`;
+  }
+
+  if (rule.type === 'typeUsage') {
+    return `Neden Yanlış: Nesnelerin tipleri tutarsız (${ev.actual} ${rule.typeId} kullanıyor). Nasıl Düzeltilir: Nesneyi seç → Properties → Type Selector ile "${rule.typeId}" tipini ata; boyut değiştirmek için Edit Type kullan.`;
+  }
+
+  if (rule.type === 'allEqual') {
+    return `Neden Yanlış: "${rule.field}" değerleri birbirinden farklı (${ev.actual}). Nasıl Düzeltilir: Aykırı nesneyi bul ve değerini diğerleriyle eşitle.`;
+  }
+
+  if (rule.type === 'compare') {
+    return `Neden Yanlış: ${ev.actual} ile ${ev.expected} eşleşmiyor. Nasıl Düzeltilir: İki nesnenin ilişkili parametresini (kat, kot) birbirine uydur.`;
   }
 
   return 'Lütfen ilgili nesneyi seçip Properties panelinden hedef ölçülerle karşılaştırın.';

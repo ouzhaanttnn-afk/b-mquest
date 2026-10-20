@@ -13,6 +13,7 @@ export interface CheckFeedbackProps {
   setRecapModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleCriterionClick: (criterionId: string) => void;
   task: MissionTask;
+  revealedHintCount: number;
   model: BimModel;
 }
 
@@ -26,6 +27,7 @@ export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
   setRecapModalOpen,
   handleCriterionClick,
   task,
+  revealedHintCount,
   model,
 }) => (
   <>
@@ -140,7 +142,7 @@ export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
                         className="bq-crit-remediation"
                         data-testid={`criterion-remediation-${c.id}`}
                       >
-                        💡 {explainCriterionFailureTr(task, model, c)}
+                        💡 {explainCriterionFailureTr(task, model, c, revealedHintCount)}
                       </span>
                     )}
                   </button>

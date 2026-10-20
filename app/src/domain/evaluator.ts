@@ -1,5 +1,6 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import taskSchemaJson from '../schemas/task.schema.json';
+import { checkModel, summarizeIssues } from './modelCheck';
 import {
   fieldValue,
   isOpening,
@@ -330,6 +331,18 @@ const evidence = (
 
 /** Criteria that look at relationships between elements, not one field. */
 function evaluateExtended(c: TaskCriterion, m: BimModel): CriterionEvidence | null {
+  if (c.type === 'modelClean') {
+    const issues = checkModel(m).filter((i) => !c.codes || c.codes.includes(i.code));
+    const sum = summarizeIssues(issues);
+    return evidence(
+      c,
+      issues.length === 0,
+      issues.length === 0
+        ? 'Sorun yok'
+        : `${sum.count} sorun · ${sum.categories.join(', ')}`,
+      '0 sorun'
+    );
+  }
   if (c.type === 'exists') {
     const where = Object.entries(c.where ?? {});
     const hits = m.elements.filter(

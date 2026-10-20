@@ -114,7 +114,7 @@ const numOf = (el: BimElement, f: string): number => {
 const typesFor = (model: BimModel, category: string): ElementType[] =>
   (model.types ?? []).filter((t) => t.category === category);
 
-const FieldRow: React.FC<FieldProps & { spec: Spec }> = ({
+export const FieldRow: React.FC<FieldProps & { spec: Spec }> = ({
   model,
   selectedElement: el,
   editDrafts,
