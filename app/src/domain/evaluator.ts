@@ -323,3 +323,15 @@ export function evaluate(
     criteria: results,
   };
 }
+
+/**
+ * Using the final step-by-step walkthrough caps the reward at two stars
+ * (silver), so the answer path never earns a gold badge.
+ */
+export function capBadgeForWalkthrough(
+  result: EvaluationResult,
+  walkthroughUsed: boolean
+): EvaluationResult {
+  if (!walkthroughUsed || result.badge !== 'gold') return result;
+  return { ...result, badge: 'silver' };
+}

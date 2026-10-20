@@ -12,7 +12,13 @@ import {
   undoCommand,
   updateElementProperty,
 } from '../src/domain/commands';
-import { evaluate, modelErrors, permissionErrors, taskErrors } from '../src/domain/evaluator';
+import {
+  capBadgeForWalkthrough,
+  evaluate,
+  modelErrors,
+  permissionErrors,
+  taskErrors,
+} from '../src/domain/evaluator';
 import {
   createDefaultSaveEnvelope,
   loadFromBrowserStorage,
@@ -634,3 +640,17 @@ describe('Layer 2 — Domain, Reference Parity & Persistence Suite (D01–D15, P
   });
 });
 
+
+describe('Guide walkthrough star penalty', () => {
+  const gold = { pass: true, score: 100, badge: 'gold' as const, errors: [], criteria: [] };
+
+  it('caps gold at silver when the final walkthrough was used', () => {
+    expect(capBadgeForWalkthrough(gold, true).badge).toBe('silver');
+  });
+
+  it('leaves the result untouched otherwise', () => {
+    expect(capBadgeForWalkthrough(gold, false)).toBe(gold);
+    const silver = { ...gold, badge: 'silver' as const };
+    expect(capBadgeForWalkthrough(silver, true).badge).toBe('silver');
+  });
+});
