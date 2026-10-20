@@ -187,3 +187,44 @@ test.describe('Geri bildirim — sürükleyerek duvar çizme', () => {
     await expect(page.getByTestId('results-recap-modal')).toBeVisible();
   });
 });
+
+test.describe('Rehber (coach) — ilk görevler', () => {
+  test('m01: parlayan nesne → seç → düzelt → Kontrol Et sırası', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByTestId('start-mission-m01').click();
+    await expect(page.getByTestId('coach-text')).toContainText('Parlayan');
+    const pulsing = page.locator('[data-testid^="plan-coach-"]').first();
+    await expect(pulsing).toBeAttached();
+    const id = (await pulsing.getAttribute('data-testid'))!.replace('plan-coach-', '');
+    await page.getByTestId(`object-row-${id}`).click();
+    await expect(page.getByTestId('coach-text')).toContainText('Seçtin');
+    for (const wid of ['w1', 'w2', 'w3', 'w4']) {
+      await page.getByTestId('object-row-' + wid).click();
+      const input = page.getByTestId('prop-input-height');
+      await input.fill('3000');
+      await input.press('Enter');
+    }
+    await expect(page.getByTestId('coach-text')).toContainText('Kontrol');
+    await expect(page.getByTestId('check-btn')).toHaveClass(/bq-coach-pulse/);
+    await page.getByTestId('coach-off-btn').click();
+    await expect(page.getByTestId('coach-bar')).toHaveCount(0);
+  });
+
+  test('m02: araç sırayla gösterilir', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      localStorage.setItem('bimquest.save.v1', JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed: { m01: { bestScore: 100 } }, drafts: {}, settings: { sound: false, reducedMotion: true } }));
+    });
+    await page.reload();
+    await page.getByTestId('start-mission-m02').click();
+    await expect(page.getByTestId('coach-text')).toContainText('Duvar');
+    await expect(page.getByTestId('tool-wall-btn')).toHaveClass(/bq-coach-pulse/);
+    await page.getByTestId('tool-wall-btn').click();
+    await expect(page.getByTestId('coach-text')).toContainText('sürükleyip');
+  });
+});

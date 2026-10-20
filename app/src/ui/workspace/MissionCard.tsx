@@ -12,12 +12,27 @@ interface MissionCardProps {
  */
 export const MissionCard: React.FC<MissionCardProps> = ({ objective, criteria }) => {
   const [open, setOpen] = useState(false);
+  const [more, setMore] = useState(false);
+  // First sentence is the goal; the rest is detail behind a tap.
+  const cut = objective.search(/[.!?](\s|$)/);
+  const goal = cut > 0 && cut < objective.length - 1 ? objective.slice(0, cut + 1) : objective;
+  const detail = objective.slice(goal.length).trim();
   const done = criteria.filter((c) => c.pass).length;
   return (
     <section className="bq-mission-card bq-mobile-only" data-testid="mission-card">
       <p className="bq-mission-goal">
-        <strong>🎯 Görev:</strong> {objective}
+        <strong>🎯 Görev:</strong> {goal}{' '}
+        {detail && (
+          <button type="button" className="bq-link-btn" data-testid="mission-card-more-btn" aria-expanded={more} onClick={() => setMore((v) => !v)}>
+            {more ? 'Gizle' : '?'}
+          </button>
+        )}
       </p>
+      {more && detail && (
+        <p className="bq-mission-detail" data-testid="mission-card-detail">
+          {detail}
+        </p>
+      )}
       <button
         type="button"
         className="bq-chip-btn"

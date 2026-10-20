@@ -32,6 +32,7 @@ import { LevelsSheet } from './workspace/LevelsSheet';
 import { ProjectBrowser, SheetEditor } from './workspace/DocumentationPanels';
 import { ProjectDelivery } from './workspace/ProjectDelivery';
 import { MissionCard } from './workspace/MissionCard';
+import { CoachBar, coachStep } from './workspace/CoachBar';
 import { WarningsSheet } from './workspace/WarningsSheet';
 import { checkModel, checkOptionsFor } from '../domain/modelCheck';
 import { getChapterForMissionId } from '../content/curriculum';
@@ -507,6 +508,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   );
   const drawingView = activeView && activeView.kind !== 'plan' ? activeView : null;
   const activePlanView = activeView && activeView.kind === 'plan' ? activeView : null;
+  const coach = coachStep({
+    task,
+    criteria: liveProgress.criteria,
+    selectedId,
+    activeTool,
+    allPass: liveProgress.allPass,
+  });
   const hasViews = model.elements.some((e) => e.type === 'view' || e.type === 'sheet');
   const hasModelCheckGoal = task.criteria.some((c) => c.type === 'modelClean');
   const pedagogicalSteps = useMemo(
@@ -885,6 +893,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           data-tour="viewport-area"
           aria-label="Model Görünüm Alanı"
         >
+        <CoachBar
+          task={task}
+          step={coach}
+          onOpenInspector={() => {
+            setMobileDrawerTab('inspector');
+            setMobileSheetOpen(true);
+            setRightCollapsed(false);
+          }}
+        />
         <MissionCard objective={task.objective} criteria={liveProgress.criteria} />
         {fieldError && (
           <div className="bq-tool-error bq-mobile-only" role="alert" data-testid="tool-error-banner">
@@ -923,6 +940,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           planTools={{
             onToolPoint: handleToolPoint,
             onToolDrag: handleToolDrag,
+            coachIds: new Set(coach.planTargets),
             chainStart: activeTool === 'grid' || activeTool === 'section' ? gridStart : chain.start,
             pickedWallIds: dimFirst ? new Set([dimFirst]) : pickedWalls,
             activeViewId: activePlanView?.id ?? null,

@@ -43,6 +43,8 @@ export interface PlanViewportProps {
   onSelect: (id: string | null) => void;
   /** Any tap while a drawing tool is active (already snapped, mm). */
   onToolPoint?: (pt: [number, number], hit?: { wallId: string; along: number }) => void;
+  /** Elements the coach asks the player to touch next (pulsing ring). */
+  coachIds?: Set<string>;
   /** Press-drag-release with a line tool (Wall, Grid, Section). */
   onToolDrag?: (start: [number, number], end: [number, number]) => void;
   /** Where the running wall chain / grid line starts. */
@@ -69,6 +71,7 @@ export type PlanToolProps = Pick<
   PlanViewportProps,
   | 'onToolPoint'
   | 'onToolDrag'
+  | 'coachIds'
   | 'chainStart'
   | 'pickedWallIds'
   | 'roomGap'
@@ -133,6 +136,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
   onSelect,
   onToolPoint,
   onToolDrag,
+  coachIds,
   chainStart = null,
   pickedWallIds,
   roomGap = null,
@@ -1082,6 +1086,26 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
               </g>
             );
           })()}
+
+        {/* Coach: pulsing ring around what to touch next */}
+        {coachIds &&
+          walls
+            .filter((w) => coachIds.has(w.id))
+            .map((w) => (
+              <line
+                key={`coach-${w.id}`}
+                className="bq-coach-line"
+                data-testid={`plan-coach-${w.id}`}
+                x1={w.start[0]}
+                y1={w.start[1]}
+                x2={w.end[0]}
+                y2={w.end[1]}
+                stroke="#FACC15"
+                strokeWidth={w.thickness + 260}
+                strokeLinecap="round"
+                pointerEvents="none"
+              />
+            ))}
 
         {/* Walls picked for Floor / Roof */}
         {pickedWallIds &&
