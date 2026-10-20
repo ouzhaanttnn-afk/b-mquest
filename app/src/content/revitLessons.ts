@@ -1,4 +1,5 @@
 import type { EditableField, MissionTask } from '../domain/types';
+import { BIM_MISSION_SPECS, buildBimMissionTask } from './bimMissions';
 
 export interface RevitLessonMeta {
   id: string;
@@ -1292,6 +1293,15 @@ export function buildGeneratedMissionTasks(): Record<string, MissionTask> {
         ],
       };
     }
+  }
+
+  // Missions that run on real BIM objects replace the number-tweaking variants.
+  for (const spec of allSpecs) {
+    const bim = BIM_MISSION_SPECS[spec.id];
+    if (!bim) continue;
+    const meta = REVIT_LESSONS_BY_ID[spec.id];
+    Object.assign(meta, bim.lesson);
+    result[spec.id] = buildBimMissionTask(spec.id, meta, spec.prevId);
   }
 
   return result;

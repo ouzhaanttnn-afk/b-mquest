@@ -257,6 +257,11 @@ export function fieldValue(
     if (field === 'volume') return Math.round(roomVolume(el, model) * 100) / 100;
     if (field === 'closed') return !roomBoundary(el, model).open;
   }
+  if (el.type === 'grid') {
+    const vertical = el.start[0] === el.end[0];
+    if (field === 'axisPos') return vertical ? el.start[0] : el.start[1];
+    if (field === 'axisDir') return vertical ? 'v' : 'h';
+  }
   if (el.type === 'roof' && field === 'baseElevation') {
     return levelById(model, el.baseLevelId)?.elevation ?? null;
   }

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { loadValidatedCatalog } from '../src/content/content';
+import { parseAndValidateSaveJson } from '../src/domain/persistence';
 import {
   createFloorCommand,
   createGridCommand,
@@ -339,5 +341,48 @@ describe('Faz 1 — BIM nesne modeli', () => {
       const open = run(m, [{ id: 'c4', type: 'roomClosed', message: 'x' }]);
       expect(open.pass).toBe(false);
     });
+  });
+});
+
+describe('Faz 1 — kayıt uyumluluğu (SaveEnvelopeV1)', () => {
+  const missionsMod = loadValidatedCatalog();
+  if (!missionsMod.ok) throw new Error('catalog');
+  const byId = missionsMod.catalog.missionsById;
+
+  const envelope = (drafts: Record<string, unknown>, completed: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      saveVersion: 1,
+      contentVersion: '1.0.0',
+      completed,
+      drafts,
+      settings: { sound: true, reducedMotion: false },
+    });
+
+  it('eski (V1) kayıt: yalnızca duvar/kapı içeren taslak sorunsuz yüklenir', () => {
+    const old = {
+      model: {
+        levels: [{ id: 'l0', elevation: 0, name: 'Zemin Kat' }],
+        elements: byId.m01.initialModel.elements,
+      },
+      revealedHints: ['h1'],
+    };
+    const res = parseAndValidateSaveJson(envelope({ m01: old }, { m01: { bestScore: 90 } }), byId);
+    expect(res.ok).toBe(true);
+  });
+
+  it('yeni nesneli taslak (pencere + Type + Top Constraint) gidiş-dönüş yapar', () => {
+    const start = createInitialSession(byId.m24);
+    const draft = { model: start.model, revealedHints: [] };
+    const res = parseAndValidateSaveJson(envelope({ m24: draft }), byId);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.save.drafts.m24.model.types?.[0].id).toBe('wn900');
+      expect(res.save.drafts.m24.model.elements.some((e) => e.type === 'window')).toBe(true);
+    }
+  });
+
+  it('m41–m50 için tamamlanma kaydı artık geçerli', () => {
+    const res = parseAndValidateSaveJson(envelope({}, { m45: { bestScore: 100 }, m50: { bestScore: 80 } }), byId);
+    expect(res.ok).toBe(true);
   });
 });

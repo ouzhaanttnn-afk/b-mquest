@@ -1,0 +1,426 @@
+import type {
+  BimElement,
+  BimModel,
+  CreatableElementType,
+  EditableField,
+  ElementType,
+  MissionTask,
+  TaskCriterion,
+  WallElement,
+  WindowElement,
+} from '../domain/types';
+import type { RevitLessonMeta } from './revitLessons';
+
+/**
+ * Missions that run on real BIM objects (Grid, Window, Floor, Roof, Stair,
+ * Room, Type, Top Constraint) instead of "change a number on a wall".
+ * The mission id, chapter and title stay as in the curriculum.
+ */
+
+const L0 = { id: 'l0', elevation: 0, name: 'Zemin Kat' };
+const l1 = (elevation: number) => ({ id: 'l1', elevation, name: '1. Kat' });
+
+const wall = (
+  id: string,
+  start: [number, number],
+  end: [number, number],
+  extra: Partial<WallElement> = {}
+): WallElement => ({
+  id,
+  type: 'wall',
+  name: id,
+  baseLevelId: 'l0',
+  start,
+  end,
+  height: 3000,
+  thickness: 200,
+  ...extra,
+});
+
+const box = (extra: Partial<WallElement> = {}): WallElement[] => [
+  wall('w1', [0, 0], [6000, 0], extra),
+  wall('w2', [6000, 0], [6000, 4000], extra),
+  wall('w3', [6000, 4000], [0, 4000], extra),
+  wall('w4', [0, 4000], [0, 0], extra),
+];
+
+const window1 = (
+  id: string,
+  host: string,
+  offset: number,
+  extra: Partial<WindowElement> = {}
+): WindowElement => ({
+  id,
+  type: 'window',
+  name: 'Pencere',
+  hostWallId: host,
+  offset,
+  width: 1200,
+  height: 1200,
+  sill: 900,
+  mark: `W-${id.slice(3)}`,
+  ...extra,
+});
+
+interface Spec {
+  lesson: Partial<RevitLessonMeta> & Pick<RevitLessonMeta, 'objective' | 'hintLevels' | 'primaryFields'>;
+  levels: BimModel['levels'];
+  elements: BimElement[];
+  types?: ElementType[];
+  editable: EditableField[];
+  creatable?: CreatableElementType[];
+  seeds?: string[];
+  minutes?: number;
+  criteria: TaskCriterion[];
+}
+
+const hints = (area: string, object: string, param: string, steps: string): RevitLessonMeta['hintLevels'] => [
+  `İpucu 1 (Alan): ${area}`,
+  `İpucu 2 (Nesne): ${object}`,
+  `İpucu 3 (Parametre): ${param}`,
+  `Adım Adım Rehber: ${steps}`,
+];
+
+const WT200: ElementType = {
+  id: 'wt200',
+  category: 'wall',
+  family: 'Basic Wall',
+  name: 'Generic - 200mm',
+  params: { thickness: 200 },
+};
+const WT100: ElementType = {
+  id: 'wt100',
+  category: 'wall',
+  family: 'Basic Wall',
+  name: 'Generic - 100mm',
+  params: { thickness: 100 },
+};
+const WN900: ElementType = {
+  id: 'wn900',
+  category: 'window',
+  family: 'Fixed',
+  name: '900 x 1200mm',
+  params: { width: 900, height: 1200 },
+};
+
+export const BIM_MISSION_SPECS: Record<string, Spec> = {
+  // ---- Bölüm 2: Level, Grid ---------------------------------------------
+  m09: {
+    lesson: {
+      objective:
+        'Dört duvarın üst kotu birbirinden farklı. Hepsini 1. Kat (l1) seviyesine bağla; yükseklik kat kotundan gelsin.',
+      hintLevels: hints(
+        '3B sahnede duvar üstlerinin aynı hizada olup olmadığına bak.',
+        'w1, w2, w3 ve w4 aynı kuralla bağlanmalı.',
+        'Properties panelinde Constraints grubundaki üst sınır alanını incele.',
+        '1) Bir duvarı seç. 2) Top Constraint alanında Up to level: 1. Kat seç. 3) Aynısını diğer duvarlara uygula. 4) Kontrol Et.'
+      ),
+      primaryFields: ['topConstraint', 'topOffset'],
+    },
+    levels: [L0, l1(3000)],
+    elements: box({ height: 2600 }),
+    editable: ['topConstraint', 'topOffset'],
+    seeds: ['w1', 'w2', 'w3', 'w4'],
+    criteria: [
+      { id: 'c_top', type: 'constraint', topConstraint: 'l1', message: 'Tüm duvarlar l1 seviyesine bağlı olmalı.' },
+      { id: 'c_eq', type: 'allEqual', category: 'wall', field: 'topElevation', message: 'Tüm duvar üst kotları eşit olmalı.' },
+    ],
+  },
+  m10: {
+    lesson: {
+      objective:
+        'Plan için 4 aks çiz: A ve B düşey (x = 0 ve x = 6000), 1 ve 2 yatay (z = 0 ve z = 4000).',
+      hintLevels: hints(
+        'Aksların plandaki konumunu 0–6000 × 0–4000 mm çerçevesine göre düşün.',
+        'İki düşey ve iki yatay Grid nesnesi gerekir; adları otomatik verilir.',
+        'Başlangıç ve bitiş koordinatları aks çizgisinin yönünü belirler.',
+        '1) + Aks ile A: (0,-1000)→(0,5000). 2) B: (6000,-1000)→(6000,5000). 3) 1: (-1000,0)→(7000,0). 4) 2: (-1000,4000)→(7000,4000).'
+      ),
+      primaryFields: ['name'],
+    },
+    levels: [L0],
+    elements: [],
+    editable: ['name'],
+    creatable: ['grid'],
+    criteria: [
+      { id: 'c_n', type: 'count', elementType: 'grid', expected: 4, message: '4 aks çizgisi gerekli.' },
+      { id: 'c_a', type: 'exists', category: 'grid', where: { name: 'A', axisPos: 0 }, message: 'Aks A, x = 0 mm üzerinde olmalı.' },
+      { id: 'c_b', type: 'exists', category: 'grid', where: { name: 'B', axisPos: 6000 }, message: 'Aks B, x = 6000 mm üzerinde olmalı.' },
+      { id: 'c_1', type: 'exists', category: 'grid', where: { name: '1', axisPos: 0 }, message: 'Aks 1, z = 0 mm üzerinde olmalı.' },
+      { id: 'c_2', type: 'exists', category: 'grid', where: { name: '2', axisPos: 4000 }, message: 'Aks 2, z = 4000 mm üzerinde olmalı.' },
+    ],
+  },
+  m12: {
+    lesson: {
+      objective:
+        'Duvarlar 1. Kat seviyesine bağlı. 1. Kat kotunu 3200 mm yap ve duvarların onunla birlikte yükseldiğini doğrula.',
+      hintLevels: hints(
+        'Duvarlar kat kotunu izliyorsa, kotu değiştirmek tek hamlede hepsini etkiler.',
+        'Değişecek şey duvarlar değil, bir Level (kat) nesnesidir.',
+        'Katlar bölümünde 1. Kat’ın kot (elevation) değerini bul.',
+        '1) Nesneler panelinde Katlar bölümünü aç. 2) 1. Kat kotunu 3200 mm yap. 3) Duvar yüksekliklerinin 3200 olduğunu gör. 4) Kontrol Et.'
+      ),
+      primaryFields: ['elevation'],
+    },
+    levels: [L0, l1(3000)],
+    elements: box({ topConstraint: 'l1', topOffset: 0, height: 3000 }),
+    editable: ['elevation'],
+    criteria: [
+      { id: 'c_top', type: 'constraint', topConstraint: 'l1', message: 'Duvarlar l1 seviyesine bağlı kalmalı.' },
+      { id: 'c_h1', type: 'property', elementId: 'w1', field: 'height', expected: 3200, tolerance: 0, message: 'w1 üst kotu 3200 mm olmalı.' },
+      { id: 'c_h3', type: 'property', elementId: 'w3', field: 'height', expected: 3200, tolerance: 0, message: 'w3 üst kotu 3200 mm olmalı.' },
+    ],
+  },
+
+  // ---- Bölüm 3: Wall, Door, Window, Floor, Roof, Stair --------------------
+  m17: {
+    lesson: {
+      objective:
+        'Güney duvarına (w_south) 1200 × 1200 mm bir pencere yerleştir. Pencere duvarın içinde kalmalı.',
+      hintLevels: hints(
+        'Pencere boşlukta durmaz; bir duvara bağlı (hosted) olmalı.',
+        'Güney duvarı bu görevde host eleman olacak.',
+        'Ofset, genişlik, yükseklik ve parapet (sill) değerlerini duvar sınırlarına göre seç.',
+        '1) + Pencere. 2) Host: w_south. 3) Genişlik 1200, yükseklik 1200. 4) Oluştur ve Kontrol Et.'
+      ),
+      primaryFields: ['hostWallId', 'offset', 'width', 'height', 'sill'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w_south', [0, 0], [6000, 0]),
+      wall('w_east', [6000, 0], [6000, 4000]),
+      wall('w_north', [6000, 4000], [0, 4000]),
+      wall('w_west', [0, 4000], [0, 0]),
+    ],
+    editable: ['hostWallId', 'offset', 'width', 'height', 'sill', 'mark', 'name'],
+    creatable: ['window'],
+    criteria: [
+      { id: 'c_n', type: 'count', elementType: 'window', expected: 1, message: '1 adet pencere gerekli.' },
+      { id: 'c_host', type: 'property', elementId: 'win1', field: 'hostWallId', expected: 'w_south', tolerance: 0, message: 'win1, w_south duvarına bağlı olmalı.' },
+      { id: 'c_w', type: 'property', elementId: 'win1', field: 'width', expected: 1200, tolerance: 0, message: 'win1 genişliği 1200 mm olmalı.' },
+      { id: 'c_h', type: 'property', elementId: 'win1', field: 'height', expected: 1200, tolerance: 0, message: 'win1 yüksekliği 1200 mm olmalı.' },
+    ],
+  },
+  m18: {
+    lesson: {
+      objective:
+        'Pencerenin parapeti (Sill Height) 300 mm; oturan bir kişinin göz hizasında olması için 900 mm olmalı.',
+      hintLevels: hints(
+        'Pencerenin zeminden ne kadar yukarıda başladığına bak.',
+        'win1 penceresi seçilmeli.',
+        'Parapet yüksekliği pencerenin alt kenarının kotudur.',
+        '1) win1’i seç. 2) Sill Height değerini 900 mm yap. 3) Kontrol Et.'
+      ),
+      primaryFields: ['sill'],
+    },
+    levels: [L0],
+    elements: [...box(), window1('win1', 'w1', 2400, { sill: 300 })],
+    editable: ['sill'],
+    seeds: ['win1'],
+    criteria: [
+      { id: 'c_s', type: 'property', elementId: 'win1', field: 'sill', expected: 900, tolerance: 0, message: 'win1 parapet yüksekliği 900 mm olmalı.' },
+    ],
+  },
+  m19: {
+    lesson: {
+      objective: 'Dört duvarın oluşturduğu alana, Zemin Kat’a ait 150 mm kalınlığında bir döşeme (Floor) ekle.',
+      hintLevels: hints(
+        'Odanın zemini henüz boş; yatay bir yapı elemanı eksik.',
+        'Döşeme bir duvar değildir; kendi kalınlığı ve kat bağlantısı vardır.',
+        'Kalınlık (Thickness) ve Level alanlarını kontrol et.',
+        '1) + Döşeme ile Zemin Kat’ta oluştur. 2) Kalınlığı 150 mm yap. 3) Kontrol Et.'
+      ),
+      primaryFields: ['thickness', 'levelId'],
+    },
+    levels: [L0],
+    elements: box(),
+    editable: ['thickness', 'levelId', 'name'],
+    creatable: ['floor'],
+    criteria: [
+      { id: 'c_n', type: 'count', elementType: 'floor', expected: 1, message: '1 adet döşeme gerekli.' },
+      { id: 'c_l', type: 'property', elementId: 'f1', field: 'levelId', expected: 'l0', tolerance: 0, message: 'f1 Zemin Kat’a (l0) ait olmalı.' },
+      { id: 'c_t', type: 'property', elementId: 'f1', field: 'thickness', expected: 150, tolerance: 0, message: 'f1 kalınlığı 150 mm olmalı.' },
+    ],
+  },
+  m20: {
+    lesson: {
+      objective:
+        'Duvarların üstüne 30° eğimli, 500 mm çıkmalı bir çatı kur. Çatı, duvar üst kotunun bulunduğu katta oturmalı.',
+      hintLevels: hints(
+        'Çatının duvarların tam üstünde mi, havada mı olduğuna 3B’de bak.',
+        'Çatı bir kata bağlanır; hangi katın kotu duvar üstüne denk geliyor?',
+        'Base Level, eğim ve çıkma (overhang) alanlarını kullan.',
+        '1) + Çatı. 2) Taban katı: duvar üst kotuyla aynı kat. 3) Eğim 30°, çıkma 500 mm. 4) Kontrol Et.'
+      ),
+      primaryFields: ['baseLevelId', 'slope', 'overhang'],
+    },
+    levels: [L0, l1(3000)],
+    elements: box(),
+    editable: ['baseLevelId', 'slope', 'overhang'],
+    creatable: ['roof'],
+    criteria: [
+      { id: 'c_n', type: 'count', elementType: 'roof', expected: 1, message: '1 adet çatı gerekli.' },
+      { id: 'c_seat', type: 'compare', elementId: 'w1', field: 'topElevation', otherElementId: 'rf1', otherField: 'baseElevation', tolerance: 0, message: 'Çatı, duvar üst kotunda oturmalı.' },
+      { id: 'c_sl', type: 'property', elementId: 'rf1', field: 'slope', expected: 30, tolerance: 0, message: 'Çatı eğimi 30° olmalı.' },
+      { id: 'c_ov', type: 'property', elementId: 'rf1', field: 'overhang', expected: 500, tolerance: 0, message: 'Çatı çıkması 500 mm olmalı.' },
+    ],
+  },
+  m21: {
+    lesson: {
+      objective:
+        'Zemin Kat ile 1. Kat (+3150 mm) arasına merdiven yerleştir. Basamak sayısı × basamak yüksekliği kat farkına tam eşit olsun.',
+      hintLevels: hints(
+        'Merdiven iki kat arasındaki yüksekliği basamaklara bölerek aşar.',
+        'Merdivenin alt ve üst katını, basamak sayısını ve yüksekliğini belirlemelisin.',
+        'Toplam yükseliş = basamak sayısı × basamak yüksekliği.',
+        '1) + Merdiven. 2) Alt kat l0, üst kat l1. 3) Basamak sayısı × yükseklik = 3150 olacak şekilde seç. 4) Kontrol Et.'
+      ),
+      primaryFields: ['baseLevelId', 'topLevelId', 'risers', 'riserHeight'],
+    },
+    levels: [L0, l1(3150)],
+    elements: box(),
+    editable: ['baseLevelId', 'topLevelId', 'risers', 'riserHeight', 'treadDepth', 'direction'],
+    creatable: ['stair'],
+    criteria: [
+      { id: 'c_n', type: 'count', elementType: 'stair', expected: 1, message: '1 adet merdiven gerekli.' },
+      { id: 'c_top', type: 'property', elementId: 's1', field: 'topLevelId', expected: 'l1', tolerance: 0, message: 's1 üst katı l1 olmalı.' },
+      { id: 'c_rise', type: 'compare', elementId: 's1', field: 'rise', otherElementId: 's1', otherField: 'levelRise', tolerance: 0, message: 'Basamak toplamı kat farkına eşit olmalı.' },
+    ],
+  },
+  m22: {
+    lesson: {
+      objective: 'Duvarların çevrelediği alana "Salon" adlı, 101 numaralı bir Oda (Room) yerleştir.',
+      hintLevels: hints(
+        'Duvarlar bir alan çevreliyor ama bu alan henüz bir "mekan" değil.',
+        'Mekan bilgisini taşıyan nesne bir Room’dur ve kapalı sınır ister.',
+        'Room’un adı ve numarası ayrı parametrelerdir.',
+        '1) + Oda. 2) Odayı alanın içindeki bir noktaya koy (ör. 3000, 2000). 3) Ad: Salon, Numara: 101. 4) Kontrol Et.'
+      ),
+      primaryFields: ['name', 'number'],
+    },
+    levels: [L0],
+    elements: box(),
+    editable: ['name', 'number', 'seedPoint'],
+    creatable: ['room'],
+    criteria: [
+      { id: 'c_r', type: 'exists', category: 'room', where: { name: 'Salon', number: '101' }, message: 'Salon / 101 adlı oda gerekli.' },
+      { id: 'c_cl', type: 'roomClosed', message: 'Oda sınırı kapalı olmalı.' },
+    ],
+  },
+  m24: {
+    lesson: {
+      objective:
+        'İki pencere de aynı tipi kullanıyor (900 × 1200). Tip boyutunu değiştirerek ikisini birden 1200 mm genişliğe getir.',
+      hintLevels: hints(
+        'Pencerelerin ikisi de aynı boyutta; ayrı ayrı değiştirmek yanlış yaklaşım.',
+        'Boyut, tek tek pencerelerde değil, paylaştıkları tipte (Type) tutuluyor.',
+        'Pencereyi seçince tip bilgisi görünür; tipi düzenleme seçeneğini ara.',
+        '1) Bir pencereyi seç. 2) Edit Type’ı aç. 3) Genişliği 1200 mm yap. 4) İki pencerenin de değiştiğini gör. 5) Kontrol Et.'
+      ),
+      primaryFields: ['typeParams'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      window1('win1', 'w1', 1000, { width: 900, typeId: 'wn900' }),
+      window1('win2', 'w3', 2000, { width: 900, typeId: 'wn900' }),
+    ],
+    types: [WN900],
+    editable: ['typeParams'],
+    criteria: [
+      { id: 'c_1', type: 'property', elementId: 'win1', field: 'typeId', expected: 'wn900', tolerance: 0, message: 'win1 aynı tipte kalmalı.' },
+      { id: 'c_w1', type: 'exists', category: 'window', where: { id: 'win1', width: 1200 }, message: 'win1 genişliği 1200 mm olmalı.' },
+      { id: 'c_w2', type: 'exists', category: 'window', where: { id: 'win2', width: 1200 }, message: 'win2 genişliği 1200 mm olmalı.' },
+    ],
+  },
+  m25: {
+    lesson: {
+      objective: 'Bir duvar farklı bir tipte (Generic - 100mm). Dört duvarı da Generic - 200mm tipine getir.',
+      hintLevels: hints(
+        'Duvarların kalınlıkları eşit değil; nedenini nesnelerin tipinde ara.',
+        'Hangi duvarın tipi diğerlerinden farklı?',
+        'Tip, Properties panelindeki Tip (Type) seçicisinden değişir.',
+        '1) Kalın/ince farklı duvarı seç. 2) Tip seçiciden Generic - 200mm’i seç. 3) Kontrol Et.'
+      ),
+      primaryFields: ['typeId'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0], { typeId: 'wt200' }),
+      wall('w2', [6000, 0], [6000, 4000], { typeId: 'wt200' }),
+      wall('w3', [6000, 4000], [0, 4000], { typeId: 'wt100', thickness: 100 }),
+      wall('w4', [0, 4000], [0, 0], { typeId: 'wt200' }),
+    ],
+    types: [WT200, WT100],
+    editable: ['typeId'],
+    seeds: ['w1', 'w2', 'w3', 'w4'],
+    criteria: [
+      { id: 'c_t', type: 'typeUsage', category: 'wall', typeId: 'wt200', message: 'Tüm duvarlar Generic - 200mm olmalı.' },
+      { id: 'c_th', type: 'allEqual', category: 'wall', field: 'thickness', message: 'Tüm duvar kalınlıkları eşit olmalı.' },
+    ],
+  },
+
+  // ---- Bölüm 6: Model QA --------------------------------------------------
+  m34: {
+    lesson: {
+      objective: 'Salon (r1) odası "sınır kapalı değil" uyarısı veriyor. Boşluğu bul ve duvarla kapat.',
+      hintLevels: hints(
+        'Planda kırmızı işaretli yere bak; oda sınırı orada sızıyor.',
+        'Kuzey tarafındaki duvarlardan biri köşeye kadar uzanmıyor.',
+        'Duvarın bitiş (End) koordinatı köşeyle eşleşmeli.',
+        '1) Planda kırmızı boşluğu bul. 2) w3 duvarını seç. 3) Bitiş noktasını (0, 4000) yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['end'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0]),
+      wall('w2', [6000, 0], [6000, 4000]),
+      wall('w3', [6000, 4000], [1500, 4000]),
+      wall('w4', [0, 4000], [0, 0]),
+      { id: 'r1', type: 'room', name: 'Salon', number: '101', levelId: 'l0', seedPoint: [3000, 2000] },
+    ],
+    editable: ['end'],
+    seeds: ['w3'],
+    criteria: [
+      { id: 'c_cl', type: 'roomClosed', roomId: 'r1', message: 'r1 odasının sınırı kapalı olmalı.' },
+      { id: 'c_n', type: 'count', elementType: 'wall', expected: 4, message: 'Duvar sayısı 4 kalmalı.' },
+    ],
+  },
+};
+
+export function buildBimMissionTask(
+  id: string,
+  meta: RevitLessonMeta,
+  prerequisite: string
+): MissionTask {
+  const spec = BIM_MISSION_SPECS[id];
+  const model: BimModel = {
+    levels: spec.levels,
+    elements: spec.elements,
+    ...(spec.types ? { types: spec.types } : {}),
+  };
+  return {
+    schemaVersion: '1.0',
+    contentVersion: '1.0.0',
+    id,
+    title: meta.title,
+    objective: meta.objective,
+    prerequisites: [prerequisite],
+    estimatedMinutes: spec.minutes ?? 8,
+    initialModel: model,
+    permissions: {
+      editableFields: spec.editable,
+      creatableTypes: spec.creatable ?? [],
+      deletableCreated: (spec.creatable ?? []).length > 0,
+      editableSeedIds: spec.seeds ?? [],
+    },
+    hints: [
+      { id: 'h1', text: meta.hintLevels[0] },
+      { id: 'h2', text: meta.hintLevels[1] },
+      { id: 'h3', text: meta.hintLevels[2] },
+    ],
+    recap: `${meta.completionExplanation.whatYouDid} Revit: ${meta.revitPath}`,
+    criteria: spec.criteria,
+  };
+}
