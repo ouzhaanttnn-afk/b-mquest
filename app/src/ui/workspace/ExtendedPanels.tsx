@@ -453,7 +453,10 @@ export const CreateExtraPanel: React.FC<{
   };
 
   const submit = (type: CreatableElementType) => {
-    const g = (k: string, def = '') => val(k, def, FORM_FIELDS[type].find((f) => f.key === k)?.kind);
+    const g = (k: string, def = '') => {
+      const field = FORM_FIELDS[type].find((f) => f.key === k);
+      return val(k, field?.def ?? def, field?.kind);
+    };
     const pt = (a: string, b: string): [number, number] => [Number(g(a)), Number(g(b))];
     let res: CommandResult;
     if (type === 'window') {

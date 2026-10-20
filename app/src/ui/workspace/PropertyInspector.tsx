@@ -1052,6 +1052,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                     </div>
                   </div>
                 ) : (
+                  <>
                   <GenericElementForm
                     model={model}
                     selectedElement={selectedElement}
@@ -1061,6 +1062,14 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                     commitSingleField={commitSingleField}
                     handleFieldKeyDown={handleFieldKeyDown}
                   />
+                  <TypePanel
+                    model={model}
+                    selectedElement={selectedElement}
+                    session={session}
+                    canEditType={task.permissions.editableFields.includes('typeParams')}
+                    applyResult={applyResult}
+                  />
+                  </>
                 )}
               </div>
             </div>
