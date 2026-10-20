@@ -365,6 +365,18 @@ export function explainCriterionFailureTr(
     return explainModelClean(rule, model, hintCount);
   }
 
+  if (rule.type === 'metric') {
+    const want =
+      rule.min !== undefined && rule.max !== undefined
+        ? `${rule.min}–${rule.max}`
+        : rule.min !== undefined
+        ? `en az ${rule.min}`
+        : `en çok ${rule.max}`;
+    return hintCount >= 2
+      ? `Neden Yanlış: Modelde şu an ${ev.actual} var; brif ${want} istiyor. Nasıl Düzeltilir: İlgili nesneyi ekle/düzenle ve sayıyı brife uydur.`
+      : `Neden Yanlış: Bu madde brifteki ölçüyle (${want}) uyuşmuyor. Nasıl Düzeltilir: Brifi yeniden oku ve modelde eksik ya da fazla olanı bul.`;
+  }
+
   if (rule.type === 'exists') {
     const c = CATEGORY_TR[rule.category];
     return `Neden Yanlış: Modelde aranan ${c.noun} henüz yok ya da özellikleri istenenle uyuşmuyor. Nasıl Düzeltilir: Architecture → ${c.tool} aracıyla ekle, sonra Properties panelinde özellikleri kontrol et.`;

@@ -393,7 +393,17 @@ export interface ModelCleanCriterion {
   message: string;
 }
 
+export interface MetricCriterion {
+  id: string;
+  type: 'metric';
+  metric: string;
+  min?: number;
+  max?: number;
+  message: string;
+}
+
 export type TaskCriterion =
+  | MetricCriterion
   | ModelCleanCriterion
   | CountCriterion
   | PropertyCriterion
@@ -452,6 +462,8 @@ export interface MissionDraft {
 
 export interface CompletedMissionRecord {
   bestScore: number;
+  /** Final-project missions keep the finished model for the next stage. */
+  model?: BimModel;
 }
 
 export interface SaveSettings {

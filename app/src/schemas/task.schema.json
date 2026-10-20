@@ -716,6 +716,62 @@
               "type",
               "message"
             ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,39}$"
+              },
+              "type": {
+                "const": "metric"
+              },
+              "metric": {
+                "enum": [
+                  "levelCount",
+                  "gridVertical",
+                  "gridHorizontal",
+                  "wallCount",
+                  "doorCount",
+                  "windowCount",
+                  "floorCount",
+                  "roofCount",
+                  "roomCount",
+                  "sectionCount",
+                  "elevationCount",
+                  "dimensionCount",
+                  "tagCount",
+                  "sheetCount",
+                  "enclosedAreaM2",
+                  "floorCovers",
+                  "roofSeated",
+                  "sheetPlanSection"
+                ]
+              },
+              "min": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100000
+              },
+              "max": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100000
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "metric",
+              "message"
+            ]
           }
         ]
       },

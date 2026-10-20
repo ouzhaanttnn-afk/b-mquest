@@ -1,0 +1,388 @@
+{
+  "levels": [
+    {
+      "id": "l0",
+      "elevation": 0,
+      "name": "Zemin Kat"
+    },
+    {
+      "id": "l1",
+      "name": "Kat 1",
+      "elevation": 3000
+    }
+  ],
+  "elements": [
+    {
+      "id": "g1",
+      "type": "grid",
+      "name": "A",
+      "start": [
+        0,
+        -1000
+      ],
+      "end": [
+        0,
+        9000
+      ]
+    },
+    {
+      "id": "g2",
+      "type": "grid",
+      "name": "B",
+      "start": [
+        9000,
+        -1000
+      ],
+      "end": [
+        9000,
+        9000
+      ]
+    },
+    {
+      "id": "g3",
+      "type": "grid",
+      "name": "1",
+      "start": [
+        -1000,
+        0
+      ],
+      "end": [
+        10000,
+        0
+      ]
+    },
+    {
+      "id": "g4",
+      "type": "grid",
+      "name": "2",
+      "start": [
+        -1000,
+        8000
+      ],
+      "end": [
+        10000,
+        8000
+      ]
+    },
+    {
+      "id": "w1",
+      "type": "wall",
+      "name": "Güney",
+      "baseLevelId": "l0",
+      "start": [
+        0,
+        0
+      ],
+      "end": [
+        9000,
+        0
+      ],
+      "height": 3000,
+      "thickness": 200
+    },
+    {
+      "id": "w2",
+      "type": "wall",
+      "name": "Doğu",
+      "baseLevelId": "l0",
+      "start": [
+        9000,
+        0
+      ],
+      "end": [
+        9000,
+        8000
+      ],
+      "height": 3000,
+      "thickness": 200
+    },
+    {
+      "id": "w3",
+      "type": "wall",
+      "name": "Kuzey",
+      "baseLevelId": "l0",
+      "start": [
+        9000,
+        8000
+      ],
+      "end": [
+        0,
+        8000
+      ],
+      "height": 3000,
+      "thickness": 200
+    },
+    {
+      "id": "w4",
+      "type": "wall",
+      "name": "Batı",
+      "baseLevelId": "l0",
+      "start": [
+        0,
+        8000
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "height": 3000,
+      "thickness": 200
+    },
+    {
+      "id": "f1",
+      "type": "floor",
+      "name": "Döşeme",
+      "levelId": "l0",
+      "boundary": [
+        [
+          0,
+          0
+        ],
+        [
+          9000,
+          0
+        ],
+        [
+          9000,
+          8000
+        ],
+        [
+          0,
+          8000
+        ]
+      ],
+      "thickness": 200
+    },
+    {
+      "id": "rf1",
+      "type": "roof",
+      "name": "Çatı",
+      "baseLevelId": "l1",
+      "footprint": [
+        [
+          0,
+          0
+        ],
+        [
+          9000,
+          0
+        ],
+        [
+          9000,
+          8000
+        ],
+        [
+          0,
+          8000
+        ]
+      ],
+      "slope": 25,
+      "overhang": 500
+    },
+    {
+      "id": "w5",
+      "type": "wall",
+      "name": "İç",
+      "baseLevelId": "l0",
+      "start": [
+        4500,
+        0
+      ],
+      "end": [
+        4500,
+        8000
+      ],
+      "height": 3000,
+      "thickness": 200
+    },
+    {
+      "id": "d1",
+      "type": "door",
+      "name": "Kapı",
+      "hostWallId": "w1",
+      "offset": 1000,
+      "width": 900,
+      "height": 2100,
+      "sill": 0,
+      "mark": "D-01",
+      "fireRating": "none"
+    },
+    {
+      "id": "d2",
+      "type": "door",
+      "name": "Kapı",
+      "hostWallId": "w5",
+      "offset": 3000,
+      "width": 900,
+      "height": 2100,
+      "sill": 0,
+      "mark": "D-02",
+      "fireRating": "none"
+    },
+    {
+      "id": "win1",
+      "type": "window",
+      "name": "Pencere",
+      "hostWallId": "w1",
+      "offset": 2500,
+      "width": 1200,
+      "height": 1200,
+      "sill": 900,
+      "mark": "W-01"
+    },
+    {
+      "id": "win2",
+      "type": "window",
+      "name": "Pencere",
+      "hostWallId": "w1",
+      "offset": 6000,
+      "width": 1200,
+      "height": 1200,
+      "sill": 900,
+      "mark": "W-02"
+    },
+    {
+      "id": "win3",
+      "type": "window",
+      "name": "Pencere",
+      "hostWallId": "w3",
+      "offset": 3000,
+      "width": 1200,
+      "height": 1200,
+      "sill": 900,
+      "mark": "W-03"
+    },
+    {
+      "id": "r1",
+      "type": "room",
+      "name": "Salon",
+      "number": "101",
+      "levelId": "l0",
+      "seedPoint": [
+        2250,
+        4000
+      ]
+    },
+    {
+      "id": "r2",
+      "type": "room",
+      "name": "Yatak Odası",
+      "number": "102",
+      "levelId": "l0",
+      "seedPoint": [
+        6750,
+        4000
+      ]
+    },
+    {
+      "id": "v1",
+      "type": "view",
+      "name": "Kesit 1",
+      "kind": "section",
+      "cutLine": [
+        [
+          0,
+          4000
+        ],
+        [
+          9000,
+          4000
+        ]
+      ],
+      "lookDir": "z+",
+      "scale": 50
+    },
+    {
+      "id": "v2",
+      "type": "view",
+      "name": "Cephe - Güney",
+      "kind": "elevation",
+      "direction": "S",
+      "scale": 100
+    },
+    {
+      "id": "dim1",
+      "type": "dimension",
+      "name": "Ölçü 1",
+      "wallA": "w1",
+      "wallB": "w3"
+    },
+    {
+      "id": "dim2",
+      "type": "dimension",
+      "name": "Ölçü 2",
+      "wallA": "w2",
+      "wallB": "w4"
+    },
+    {
+      "id": "v3",
+      "type": "view",
+      "name": "Plan - Zemin Kat",
+      "kind": "plan",
+      "levelId": "l0",
+      "scale": 100,
+      "cutHeight": 1200
+    },
+    {
+      "id": "sh1",
+      "type": "sheet",
+      "name": "Zemin Kat Planı",
+      "number": "A-101",
+      "size": "A3",
+      "placements": [
+        {
+          "viewId": "v3",
+          "x": 20,
+          "z": 20
+        },
+        {
+          "viewId": "v1",
+          "x": 120,
+          "z": 20
+        }
+      ]
+    },
+    {
+      "id": "tg1",
+      "type": "tag",
+      "name": "Etiket 1",
+      "targetId": "d1"
+    },
+    {
+      "id": "tg2",
+      "type": "tag",
+      "name": "Etiket 2",
+      "targetId": "d2"
+    },
+    {
+      "id": "tg3",
+      "type": "tag",
+      "name": "Etiket 3",
+      "targetId": "win1"
+    },
+    {
+      "id": "tg4",
+      "type": "tag",
+      "name": "Etiket 4",
+      "targetId": "win2"
+    },
+    {
+      "id": "tg5",
+      "type": "tag",
+      "name": "Etiket 5",
+      "targetId": "win3"
+    },
+    {
+      "id": "tg6",
+      "type": "tag",
+      "name": "Etiket 6",
+      "targetId": "r1"
+    },
+    {
+      "id": "tg7",
+      "type": "tag",
+      "name": "Etiket 7",
+      "targetId": "r2"
+    }
+  ]
+}

@@ -2376,3 +2376,41 @@ select:focus-visible,
     flex: 0 0 auto;
   }
 }
+
+/* Faz 4/5 — long modal content scrolls inside the card instead of off-screen */
+.bq-modal-card {
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.bq-sheet-wrap,
+.bq-delivery-sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bq-sheet-svg,
+.bq-drawing-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.bq-drawing-svg {
+  min-height: 220px;
+  max-height: 60vh;
+}
+.bq-delivery-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+.bq-delivery-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+.bq-sheet-fields {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

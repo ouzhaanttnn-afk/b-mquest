@@ -1,6 +1,7 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import taskSchemaJson from '../schemas/task.schema.json';
 import { checkModel, checkOptionsFor, summarizeIssues } from './modelCheck';
+import { modelMetric, type MetricName } from './metrics';
 import { fieldValue } from './fieldValues';
 import {
   isOpening,
@@ -359,6 +360,17 @@ const evidence = (
 
 /** Criteria that look at relationships between elements, not one field. */
 function evaluateExtended(c: TaskCriterion, m: BimModel): CriterionEvidence | null {
+  if (c.type === 'metric') {
+    const v = modelMetric(m, c.metric as MetricName);
+    const pass = (c.min === undefined || v >= c.min) && (c.max === undefined || v <= c.max);
+    const want =
+      c.min !== undefined && c.max !== undefined
+        ? `${c.min}–${c.max}`
+        : c.min !== undefined
+        ? `≥ ${c.min}`
+        : `≤ ${c.max}`;
+    return evidence(c, pass, v, want);
+  }
   if (c.type === 'modelClean') {
     const issues = checkModel(m, checkOptionsFor([c])).filter(
       (i) => !c.codes || c.codes.includes(i.code)

@@ -1,5 +1,6 @@
 import type { EditableField, MissionTask } from '../domain/types';
 import { BIM_MISSION_SPECS, buildBimMissionTask } from './bimMissions';
+import { FINAL_STAGES, buildFinalMissionTask, finalLessonOverrides } from './finalProject';
 
 export interface RevitLessonMeta {
   id: string;
@@ -1302,6 +1303,14 @@ export function buildGeneratedMissionTasks(): Record<string, MissionTask> {
     const meta = REVIT_LESSONS_BY_ID[spec.id];
     Object.assign(meta, bim.lesson);
     result[spec.id] = buildBimMissionTask(spec.id, meta, spec.prevId);
+  }
+
+  // Bölüm 7: one continuous house project, no tool names.
+  for (const spec of allSpecs) {
+    if (!FINAL_STAGES[spec.id]) continue;
+    const meta = REVIT_LESSONS_BY_ID[spec.id];
+    Object.assign(meta, finalLessonOverrides(spec.id));
+    result[spec.id] = buildFinalMissionTask(spec.id, meta, spec.prevId);
   }
 
   return result;

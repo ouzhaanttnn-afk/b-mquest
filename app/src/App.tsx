@@ -11,6 +11,7 @@ import {
   isMissionUnlocked,
   loadFromBrowserStorage,
   parseAndValidateSaveJson,
+  carryOverDraft,
   recordPassingScore,
   SAVE_STORAGE_KEY,
   writeToBrowserStorage,
@@ -104,7 +105,10 @@ export function App() {
         persistSave(nextSave);
       }
 
-      const session = createInitialSession(task, existingDraft);
+      const session = createInitialSession(
+        task,
+        existingDraft ?? carryOverDraft(task, save)
+      );
       setActiveSession(session);
     },
     [persistSave, save]
@@ -133,7 +137,8 @@ export function App() {
         nextSave = recordPassingScore(
           nextSave,
           missionId,
-          passingEvaluation.score
+          passingEvaluation.score,
+          nextSession.model
         );
       }
 
@@ -144,8 +149,11 @@ export function App() {
 
   const handleResetDraftConfirmed = useCallback(
     (resetState: MissionSessionState) => {
-      setActiveSession(resetState);
       const missionId = resetState.task.id;
+      const carried = carryOverDraft(resetState.task, save);
+      setActiveSession(
+        carried ? createInitialSession(resetState.task, carried) : resetState
+      );
       const nextDrafts = { ...save.drafts };
       delete nextDrafts[missionId];
       const nextSave: SaveEnvelopeV1 = {
@@ -226,9 +234,11 @@ export function App() {
         return;
       }
       const existingDraft = save.drafts[nextMissionId];
-      setActiveSession(createInitialSession(task, existingDraft));
+      setActiveSession(
+        createInitialSession(task, existingDraft ?? carryOverDraft(task, save))
+      );
     },
-    [save.drafts]
+    [save]
   );
 
   return (

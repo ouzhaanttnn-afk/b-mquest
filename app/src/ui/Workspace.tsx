@@ -30,6 +30,7 @@ import { buildDraftsForElement } from './workspace/drafts';
 import { TopBar } from './workspace/TopBar';
 import { LevelsSheet } from './workspace/LevelsSheet';
 import { ProjectBrowser, SheetEditor } from './workspace/DocumentationPanels';
+import { ProjectDelivery } from './workspace/ProjectDelivery';
 import { WarningsSheet } from './workspace/WarningsSheet';
 import { checkModel, checkOptionsFor } from '../domain/modelCheck';
 import { getChapterForMissionId } from '../content/curriculum';
@@ -81,6 +82,7 @@ export interface WorkspaceProps {
 export const Workspace: React.FC<WorkspaceProps> = ({
   session,
   allMissions,
+  completedMap,
   reducedMotion,
   theme = 'dark',
   storageWarning,
@@ -1002,8 +1004,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           setStatusToast={setStatusToast}
         />
 
+        {task.id === 'm50' && (
+          <ProjectDelivery
+            open={recapModalOpen}
+            evaluation={lastEvaluation}
+            task={task}
+            model={model}
+            completedMap={completedMap}
+            onClose={() => setRecapModalOpen(false)}
+            onBackToDashboard={onBackToDashboard}
+          />
+        )}
         <RecapModal
-          recapModalOpen={recapModalOpen}
+          recapModalOpen={recapModalOpen && task.id !== 'm50'}
           lastEvaluation={lastEvaluation}
           reducedMotion={reducedMotion}
           task={task}

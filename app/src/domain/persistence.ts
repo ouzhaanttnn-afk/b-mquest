@@ -1,7 +1,7 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import taskSchemaJson from '../schemas/task.schema.json';
 import { modelErrors, permissionErrors } from './evaluator';
-import type { MissionTask, SaveEnvelopeV1 } from './types';
+import type { BimModel, MissionTask, SaveEnvelopeV1 } from './types';
 
 export const SAVE_STORAGE_KEY = 'bimquest.save.v1';
 export const MAX_IMPORT_BYTES = 1024 * 1024; // 1 MiB UTF-8
@@ -28,6 +28,7 @@ const saveEnvelopeSchema = {
         required: ['bestScore'],
         properties: {
           bestScore: { type: 'integer', minimum: 0, maximum: 100 },
+          model: { $ref: `${taskSchemaJson.$id}#/$defs/model` },
         },
       },
     },
@@ -220,6 +221,20 @@ export function parseAndValidateSaveJson(
     }
   }
 
+  for (const [missionId, comp] of Object.entries(candidate.completed)) {
+    if (comp.model) {
+      const err = modelErrors(comp.model);
+      if (err.length > 0) {
+        return {
+          ok: false,
+          reason: 'E_INVALID_DRAFT',
+          message: `${missionId} tamamlanma modeli bütünlük kontrolünden geçemedi (${err[0]}).`,
+          rawText,
+        };
+      }
+    }
+  }
+
   // Deep clone through clean assignment to avoid prototype pollution
   const cleanSave: SaveEnvelopeV1 = {
     saveVersion: 1,
@@ -234,7 +249,10 @@ export function parseAndValidateSaveJson(
 
   for (const [mId, comp] of Object.entries(candidate.completed)) {
     if (MISSION_ID_REGEX.test(mId)) {
-      cleanSave.completed[mId] = { bestScore: comp.bestScore };
+      cleanSave.completed[mId] = {
+        bestScore: comp.bestScore,
+        ...(comp.model ? { model: JSON.parse(JSON.stringify(comp.model)) as BimModel } : {}),
+      };
     }
   }
 
@@ -250,20 +268,41 @@ export function parseAndValidateSaveJson(
   return { ok: true, save: cleanSave };
 }
 
+/** Final-project stages whose finished model is handed to the next stage. */
+export const MODEL_CARRYING_MISSIONS = new Set(['m44', 'm45', 'm46', 'm47', 'm48', 'm49']);
+
 export function recordPassingScore(
   save: SaveEnvelopeV1,
   missionId: string,
-  newPassingScore: number
+  newPassingScore: number,
+  finishedModel?: BimModel
 ): SaveEnvelopeV1 {
-  const prevBest = save.completed[missionId]?.bestScore ?? 0;
-  const bestScore = Math.max(prevBest, Math.min(100, Math.max(0, newPassingScore)));
+  const prev = save.completed[missionId];
+  const bestScore = Math.max(prev?.bestScore ?? 0, Math.min(100, Math.max(0, newPassingScore)));
+  const carry = MODEL_CARRYING_MISSIONS.has(missionId) ? finishedModel : undefined;
+  const model = carry ?? prev?.model;
   return {
     ...save,
     completed: {
       ...save.completed,
-      [missionId]: { bestScore },
+      [missionId]: { bestScore, ...(model ? { model: JSON.parse(JSON.stringify(model)) as BimModel } : {}) },
     },
   };
+}
+
+/**
+ * Final-project stages continue the same house: a stage that has no draft of
+ * its own starts from the model the previous stage finished.
+ */
+export function carryOverDraft(
+  task: MissionTask,
+  save: SaveEnvelopeV1
+): { model: BimModel; revealedHints: string[] } | undefined {
+  const prev = task.prerequisites[0];
+  if (!prev || !MODEL_CARRYING_MISSIONS.has(prev)) return undefined;
+  const model = save.completed[prev]?.model;
+  if (!model) return undefined;
+  return { model: JSON.parse(JSON.stringify(model)) as BimModel, revealedHints: [] };
 }
 
 export function isMissionUnlocked(

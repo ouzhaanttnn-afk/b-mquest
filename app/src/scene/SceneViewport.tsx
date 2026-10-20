@@ -206,7 +206,8 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
         lineWidth={3}
       />
 
-      {/* Dashed Cyan Target Ghosts */}
+      {/* Dashed Cyan Target Ghosts (first missions only) */}
+      {['m01', 'm02', 'm03'].includes(task.id) && (
       <Line
         points={targetRoomBottomLoop}
         color="#38BDF8"
@@ -215,6 +216,8 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
         dashSize={0.2}
         gapSize={0.12}
       />
+      )}
+      {['m01', 'm02', 'm03'].includes(task.id) && (
       <Line
         points={targetRoomTopLoop}
         color="#38BDF8"
@@ -223,6 +226,7 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
         dashSize={0.2}
         gapSize={0.12}
       />
+      )}
       {task.id === 'm03' && (
         <Line
           points={targetDoorLoop}
@@ -460,25 +464,48 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const glCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Camera framing follows the model: a 9 × 8 m house needs a wider shot than the 6 × 4 m room.
+  const modelRef = useRef(model);
+  modelRef.current = model;
+  const frame = useCallback(() => {
+    const walls = modelRef.current.elements.filter((e) => e.type === 'wall');
+    if (walls.length === 0) return { cx: 3, cz: 2, w: 6, d: 4 };
+    const xs = walls.flatMap((w) => [w.start[0], w.end[0]]);
+    const zs = walls.flatMap((w) => [w.start[1], w.end[1]]);
+    const w = (Math.max(...xs) - Math.min(...xs)) / 1000;
+    const d = (Math.max(...zs) - Math.min(...zs)) / 1000;
+    return {
+      cx: (Math.max(...xs) + Math.min(...xs)) / 2000,
+      cz: (Math.max(...zs) + Math.min(...zs)) / 2000,
+      w: Math.max(w, 4),
+      d: Math.max(d, 3),
+    };
+  }, []);
+
   const resetCamera = useCallback(() => {
     const ctrl = controlsRef.current;
     if (!ctrl) return;
-    ctrl.object.position.set(8.2, 6.2, 8.8);
-    ctrl.target.set(3, 1.2, 2);
+    const f = frame();
+    const span = Math.max(f.w, f.d);
+    ctrl.object.position.set(f.cx + span * 0.95, span * 0.75 + 1.7, f.cz + span * 1.1);
+    ctrl.target.set(f.cx, 1.2, f.cz);
     ctrl.update();
-  }, []);
+  }, [frame]);
 
   const setInsideRoomCamera = useCallback(() => {
     const ctrl = controlsRef.current;
     if (!ctrl) return;
-    ctrl.object.position.set(3.0, 1.65, 3.3);
-    ctrl.target.set(3.0, 1.4, 0.0);
+    const f = frame();
+    ctrl.object.position.set(f.cx, 1.65, f.cz + f.d * 0.35);
+    ctrl.target.set(f.cx, 1.4, f.cz - f.d / 2);
     ctrl.update();
-  }, []);
+  }, [frame]);
 
   useEffect(() => {
-    resetCamera();
-  }, [task.id, resetCamera]);
+    // The controls mount a frame after the canvas: reframe once they exist.
+    const id = requestAnimationFrame(() => resetCamera());
+    return () => cancelAnimationFrame(id);
+  }, [task.id, sceneMountKey, resetCamera]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -640,7 +667,16 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
           dpr={1}
           shadows
           frameloop={isVisible ? 'always' : 'never'}
-          camera={{ position: [8.2, 6.2, 8.8], fov: 42, near: 0.1, far: 120 }}
+          camera={{
+            position: (() => {
+              const f = frame();
+              const span = Math.max(f.w, f.d);
+              return [f.cx + span * 0.95, span * 0.75 + 1.7, f.cz + span * 1.1] as [number, number, number];
+            })(),
+            fov: 42,
+            near: 0.1,
+            far: 120,
+          }}
           onPointerMissed={() => onSelect(null)}
           onCreated={handleCreated}
         >

@@ -546,7 +546,11 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         </g>
 
         {/* Target Ghosts & Architectural Dimension Lines */}
-        <g data-testid="plan-ghost-targets" data-bg="true">
+        <g
+          data-testid="plan-ghost-targets"
+          data-bg="true"
+          display={['m01', 'm02', 'm03'].includes(task.id) ? undefined : 'none'}
+        >
           <rect
             x={0}
             y={0}
