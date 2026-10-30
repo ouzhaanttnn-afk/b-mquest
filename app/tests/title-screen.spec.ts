@@ -324,3 +324,60 @@ test.describe('Takılan oyuncuya yardım', () => {
     await expect(page.getByTestId('stuck-nudge')).toBeVisible();
   });
 });
+
+test.describe('Kaydırma ve yerleşim (telefon / tablet)', () => {
+  const seed = async (page: import('@playwright/test').Page) =>
+    page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      if (!window.localStorage.getItem('bimquest.meta.v1')) {
+        window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission', 'chapter-1'] }));
+      }
+      if (!window.localStorage.getItem('bimquest.save.v1')) {
+        window.localStorage.setItem(
+          'bimquest.save.v1',
+          JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed: { m01: { bestScore: 95 }, m02: { bestScore: 95 } }, drafts: {}, settings: { reducedMotion: true, sound: false } })
+        );
+      }
+    });
+
+  for (const [label, w, h] of [['telefon', 390, 844], ['küçük telefon', 320, 640], ['iPad dikey', 820, 1180]] as const) {
+    test(`${label}: çalışma ekranı sayfa gibi kaymaz, Kontrol et ve plan ekranda`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await seed(page);
+      await page.goto('/');
+      await page.getByTestId('start-mission-m03').click();
+      await expect(page.getByTestId('workspace-screen')).toBeVisible();
+      const m = await page.evaluate(() => {
+        const ws = document.querySelector('.bq-workspace') as HTMLElement;
+        const check = document.querySelector('[data-testid="check-btn"]') as HTMLElement;
+        const plan = document.querySelector('.bq-plan-svg') as SVGElement;
+        const c = check.getBoundingClientRect();
+        const p = plan.getBoundingClientRect();
+        return {
+          pageScroll: ws.scrollHeight - ws.clientHeight,
+          docOverflowX: document.documentElement.scrollWidth - window.innerWidth,
+          checkVisible: c.top >= 0 && c.bottom <= window.innerHeight,
+          planHeight: p.height,
+        };
+      });
+      expect(m.pageScroll).toBeLessThanOrEqual(1);
+      expect(m.docOverflowX).toBeLessThanOrEqual(0);
+      expect(m.checkVisible).toBe(true);
+      expect(m.planHeight).toBeGreaterThan(150);
+    });
+  }
+
+  test('320 px görevler ekranında yatay taşma yok; sözlük listesi kendi içinde kayar', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await seed(page);
+    await page.goto('/');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await page.getByTestId('help-btn').click();
+    const r = await page.evaluate(() => {
+      const card = document.querySelector('.bq-modal-card') as HTMLElement;
+      const list = document.querySelector('.bq-help-list') as HTMLElement;
+      return { cardScrolls: card.scrollHeight > card.clientHeight + 1, listScrolls: list.scrollHeight > list.clientHeight, bodyLocked: getComputedStyle(document.body).overflow === 'hidden' };
+    });
+    expect(r).toEqual({ cardScrolls: false, listScrolls: true, bodyLocked: true });
+  });
+});
