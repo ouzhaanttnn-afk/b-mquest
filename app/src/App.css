@@ -2745,3 +2745,9 @@ select:focus-visible,
 .bq-tour-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-subtle); }
 .bq-tour-dot.on { background: var(--accent-bright); }
 .bq-tour-icon { font-size: 40px; text-align: center; }
+.bq-cert-svg { width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
+
+.bq-wall-helpers { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.bq-wall-helper { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; }
+.bq-dir-btn { min-width: 44px; min-height: 44px; font-size: 20px; }
+.bq-wall-helpers > summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-bright); min-height: 32px; display: flex; align-items: center; }

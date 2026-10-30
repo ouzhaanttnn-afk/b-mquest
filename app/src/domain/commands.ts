@@ -24,7 +24,14 @@ import {
   type CreateWindowInput,
   type OpResult,
 } from './modelOps';
-import { alignWallOp, copyWallsOp, mirrorWallsOp, offsetWallOp } from './modifyOps';
+import {
+  alignWallOp,
+  copyWallsOp,
+  mirrorWallsOp,
+  offsetWallOp,
+  rectangleWallsOp,
+  type RectangleWallsInput,
+} from './modifyOps';
 import { elementTypeOf } from './derived';
 import {
   createDimensionOp,
@@ -975,6 +982,16 @@ function commitCreate(state: MissionSessionState, op: OpResult): CommandResult {
 }
 
 // ---- Modify tools -----------------------------------------------------------
+
+export function createRectangleWallsCommand(
+  state: MissionSessionState,
+  input: RectangleWallsInput
+): CommandResult {
+  return (
+    noPermission(state, 'wall', 'duvar') ??
+    commitCreate(state, rectangleWallsOp(state.model, input))
+  );
+}
 
 export function copyWallsCommand(
   state: MissionSessionState,

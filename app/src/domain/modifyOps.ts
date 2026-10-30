@@ -159,3 +159,55 @@ export function alignWallOp(model: BimModel, movingId: string, refId: string): O
   };
   return { ok: true, model: next };
 }
+
+export interface RectangleWallsInput {
+  /** South-west corner. */
+  x: number;
+  z: number;
+  width: unknown;
+  depth: unknown;
+  baseLevelId: string;
+  height: number;
+  thickness: number;
+}
+
+/** Four walls around a rectangle in one step (Revit's Rectangle draw option). */
+export function rectangleWallsOp(model: BimModel, input: RectangleWallsInput): OpResult {
+  const w = coord(input.width, 'width', 100, LIMIT);
+  if (!w.ok) return { ok: false, error: w.error };
+  const d = coord(input.depth, 'depth', 100, LIMIT);
+  if (!d.ok) return { ok: false, error: d.error };
+  if (model.elements.length + 4 > MAX_ELEMENTS) {
+    return fail('E_MAX_ELEMENTS', 'Model en fazla 500 nesne içerebilir.');
+  }
+  if (!model.levels.some((l) => l.id === input.baseLevelId)) {
+    return fail('E_LEVEL', 'Geçerli bir kat seçilmelidir.');
+  }
+  const x0 = input.x;
+  const z0 = input.z;
+  const x1 = x0 + w.value;
+  const z1 = z0 + d.value;
+  const corners: Array<[Point, Point, string]> = [
+    [[x0, z0], [x1, z0], 'Güney'],
+    [[x1, z0], [x1, z1], 'Doğu'],
+    [[x1, z1], [x0, z1], 'Kuzey'],
+    [[x0, z1], [x0, z0], 'Batı'],
+  ];
+  const next = cloneModelDeep(model);
+  let first: string | undefined;
+  for (const [start, end, label] of corners) {
+    const id = nextId(next, 'w');
+    first ??= id;
+    next.elements.push({
+      id,
+      type: 'wall',
+      name: `${label} duvar`,
+      baseLevelId: input.baseLevelId,
+      start: [start[0], start[1]],
+      end: [end[0], end[1]],
+      height: input.height,
+      thickness: input.thickness,
+    });
+  }
+  return { ok: true, model: next, createdId: first };
+}

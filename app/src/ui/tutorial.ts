@@ -1,7 +1,8 @@
-import { driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
-
-export function startMission1Tutorial(): void {
+export async function startMission1Tutorial(): Promise<void> {
+  const [{ driver }] = await Promise.all([
+    import('driver.js'),
+    import('driver.js/dist/driver.css'),
+  ]);
   const drv = driver({
     showProgress: true,
     animate: true,

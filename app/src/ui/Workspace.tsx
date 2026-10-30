@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createDoorCommand,
   createWallCommand,
+  createRectangleWallsCommand,
   deleteElementCommand,
   moveWallCommand,
   redoCommand,
@@ -55,6 +56,8 @@ import {
   roofFromWalls,
   stairAt,
   toolForShortcut,
+  wallByLength,
+  type WallDir,
   wallChainTap,
   type ChainState,
   type ToolId,
@@ -640,6 +643,35 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const handleWallByLength = (dir: WallDir, length: number) => {
+    const o = wallByLength(session, chain, dir, length, {
+      baseLevelId: activeLevelId,
+      height: num(toolOpts.wallHeight, 3000),
+      thickness: num(toolOpts.wallThickness, 200),
+    });
+    setChain(o.next);
+    if (o.result) applyResult(o.result);
+    if (o.toast) setStatusToast(o.toast);
+  };
+
+  const handleWallRectangle = (width: number, depth: number) => {
+    const origin: [number, number] = chain.start ?? [0, 0];
+    const res = createRectangleWallsCommand(session, {
+      x: origin[0],
+      z: origin[1],
+      width,
+      depth,
+      baseLevelId: activeLevelId,
+      height: num(toolOpts.wallHeight, 3000),
+      thickness: num(toolOpts.wallThickness, 200),
+    });
+    applyResult(res);
+    if (res.ok) {
+      setChain(EMPTY_CHAIN);
+      setStatusToast('4 duvarlı oda oluşturuldu.');
+    }
+  };
+
   const handleToolPoint = (
     pt: [number, number],
     hit?: { wallId: string; along: number }
@@ -965,6 +997,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onCreateFloor={handleCreateFloorTool}
           onCreateRoof={handleCreateRoofTool}
           onElevation={(dir) => applyResult(elevationFor(session, dir))}
+          onWallByLength={handleWallByLength}
+          onWallRectangle={handleWallRectangle}
         />
         <StageViewports
           viewMode={viewMode}

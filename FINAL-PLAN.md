@@ -94,3 +94,18 @@ Her faz sonunda: `npx tsc -b`, `npm test`, `npm run build`, `npx playwright test
 3. 320 px genişlikte yatay taşma, 16 px altı input fontu olmaz.
 4. Sırlar (anahtar, p8, p12, profil) koda ve repoya girmez.
 5. `main`'e birleştirme TestFlight build'i tetikler; yalnızca kullanıcı isteyince yapılır.
+
+## 4. Uygulama durumu (30 Ekim 2026)
+
+| Faz | Durum | Not |
+|---|---|---|
+| 0 Güvenlik ağı | Yapıldı | ErrorBoundary, CI kapısı (iOS build'inden önce tsc + test + build), şablon dosyalar silindi. Kalan lint uyarıları eski koda ait ve davranışa dokunduğu için bırakıldı. |
+| 1 Görev düzeltmeleri | Yapıldı | m07, m11, m23 yeniden yazıldı. |
+| 2 Yardım ve sözlük | Yapıldı | Sözlük araması, kısayol kartı, 3 kartlık ilk açılış turu. |
+| 3 Sertifika | Yapıldı | Görev 50 sonrası, ad yazılır, PNG indirilir. |
+| 4 Geri bildirim | Gereksiz bulundu | Kriter satırına dokununca ilgili nesne zaten seçiliyor. Yeni iş yapılmadı. |
+| 5 Erişilebilirlik/performans | Kısmen | Plan için ekran okuyucu özeti ve lazy yükleme yapıldı (ana paket 758 → 617 kB). `user-scalable=no` bilerek korundu: planda parmakla yakınlaştırma sayfayı yakınlaştırırdı. |
+| 6 Kod sağlığı | Yapılmadı | Büyük dosyaların bölünmesi. |
+| 7 Kapsam | Yapılmadı | Family editörü, çok katlı tek proje vb. |
+
+Ek (kullanıcı geri bildirimiyle): duvar çizmek zor geldiği için "Ölçüyle çiz" eklendi: yön oklarıyla ölçülü duvar zinciri ve tek dokunuşta 4 duvarlı oda; çizim sırasında canlı uzunluk etiketi.

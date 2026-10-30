@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import './App.css';
 import { loadValidatedCatalog } from './content/content';
 import {
@@ -34,7 +34,9 @@ import { playSound } from './ui/sound';
 import { Dashboard } from './ui/Dashboard';
 import { TitleScreen } from './ui/TitleScreen';
 import { FirstRunTour } from './ui/FirstRunTour';
-import { Workspace } from './ui/Workspace';
+const Workspace = lazy(() =>
+  import('./ui/Workspace').then((m) => ({ default: m.Workspace }))
+);
 
 const THEME_STORAGE_KEY = 'bimquest.theme.v1';
 const TITLE_SEEN_KEY = 'bimquest.titleSeen.v1';
@@ -351,6 +353,7 @@ export function App() {
         <Dashboard
           streak={visibleStreak(meta, today)}
           meta={meta}
+          onSetPlayerName={(name) => updateMeta({ ...meta, playerName: name })}
           initialInfoOpen={openInfoOnDashboard}
           onBackToTitle={() => setShowTitle(true)}
           missions={catalog.missions}
@@ -371,6 +374,7 @@ export function App() {
         )}
         </>
       ) : (
+        <Suspense fallback={<div className="bq-scene-loading" role="status">Görev yükleniyor…</div>}>
         <Workspace
           session={activeSession}
           allMissions={catalog.missions}
@@ -385,6 +389,7 @@ export function App() {
           onGoToNextMission={handleGoToNextMission}
           onExportSave={handleExportSave}
         />
+        </Suspense>
       )}
     </div>
   );

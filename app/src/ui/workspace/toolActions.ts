@@ -128,6 +128,33 @@ export function wallChainTap(
   };
 }
 
+export type WallDir = 'E' | 'W' | 'N' | 'S';
+
+/**
+ * Adds a wall of exact length in a compass direction, continuing the running
+ * chain (or starting at the origin). Plan "north" is +Z.
+ */
+export function wallByLength(
+  session: MissionSessionState,
+  chain: ChainState,
+  dir: WallDir,
+  length: number,
+  d: WallDefaults
+): TapOutcome<ChainState> {
+  if (!Number.isInteger(length) || length < 100) {
+    return {
+      result: null,
+      next: chain,
+      toast: 'Uzunluk en az 100 mm olan bir tam sayı olmalı.',
+    };
+  }
+  const start: Point = chain.start ?? [0, 0];
+  const delta: Record<WallDir, Point> = { E: [length, 0], W: [-length, 0], N: [0, length], S: [0, -length] };
+  const end: Point = [start[0] + delta[dir][0], start[1] + delta[dir][1]];
+  const seeded: ChainState = chain.start ? chain : { start, origin: start };
+  return wallChainTap(session, seeded, end, d);
+}
+
 export interface OpeningDefaults {
   width: number;
   height: number;

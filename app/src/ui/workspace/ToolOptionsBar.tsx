@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BimModel, StairDirection } from '../../domain/types';
-import { TOOL_DEFS, type ToolId } from './toolActions';
+import { TOOL_DEFS, type ToolId, type WallDir } from './toolActions';
 
 export interface ToolOptions {
   winWidth: string;
@@ -33,6 +33,8 @@ export interface ToolOptionsBarProps {
   onCreateFloor: () => void;
   onCreateRoof: () => void;
   onElevation: (dir: 'N' | 'S' | 'E' | 'W') => void;
+  onWallByLength: (dir: WallDir, length: number) => void;
+  onWallRectangle: (width: number, depth: number) => void;
 }
 
 const Num: React.FC<{
@@ -67,7 +69,12 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   onCreateFloor,
   onCreateRoof,
   onElevation,
+  onWallByLength,
+  onWallRectangle,
 }) => {
+  const [len, setLen] = React.useState('3000');
+  const [rw, setRw] = React.useState('6000');
+  const [rd, setRd] = React.useState('4000');
   if (activeTool === 'select') return null;
   const def = TOOL_DEFS.find((t) => t.id === activeTool);
   const levelSelect = (
@@ -104,6 +111,58 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
           <>
             <Num label="Yükseklik" name="wallHeight" opts={opts} setOpts={setOpts} />
             <Num label="Kalınlık" name="wallThickness" opts={opts} setOpts={setOpts} />
+            <details className="bq-wall-helpers" data-testid="wall-helpers">
+              <summary data-testid="wall-helpers-toggle">Ölçüyle çiz (sürüklemek zor gelirse)</summary>
+              <div className="bq-wall-helper">
+                <label className="bq-tool-opt">
+                  <span>Ölçüyle duvar (mm)</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    data-testid="wall-len"
+                    value={len}
+                    onChange={(e) => setLen(e.target.value)}
+                  />
+                </label>
+                {(
+                  [
+                    ['W', '←', 'Batı'],
+                    ['E', '→', 'Doğu'],
+                    ['N', '↑', 'Kuzey'],
+                    ['S', '↓', 'Güney'],
+                  ] as const
+                ).map(([d, arrow, label]) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className="bq-btn bq-btn-secondary bq-btn-compact bq-dir-btn"
+                    data-testid={`wall-dir-${d}`}
+                    aria-label={`${label} yönüne ${len} mm duvar ekle`}
+                    onClick={() => onWallByLength(d, Number(len))}
+                  >
+                    {arrow}
+                  </button>
+                ))}
+              </div>
+              <div className="bq-wall-helper">
+                <label className="bq-tool-opt">
+                  <span>Oda genişlik</span>
+                  <input type="text" inputMode="numeric" data-testid="rect-w" value={rw} onChange={(e) => setRw(e.target.value)} />
+                </label>
+                <label className="bq-tool-opt">
+                  <span>Oda derinlik</span>
+                  <input type="text" inputMode="numeric" data-testid="rect-d" value={rd} onChange={(e) => setRd(e.target.value)} />
+                </label>
+                <button
+                  type="button"
+                  className="bq-btn bq-btn-secondary bq-btn-compact"
+                  data-testid="wall-rect-btn"
+                  onClick={() => onWallRectangle(Number(rw), Number(rd))}
+                >
+                  4 duvarlı oda
+                </button>
+              </div>
+            </details>
           </>
         )}
         {activeTool === 'door' && (

@@ -1,3 +1,4 @@
+import { describeModel } from '../domain/summary';
 import React, { useMemo, useRef, useState } from 'react';
 import type {
   BimModel,
@@ -487,7 +488,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         viewBox={viewBoxStr}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`${task.title} 2B Ortografik Plan Görünümü`}
+        aria-label={`${task.title} 2B Ortografik Plan Görünümü. ${describeModel(model, selectedId)}`}
         onPointerDown={handleSvgPointerDown}
         onPointerMove={handleSvgPointerMove}
         onPointerUp={handleSvgPointerUp}
@@ -1048,6 +1049,20 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
               stroke="#FFFFFF"
               strokeWidth={24}
             />
+            <text
+              x={(wallPreview.startX + wallPreview.endX) / 2}
+              y={(wallPreview.startZ + wallPreview.endZ) / 2 - 160}
+              textAnchor="middle"
+              fontSize={150}
+              fontWeight={800}
+              fill="#F97316"
+              stroke="#0B1120"
+              strokeWidth={30}
+              paintOrder="stroke"
+              data-testid="plan-wall-length"
+            >
+              {Math.round(Math.hypot(wallPreview.endX - wallPreview.startX, wallPreview.endZ - wallPreview.startZ))} mm
+            </text>
             <circle
               cx={wallPreview.endX}
               cy={wallPreview.endZ}

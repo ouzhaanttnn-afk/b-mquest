@@ -167,3 +167,69 @@ test.describe('Yardım ve sözlük', () => {
     await expect(page.getByTestId('help-shortcuts')).toContainText('WA');
   });
 });
+
+test.describe('Mezuniyet sertifikası', () => {
+  test('final sonrası sertifika açılır, ad yazılır', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+      const completed: Record<string, unknown> = {};
+      for (let i = 1; i <= 50; i++) completed[`m${String(i).padStart(2, '0')}`] = { bestScore: 100 };
+      window.localStorage.setItem(
+        'bimquest.save.v1',
+        JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed, drafts: {}, settings: { reducedMotion: true, sound: false } })
+      );
+    });
+    await page.goto('/');
+    await page.getByTestId('certificate-btn').click();
+    await expect(page.getByTestId('certificate-sheet')).toBeVisible();
+    await page.getByTestId('certificate-name').fill('Ayşe Yılmaz');
+    await expect(page.getByTestId('certificate-name-text')).toHaveText('Ayşe Yılmaz');
+    await expect(page.getByTestId('certificate-svg')).toContainText('50');
+  });
+  test('final bitmeden sertifika düğmesi yok', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+    });
+    await page.goto('/');
+    await expect(page.getByTestId('certificate-btn')).toHaveCount(0);
+  });
+});
+
+test.describe('Duvar çizmeyi kolaylaştıranlar', () => {
+  const seed = async (page: import('@playwright/test').Page) =>
+    page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+      window.localStorage.setItem(
+        'bimquest.save.v1',
+        JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed: { m01: { bestScore: 100 } }, drafts: {}, settings: { reducedMotion: true, sound: false } })
+      );
+    });
+
+  test('m02: "4 duvarlı oda" tek dokunuşla görevi çözer', async ({ page }) => {
+    await seed(page);
+    await page.goto('/');
+    await page.getByTestId('start-mission-m02').click();
+    await page.getByTestId('tool-wall-btn').click();
+    await page.getByTestId('wall-helpers-toggle').click();
+    await page.getByTestId('wall-rect-btn').click();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+
+  test('m02: ölçüyle duvar — yön okları zinciri çizer', async ({ page }) => {
+    await seed(page);
+    await page.goto('/');
+    await page.getByTestId('start-mission-m02').click();
+    await page.getByTestId('tool-wall-btn').click();
+    await page.getByTestId('wall-helpers-toggle').click();
+    for (const [dir, len] of [['E', '6000'], ['N', '4000'], ['W', '6000'], ['S', '4000']]) {
+      await page.getByTestId('wall-len').fill(len);
+      await page.getByTestId(`wall-dir-${dir}`).click();
+    }
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+});

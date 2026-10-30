@@ -18,6 +18,8 @@ export interface GameMeta {
   stats: Record<string, MissionStats>;
   /** The three-card first-run tour has been seen or skipped. */
   introDone: boolean;
+  /** Name printed on the graduation certificate. */
+  playerName: string;
 }
 
 export interface MissionStats {
@@ -33,6 +35,7 @@ export const EMPTY_META: GameMeta = {
   announced: [],
   stats: {},
   introDone: false,
+  playerName: '',
 };
 
 type Completed = Record<string, { bestScore: number }>;
@@ -237,6 +240,7 @@ export function loadMeta(): GameMeta {
         : [],
       stats: sanitizeStats(p.stats),
       introDone: p.introDone === true,
+      playerName: typeof p.playerName === 'string' ? p.playerName.slice(0, 40) : '',
     };
   } catch {
     return EMPTY_META;

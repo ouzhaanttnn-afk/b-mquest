@@ -17,6 +17,8 @@ import type {
 } from '../domain/types';
 import { playSound } from './sound';
 import { HelpSheet } from './HelpSheet';
+import { CertificateSheet } from './CertificateSheet';
+import { certificateUnlocked } from '../domain/certificate';
 
 export interface DashboardProps {
   missions: MissionTask[];
@@ -24,6 +26,7 @@ export interface DashboardProps {
   theme: 'light' | 'dark';
   streak: number;
   meta: GameMeta;
+  onSetPlayerName: (name: string) => void;
   initialInfoOpen?: boolean;
   onBackToTitle?: () => void;
   storageWarning: string | null;
@@ -66,6 +69,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   theme,
   streak,
   meta,
+  onSetPlayerName,
   initialInfoOpen = false,
   onBackToTitle,
   storageWarning,
@@ -88,6 +92,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [expandedChapterId, setExpandedChapterId] = useState<string>('');
   const [infoModalOpen, setInfoModalOpen] = useState(initialInfoOpen);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [certificateOpen, setCertificateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,6 +223,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <span className="bq-i-badge">i</span>
           </button>
+
+          {certificateUnlocked(save.completed) && (
+            <button
+              type="button"
+              className="bq-icon-pill-btn"
+              data-testid="certificate-btn"
+              aria-label="Mezuniyet sertifikası"
+              title="Mezuniyet sertifikası"
+              onClick={() => {
+                playSound('click');
+                setCertificateOpen(true);
+              }}
+            >
+              <span>🎓</span>
+            </button>
+          )}
 
           <HelpSheet />
 
@@ -792,6 +813,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
       </section>
+
+      {certificateOpen && (
+        <CertificateSheet
+          completed={save.completed}
+          name={meta.playerName}
+          onNameChange={onSetPlayerName}
+          onClose={() => setCertificateOpen(false)}
+        />
+      )}
 
       {achievementsOpen && (
         <div

@@ -209,3 +209,35 @@ describe('Faz 1 — yeniden yazılan görevler', () => {
     expect(passes(s).pass).toBe(true);
   });
 });
+
+import { createRectangleWallsCommand } from '../src/domain/commands';
+import { wallByLength, EMPTY_CHAIN } from '../src/ui/workspace/toolActions';
+
+describe('Duvar çizmeyi kolaylaştıranlar', () => {
+  const d = { baseLevelId: 'l0', height: 3000, thickness: 200 };
+  it('4 duvarlı oda tek adımda gelir ve m02 çözümünü sağlar', () => {
+    const s = run('m02', [
+      (st) => createRectangleWallsCommand(st, { x: 0, z: 0, width: 6000, depth: 4000, ...d }),
+    ]);
+    expect(s.model.elements.filter((e) => e.type === 'wall')).toHaveLength(4);
+    expect(s.past).toHaveLength(1);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('ölçüyle duvar zinciri: 4 yön, zincir kapanır', () => {
+    let s = createInitialSession(missions.m02);
+    let chain = EMPTY_CHAIN;
+    for (const [dir, len] of [['E', 6000], ['N', 4000], ['W', 6000], ['S', 4000]] as const) {
+      const o = wallByLength(s, chain, dir, len, d);
+      expect(o.result?.ok, `${dir}`).toBe(true);
+      if (o.result?.ok) s = o.result.state;
+      chain = o.next;
+    }
+    expect(chain).toEqual(EMPTY_CHAIN);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('geçersiz uzunluk reddedilir', () => {
+    const s = createInitialSession(missions.m02);
+    expect(wallByLength(s, EMPTY_CHAIN, 'E', 50, d).result).toBeNull();
+    expect(wallByLength(s, EMPTY_CHAIN, 'E', 1.5, d).result).toBeNull();
+  });
+});
