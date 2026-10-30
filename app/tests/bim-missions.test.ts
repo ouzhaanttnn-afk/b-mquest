@@ -211,7 +211,7 @@ describe('Faz 1 — yeniden yazılan görevler', () => {
 });
 
 import { createRectangleWallsCommand } from '../src/domain/commands';
-import { wallByLength, EMPTY_CHAIN } from '../src/ui/workspace/toolActions';
+import { wallByLength, EMPTY_CHAIN, type WallDir } from '../src/ui/workspace/toolActions';
 
 describe('Duvar çizmeyi kolaylaştıranlar', () => {
   const d = { baseLevelId: 'l0', height: 3000, thickness: 200 };
@@ -239,5 +239,48 @@ describe('Duvar çizmeyi kolaylaştıranlar', () => {
     const s = createInitialSession(missions.m02);
     expect(wallByLength(s, EMPTY_CHAIN, 'R', 50, d).result).toBeNull();
     expect(wallByLength(s, EMPTY_CHAIN, 'R', 1.5, d).result).toBeNull();
+  });
+});
+
+describe('Çeşitlendirilen görevler: m13, m14, m28', () => {
+  const d = { baseLevelId: 'l0', height: 3000, thickness: 200 };
+  const chain = (id: string, steps: Array<[WallDir, number]>) => {
+    let s = createInitialSession(missions[id]);
+    let c = EMPTY_CHAIN;
+    for (const [dir, len] of steps) {
+      const o = wallByLength(s, c, dir, len, d);
+      expect(o.result?.ok, `${id} ${dir}`).toBe(true);
+      if (o.result?.ok) s = o.result.state;
+      c = o.next;
+    }
+    return s;
+  };
+
+  it('hepsi başlangıçta kalır', () => {
+    for (const id of ['m13', 'm14', 'm28']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+  it('m13: 5000 × 4000 oda geçer; m02’nin 6000 × 4000 odası geçmez', () => {
+    const ok = chain('m13', [['R', 5000], ['D', 4000], ['L', 5000], ['U', 4000]]);
+    expect(passes(ok).pass).toBe(true);
+    const wrong = chain('m13', [['R', 6000], ['D', 4000], ['L', 6000], ['U', 4000]]);
+    expect(evaluate(wrong.task, wrong.model, 0).pass).toBe(false);
+  });
+  it('m14: L biçimli plan 6 duvar ve 18 m²; dikdörtgen geçmez', () => {
+    const ok = chain('m14', [['R', 6000], ['D', 2000], ['L', 3000], ['D', 2000], ['L', 3000], ['U', 4000]]);
+    expect(passes(ok).pass).toBe(true);
+    const box4 = chain('m14', [['R', 6000], ['D', 3000], ['L', 6000], ['U', 3000]]);
+    expect(evaluate(box4.task, box4.model, 0).pass).toBe(false);
+  });
+  it('m28: üç hata üç düzeltmeyle çözülür; d1 kilitli', () => {
+    const s0 = createInitialSession(missions.m28);
+    expect(updateElementProperty(s0, 'd1', 'mark', 'D-09').ok).toBe(false);
+    const s = run('m28', [
+      (st) => updateElementProperty(st, 'd2', 'mark', 'D-02'),
+      (st) => updateElementProperty(st, 'd3', 'width', 900),
+      (st) => updateElementProperty(st, 'd4', 'fireRating', 'EI30'),
+    ]);
+    expect(passes(s).pass).toBe(true);
   });
 });

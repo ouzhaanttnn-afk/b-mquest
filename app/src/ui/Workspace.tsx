@@ -138,6 +138,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   // Modals & Audio
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [recapModalOpen, setRecapModalOpen] = useState(false);
+  const [failedChecks, setFailedChecks] = useState(0);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [soundMuted, setSoundMutedState] = useState<boolean>(() => isSoundMuted());
   const resetCancelBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -590,6 +591,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       else setRecapModalOpen(true);
     } else {
       playSound('error');
+      setFailedChecks((n) => n + 1);
     }
   };
 
@@ -1116,6 +1118,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           task={task}
           revealedHintCount={revealedHints.length}
           model={model}
+          failedChecks={failedChecks}
         />
 
       {/* Mobile Bottom Navigation Bar (iPhone / Narrow Screen Ergonomics) */}

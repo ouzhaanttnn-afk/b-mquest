@@ -121,3 +121,9 @@ Web araştırmasından çıkan kararlar (kaynaklar ikincil; Apple'ın güncel me
 Bu turda ekran görüntülerinden bulunup düzeltilenler: iPad dikey düzen, 3B kamera uzaklığı, kalın sarı vurgu, kuzey oku yönü, ↑ oklarının ters yöne çizmesi.
 
 Kalanlar: Faz 6 (büyük dosyaları bölme), Faz 7 (Family editörü, çok katlı tek proje), eski şablon görevlerin (m04–m06, m13–m16, m26–m29) çeşitlendirilmesi, Xcode'da gerçek derleme ve cihaz denemesi.
+
+## 6. Görev çeşitlendirme turu
+
+- m13 (5000 × 4000, 20 m²), m14 (L biçimli plan, 6 duvar, 18 m²) ve m28 (üç ayrı veri hatalı kapı listesi) kendi senaryolarına kavuştu; artık m02 ve m04 ile aynı değiller.
+- Takılan oyuncuya yardım: iki başarısız kontrolden sonra ipucu önerisi çıkar.
+- Hâlâ şablona yakın: m04–m06, m15, m16, m26, m27, m29.

@@ -15,6 +15,8 @@ export interface CheckFeedbackProps {
   task: MissionTask;
   revealedHintCount: number;
   model: BimModel;
+  /** How many times "Kontrol et" failed in this session. */
+  failedChecks?: number;
 }
 
 export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
@@ -29,6 +31,7 @@ export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
   task,
   revealedHintCount,
   model,
+  failedChecks = 0,
 }) => (
   <>
       <footer
@@ -106,6 +109,12 @@ export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
             ✕ Sahneyi Gör
           </button>
         </div>
+
+        {lastEvaluation && !lastEvaluation.pass && !lastEvaluation.stale && failedChecks >= 2 && revealedHintCount < 3 && (
+          <p className="bq-stuck-nudge" role="status" data-testid="stuck-nudge">
+            Takıldın mı? {failedChecks} kez denedin. Sol paneldeki ipuçları adım adım yol gösterir (her biri −5 puan).
+          </p>
+        )}
 
         {/* Detailed Criterion Results List with Actionable Remediation */}
         {lastEvaluation && (

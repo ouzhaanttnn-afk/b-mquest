@@ -210,6 +210,81 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
     ],
   },
 
+  // ---- Çeşitlendirme: şablon görevler kendi senaryolarına kavuştu ---------
+  m13: {
+    lesson: {
+      objective:
+        'Zemin Kat’ta 5000 × 4000 mm kapalı bir hacim oluştur: 4 duvar, 20 m² iç alan.',
+      hintLevels: hints(
+        'Dört duvarın uçları birbirine değmeli; açık köşe hacmi kapatmaz.',
+        'Plana başlangıçtan (0, 0) başlayıp saat yönünde dört duvar çizmen yeterli.',
+        'Ölçüler: 5000 mm yatay, 4000 mm düşey. Zincirleme çizim köşeleri kendiliğinden birleştirir.',
+        '1) Duvar aracını seç. 2) (0,0) → (5000,0) → (5000,4000) → (0,4000) → (0,0). 3) Kontrol Et. İstersen Ölçüyle çiz bölümünü kullan.'
+      ),
+      primaryFields: ['start', 'end'],
+    },
+    levels: [L0],
+    elements: [],
+    editable: ['start', 'end', 'height', 'thickness', 'name'],
+    creatable: ['wall'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_n', type: 'metric', metric: 'wallCount', min: 4, max: 4, message: 'Tam olarak 4 duvar olmalı.' },
+      { id: 'c_a', type: 'metric', metric: 'enclosedAreaM2', min: 20, max: 20, message: 'Duvarlar 20 m² kapalı alan oluşturmalı.' },
+    ],
+  },
+  m14: {
+    lesson: {
+      objective:
+        'Zincir çizimle L biçimli bir plan kur: (0,0) → (6000,0) → (6000,2000) → (3000,2000) → (3000,4000) → (0,4000) → (0,0). Toplam 18 m².',
+      hintLevels: hints(
+        'Plan dikdörtgen değil; bir köşesi çıkıntılı, yani 6 duvar gerekir.',
+        'Her duvar bir öncekinin bittiği yerden başlar; son duvar başlangıç noktasına döner.',
+        'Zincir başlangıca dönünce kendiliğinden kapanır; ölçüleri sırayla gir.',
+        '1) Duvar aracı. 2) Köşeleri sırayla işaretle ya da Ölçüyle çiz: →6000, ↓2000, ←3000, ↓2000, ←3000, ↑4000. 3) Kontrol Et.'
+      ),
+      primaryFields: ['start', 'end'],
+    },
+    levels: [L0],
+    elements: [],
+    editable: ['start', 'end', 'height', 'thickness', 'name'],
+    creatable: ['wall'],
+    minutes: 8,
+    criteria: [
+      { id: 'c_n', type: 'metric', metric: 'wallCount', min: 6, max: 6, message: 'L biçimli plan 6 duvardan oluşmalı.' },
+      { id: 'c_a', type: 'metric', metric: 'enclosedAreaM2', min: 18, max: 18, message: 'Kapalı alan 18 m² olmalı.' },
+    ],
+  },
+  m28: {
+    lesson: {
+      objective:
+        'Kapı listesinde üç ayrı veri hatası var. Tüm kapıların genişliği 900 mm, pozları D-01…D-04 benzersiz olmalı ve koridora açılan d4 kapısı EI30 olmalı.',
+      hintLevels: hints(
+        'Dört kapıyı karşılaştır: ölçü, poz ve yangın sınıfı sütunlarına bak.',
+        'Hatalar üç farklı kapıda; her biri farklı bir alanda.',
+        'Biri tekrar eden poz, biri dar genişlik, biri eksik yangın sınıfı.',
+        '1) Çizelgeler’i aç. 2) d2 pozunu D-02 yap. 3) d3 genişliğini 900 yap. 4) d4 yangın sınıfını EI30 yap. 5) Kontrol Et.'
+      ),
+      primaryFields: ['mark', 'width', 'fireRating'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+      door1('d2', 'w1', 3200, { mark: 'D-01' }),
+      door1('d3', 'w3', 1500, { mark: 'D-03', width: 800 }),
+      door1('d4', 'w3', 4000, { mark: 'D-04' }),
+    ],
+    editable: ['mark', 'width', 'fireRating'],
+    seeds: ['d2', 'd3', 'd4'],
+    minutes: 8,
+    criteria: [
+      { id: 'c_m', type: 'property', elementId: 'd2', field: 'mark', expected: 'D-02', tolerance: 0, message: 'd2 pozu benzersiz olmalı (D-02).' },
+      { id: 'c_w', type: 'property', elementId: 'd3', field: 'width', expected: 900, tolerance: 0, message: 'd3 genişliği 900 mm olmalı.' },
+      { id: 'c_f', type: 'property', elementId: 'd4', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd4 kapısı EI30 olmalı.' },
+    ],
+  },
+
   // ---- Bölüm 2: Level, Grid ---------------------------------------------
   m09: {
     lesson: {

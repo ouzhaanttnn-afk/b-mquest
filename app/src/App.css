@@ -2765,3 +2765,4 @@ select:focus-visible,
     grid-auto-rows: minmax(360px, 1fr);
   }
 }
+.bq-stuck-nudge { margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--bg-elevated); border-left: 3px solid var(--status-warn); color: var(--text-primary); }

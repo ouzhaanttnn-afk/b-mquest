@@ -307,3 +307,20 @@ test.describe('Hakkında, gizlilik ve ayarlar', () => {
     await expect(page.getByTestId('toggle-haptics')).not.toBeChecked();
   });
 });
+
+test.describe('Takılan oyuncuya yardım', () => {
+  test('iki başarısız kontrolden sonra ipucu önerisi çıkar', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      if (!window.localStorage.getItem('bimquest.meta.v1')) {
+        window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+      }
+    });
+    await page.goto('/');
+    await page.getByTestId('start-mission-m01').click();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('stuck-nudge')).toHaveCount(0);
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('stuck-nudge')).toBeVisible();
+  });
+});
