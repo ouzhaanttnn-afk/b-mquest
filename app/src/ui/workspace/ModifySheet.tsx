@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   alignWallCommand,
+  copyWallsToLevelCommand,
   copyWallsCommand,
   mirrorWallsCommand,
   offsetWallCommand,
@@ -17,13 +18,14 @@ interface ModifySheetProps {
   onClose: () => void;
 }
 
-type Tab = 'copy' | 'mirror' | 'offset' | 'align';
+type Tab = 'copy' | 'mirror' | 'offset' | 'align' | 'level';
 
 const TABS: Array<{ id: Tab; label: string; hint: string }> = [
   { id: 'copy', label: 'Kopyala', hint: 'Seçili duvarları ve kapı/pencerelerini verilen mesafe kadar kopyala.' },
   { id: 'mirror', label: 'Aynala', hint: 'Seçili duvarları bir eksene göre yansıt; asıllar yerinde kalır.' },
   { id: 'offset', label: 'Öteleme', hint: 'Bir duvarın paralel kopyasını duvar yönünün soluna doğru verilen mesafede oluştur.' },
   { id: 'align', label: 'Hizala', hint: 'Duvarı referans duvarın çizgisine oturt. İkisi de yatay ya da ikisi de düşey olmalı.' },
+  { id: 'level', label: 'Kata kopyala', hint: 'Seçili duvarları kapı ve pencereleriyle başka bir kata aynı konumda yapıştır (Paste Aligned to Selected Levels).' },
 ];
 
 /** Modify tab: Copy, Mirror, Offset, Align on walls. */
@@ -42,6 +44,7 @@ export const ModifySheet: React.FC<ModifySheetProps> = ({
   const [at, setAt] = useState('0');
   const [distance, setDistance] = useState('0');
   const [ref, setRef] = useState('');
+  const [targetLevel, setTargetLevel] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   if (!open) return null;
 
@@ -64,13 +67,16 @@ export const ModifySheet: React.FC<ModifySheetProps> = ({
     if (tab === 'copy') res = copyWallsCommand(session, effective, dx, dz);
     else if (tab === 'mirror') res = mirrorWallsCommand(session, effective, axis, at);
     else if (tab === 'offset') res = offsetWallCommand(session, single, distance);
+    else if (tab === 'level') res = copyWallsToLevelCommand(session, effective, levelTarget);
     else res = alignWallCommand(session, single, refId);
     applyResult(res);
     setMessage(res.ok ? 'Uygulandı.' : res.error.message);
     if (res.ok) setPicked([]);
   };
 
-  const multi = tab === 'copy' || tab === 'mirror';
+  const multi = tab === 'copy' || tab === 'mirror' || tab === 'level';
+  const levels = session.model.levels;
+  const levelTarget = targetLevel || levels.find((l) => !walls.some((w) => effective.includes(w.id) && w.baseLevelId === l.id))?.id || levels[0]?.id || '';
 
   return (
     <div
@@ -119,7 +125,7 @@ export const ModifySheet: React.FC<ModifySheetProps> = ({
                 checked={multi ? effective.includes(w.id) : single === w.id}
                 onChange={() => (multi ? toggle(w.id) : setPicked([w.id]))}
               />{' '}
-              {w.id} · ({w.start[0]}, {w.start[1]}) → ({w.end[0]}, {w.end[1]})
+              {w.id} · {levels.length > 1 ? `${levels.find((l) => l.id === w.baseLevelId)?.name ?? w.baseLevelId} · ` : ''}({w.start[0]}, {w.start[1]}) → ({w.end[0]}, {w.end[1]})
             </label>
           ))}
         </fieldset>
@@ -160,6 +166,18 @@ export const ModifySheet: React.FC<ModifySheetProps> = ({
               <select data-testid="modify-ref" value={refId} onChange={(e) => setRef(e.target.value)}>
                 {walls.filter((w) => w.id !== single).map((w) => (
                   <option key={w.id} value={w.id}>{w.id}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {tab === 'level' && (
+          <div className="bq-modify-row">
+            <label className="bq-field"><span>Hedef kat</span>
+              <select data-testid="modify-level" value={levelTarget} onChange={(e) => setTargetLevel(e.target.value)}>
+                {levels.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name} (+{l.elevation})</option>
                 ))}
               </select>
             </label>

@@ -29,10 +29,11 @@ NELER ÖĞRENİRSİN
 • Type ve Instance farkı, host ilişkisi, poz numarası, yangın sınıfı
 • Kesit, cephe, ölçü, etiket ve A3 pafta
 • Çizelgeler (Schedules) ve Modify araçları: Copy, Mirror, Offset, Align
+• Tip çoğaltma (Edit Type → Duplicate) ve çok katlı model: kata kopyala, üst kat döşemesi, merdiven
 • Model kontrolü: gizli hataları bulma
 
 OYUN ÖZELLİKLERİ
-• 58 görev, 9 bölüm ve final proje
+• 61 görev, 10 bölüm ve final proje
 • Plan ve 3B görünüm aynı anda, parmakla çizim
 • Hata yaptığında nedenini açıklayan geri bildirim
 • Serbest Atölye: görevsiz, tüm araçlar açık

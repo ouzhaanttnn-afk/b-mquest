@@ -1179,6 +1179,88 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
       { id: 'c_h', type: 'hosted', category: 'door', hostCategory: 'wall', min: 2, message: 'İki kapı da duvara bağlı olmalı.' },
     ],
   },
+  // ---- Bonus Bölüm 10: Aile ve katlar -----------------------------------
+  m59: {
+    lesson: {
+      objective:
+        'Ana giriş kapısı (d1) 1000 × 2100 mm olmalı; diğer iki kapı 900 mm kalmalı. Tipi çoğaltarak çöz.',
+      hintLevels: hints(
+        'Üç kapı aynı tipi kullanıyor; tipi değiştirmek üçünü birden değiştirir.',
+        'Değişecek yalnızca d1; ona ait yeni bir tip gerekiyor.',
+        'Edit Type içinde Çoğalt (Duplicate) yeni bir tip oluşturur ve seçili kapıya verir.',
+        '1) d1’i seç. 2) Edit Type → Çoğalt, ad: Ana Giriş 1000 x 2100. 3) Yeni tipte width: 1000. 4) Kontrol Et.'
+      ),
+      primaryFields: ['typeParams', 'typeId'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 2550, { typeId: 'dt900', mark: 'D-01' }),
+      door1('d2', 'w3', 1000, { typeId: 'dt900', mark: 'D-02' }),
+      door1('d3', 'w3', 4000, { typeId: 'dt900', mark: 'D-03' }),
+    ],
+    types: [DT900],
+    editable: ['typeParams', 'typeId'],
+    seeds: ['d1'],
+    minutes: 7,
+    criteria: [
+      { id: 'c_d1', type: 'exists', category: 'door', where: { id: 'd1', width: 1000 }, message: 'd1 kapısı 1000 mm genişlikte olmalı.' },
+      { id: 'c_d2', type: 'exists', category: 'door', where: { id: 'd2', width: 900 }, message: 'd2 kapısı 900 mm kalmalı.' },
+      { id: 'c_d3', type: 'exists', category: 'door', where: { id: 'd3', width: 900 }, message: 'd3 kapısı 900 mm kalmalı.' },
+      { id: 'c_t', type: 'typeUsage', category: 'door', typeId: 'dt900', count: 2, message: 'Standart tip yalnızca iki iç kapıda kalmalı.' },
+    ],
+  },
+  m60: {
+    lesson: {
+      objective: 'Zemin Kat’taki dört dış duvarı 1. Kat’a aynı konumda kopyala.',
+      hintLevels: hints(
+        'Üst kat duvarları alt kattakilerle aynı hizada olacak.',
+        'Dört duvarın hepsi kopyalanacak; hedef 1. Kat.',
+        'Değiştir panelinde “Kata kopyala” sekmesi seçili duvarları başka bir kata yapıştırır.',
+        '1) Değiştir → Kata kopyala. 2) Dört duvarı işaretle. 3) Hedef kat: 1. Kat. 4) Uygula ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0, l1(3000)],
+    elements: [...box()],
+    editable: [],
+    creatable: ['wall'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_up', type: 'metric', metric: 'upperWallCount', min: 4, max: 4, message: '1. Kat’ta 4 duvar olmalı.' },
+      { id: 'c_all', type: 'metric', metric: 'wallCount', min: 8, max: 8, message: 'Toplam 8 duvar olmalı (4 zemin + 4 üst).' },
+      { id: 'c_n', type: 'exists', category: 'wall', where: { baseLevelId: 'l1', axisDir: 'h', axisPos: 4000 }, message: 'Üst kat duvarları alt katla aynı hizada olmalı.' },
+    ],
+  },
+  m61: {
+    lesson: {
+      objective:
+        '1. Kat’a (+3150 mm) döşeme ekle ve Zemin Kat ile 1. Kat arasına, yüksekliği tam 3150 mm tutan bir merdiven yerleştir.',
+      hintLevels: hints(
+        'Üst katın zemini yok; ayrıca katlar arasında bağlantı yok.',
+        'Bir döşeme (1. Kat) ve bir merdiven (Zemin → 1. Kat) gerekiyor.',
+        'Basamak sayısı × basamak yüksekliği = 3150 olmalı; 175 mm’lik basamakla kaç basamak gerekir?',
+        '1) Aktif kat: 1. Kat, Döşeme aracıyla duvarları seçip döşeme oluştur. 2) Merdiven: alt Zemin, üst 1. Kat, 18 × 175. 3) Kontrol Et.'
+      ),
+      primaryFields: ['risers', 'riserHeight'],
+    },
+    levels: [L0, l1(3150)],
+    elements: [
+      ...box({ height: 3150 }),
+      wall('u1', [0, 0], [6000, 0], { baseLevelId: 'l1' }),
+      wall('u2', [6000, 0], [6000, 4000], { baseLevelId: 'l1' }),
+      wall('u3', [6000, 4000], [0, 4000], { baseLevelId: 'l1' }),
+      wall('u4', [0, 4000], [0, 0], { baseLevelId: 'l1' }),
+    ],
+    editable: ['risers', 'riserHeight', 'treadDepth', 'topLevelId', 'direction', 'thickness'],
+    creatable: ['floor', 'stair'],
+    minutes: 9,
+    criteria: [
+      { id: 'c_f', type: 'exists', category: 'floor', where: { levelId: 'l1' }, message: '1. Kat’ta bir döşeme olmalı.' },
+      { id: 'c_s', type: 'exists', category: 'stair', where: { baseLevelId: 'l0', topLevelId: 'l1' }, message: 'Merdiven Zemin Kat’tan 1. Kat’a çıkmalı.' },
+      { id: 'c_r', type: 'exists', category: 'stair', where: { rise: 3150 }, message: 'Merdivenin toplam yüksekliği 3150 mm olmalı.' },
+    ],
+  },
 };
 
 export function buildBimMissionTask(

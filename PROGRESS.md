@@ -9,7 +9,7 @@ Uygulama klasörü: `app/`.
 2. **Görevler ekranı** (`Dashboard`): sıradaki göreve götüren hero kartı ("Selin Mimar" notuyla), seviye çubuğu, gün serisi, başarım listesi, bölüm sekmeleri ve görev kartları.
 3. **Uygulama ekranı** (`Workspace`): 2B plan + 3B sahne, Properties, araç çubuğu, Rehber Turu, koç çubuğu, Kontrol Et, değerlendirme.
 
-## Müfredat: 9 bölüm, 58 görev
+## Müfredat: 10 bölüm, 61 görev
 
 | Bölüm | Görevler | Konu |
 |---|---|---|
@@ -22,6 +22,7 @@ Uygulama klasörü: `app/`.
 | 7 | 44–50 | Final proje (konut teslimi) |
 | 8 (bonus) | 51–53 | Çizelgeler (Schedules): kapı, yangın sınıfı, oda |
 | 9 (bonus) | 54–58 | Modify araçları: Copy, Mirror, Offset, Align |
+| 10 (bonus) | 59–61 | Tip çoğaltma (Duplicate), kata kopyala, üst kat döşemesi ve merdiven |
 
 ## Oyun hissi katmanı
 
@@ -40,6 +41,8 @@ Uygulama klasörü: `app/`.
 - Yön okları ekran yönünü izler (↑ yukarı = −Z). Kuzey oku, görev verisindeki gerçek kuzeye (+Z, aşağı) bakacak şekilde düzeltildi.
 - iPad dikey modunda plan ve 3B alt alta; dar panelde 3B kamera geri çekilir.
 
+- Telefon ve tablet: çalışma ekranı tek ekran (sayfa kaymaz), paneller alt sayfa, "Kontrol et" yüzen düğme; pencereler telefonda alttan açılır ve arkadaki sayfa kilitlenir.
+
 ## Teknik
 
 - 3B sahne `React.lazy` ile ayrıldı; ana paket ~1,7 MB → ~0,74 MB.
@@ -50,7 +53,7 @@ Uygulama klasörü: `app/`.
 ```bash
 cd app
 npx tsc -b
-npm test            # vitest, 161 test
+npm test            # vitest
 npm run build
 npm run test:e2e    # Playwright
 ```
@@ -60,7 +63,7 @@ Bilinen: `bim-docs` (m36/m37) ve `bim-final` (m50) e2e testleri PNG indirme dosy
 ## Henüz yok
 
 - Trim ve Array araçları; Modify araçları şimdilik yalnızca duvarlarda çalışır.
-- Family editörü, malzemeler.
+- Tam Family editörü (şekil/parametre tanımlama) ve malzemeler; şimdilik yalnızca tip çoğaltma ve tip parametresi düzenleme var.
 - Kalan eski görevlerin (m04–m08, m11, m13–m16, m23, m26–m29) bir kısmı ortak şablon duvar/kapı seti kullanır.
 - Bulut kaydı ve hesap; uzaktan analitik (şimdiki istatistikler yerel).
 

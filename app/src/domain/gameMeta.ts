@@ -61,7 +61,7 @@ const goldCount = (c: Completed) =>
 const chapterAchievements: Achievement[] = SEVEN_CHAPTER_CURRICULUM.map(
   (ch) => ({
     id: `chapter-${ch.chapterNumber}`,
-    icon: ['🧱', '📏', '🏠', '🗂️', '📐', '🔎', '🏆', '📊', '🛠️'][ch.chapterNumber - 1],
+    icon: ['🧱', '📏', '🏠', '🗂️', '📐', '🔎', '🏆', '📊', '🛠️', '🏢'][ch.chapterNumber - 1],
     title: `Bölüm ${ch.chapterNumber} Tamam`,
     description: ch.title.replace(/^Bölüm \d+: /, ''),
     earned: (c) => ch.missions.every((m) => m.id in c),

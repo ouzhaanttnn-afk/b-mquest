@@ -127,3 +127,11 @@ Kalanlar: Faz 6 (büyük dosyaları bölme), Faz 7 (Family editörü, çok katl�
 - m13 (5000 × 4000, 20 m²), m14 (L biçimli plan, 6 duvar, 18 m²) ve m28 (üç ayrı veri hatalı kapı listesi) kendi senaryolarına kavuştu; artık m02 ve m04 ile aynı değiller.
 - Takılan oyuncuya yardım: iki başarısız kontrolden sonra ipucu önerisi çıkar.
 - Hâlâ şablona yakın: m04–m06, m15, m16, m26, m27, m29.
+
+## 7. Cila ve tamamlama turu
+
+- Kaydırma denetimi (`store/tools` dışında, geçici betikle): telefonda çalışma ekranı 2190 px sayfa gibi kayıyordu, "Kontrol et" en alttaydı → tek ekran düzeni, yüzen Kontrol et, panel sayfaları. 320 px Görevler ekranında 37 px yatay taşma → düzeltildi. Pencerelerde iç içe kaydırma → tek kaydırma alanı; telefonda alttan açılan pencere; arka sayfa kilidi. Hepsi için kalıcı e2e testi var.
+- Kod sağlığı: `commands.ts` dört dosyaya, `PropertyInspector` iki form bileşenine bölündü.
+- Görevler: m05 (gerçek Type/Instance), m26 (bağlama göre yangın sınıfı), m27 (karışık pozlar) yeniden yazıldı.
+- Faz 7'den: tip çoğaltma (Edit Type → Duplicate) ve kata kopyala; Bonus Bölüm 10 (m59–m61).
+- Kalan: Workspace.tsx ve PlanViewport.tsx hâlâ büyük; m04, m06, m15, m16, m29 şablona yakın; tam Family editörü, Trim/Array.

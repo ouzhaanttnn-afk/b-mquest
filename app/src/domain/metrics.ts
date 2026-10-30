@@ -5,6 +5,7 @@ import type { BimModel, ViewElement } from './types';
 export const METRIC_NAMES = [
   'levelCount',
   'maxLevelElevation',
+  'upperWallCount',
   'gridVertical',
   'gridHorizontal',
   'wallCount',
@@ -41,6 +42,10 @@ export function modelMetric(m: BimModel, name: MetricName): number {
   switch (name) {
     case 'levelCount':
       return m.levels.length;
+    case 'upperWallCount': {
+      const lowest = [...m.levels].sort((a, b) => a.elevation - b.elevation)[0]?.id;
+      return m.elements.filter((e) => e.type === 'wall' && e.baseLevelId !== lowest).length;
+    }
     case 'maxLevelElevation':
       return Math.max(...m.levels.map((l) => l.elevation));
     case 'gridVertical':

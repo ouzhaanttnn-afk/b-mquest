@@ -403,6 +403,42 @@ export function assignTypeOp(
   return { ok: true, model: next };
 }
 
+/**
+ * Edit Type → Duplicate: a new Type with the same parameters and a new name.
+ * When `assignToId` is given, that element switches to the new Type (as Revit
+ * does when you duplicate from an element's Type Properties).
+ */
+export function duplicateTypeOp(
+  model: BimModel,
+  typeId: string,
+  rawName: unknown,
+  assignToId?: string
+): OpResult {
+  const type = model.types?.find((t) => t.id === typeId);
+  if (!type) return fail('E_TYPE', `${typeId} kimlikli tip bulunamadı.`, 'typeParams');
+  const name = normalizeTextField(rawName, 'name');
+  if (!name.ok) return { ok: false, error: name.error };
+  if (!name.value) return fail('E_TYPE_NAME', 'Yeni tipe bir ad ver.', 'typeParams');
+  if (model.types!.some((t) => t.category === type.category && t.name === name.value)) {
+    return fail('E_TYPE_NAME', `"${name.value}" adında bir tip zaten var.`, 'typeParams');
+  }
+  if (model.types!.length >= 64) return fail('E_MAX_TYPES', 'Bir modelde en fazla 64 tip olabilir.');
+  const used = new Set(model.types!.map((t) => t.id));
+  let n = 1;
+  while (used.has(`${type.id}-c${n}`)) n++;
+  const id = `${type.id}-c${n}`;
+  const next = cloneModelDeep(model);
+  next.types!.push({ id, category: type.category, family: type.family, name: name.value, params: { ...type.params } });
+  if (assignToId) {
+    const el = next.elements.find((e) => e.id === assignToId);
+    if (!el || el.type !== type.category) {
+      return fail('E_TYPE', 'Yeni tip yalnızca aynı kategorideki bir nesneye atanabilir.', 'typeId');
+    }
+    (el as { typeId?: string }).typeId = id;
+  }
+  return { ok: true, model: next, createdId: id };
+}
+
 /** Elements that must go with a wall when it is deleted. */
 export function hostedIds(model: BimModel, wallId: string): string[] {
   return model.elements

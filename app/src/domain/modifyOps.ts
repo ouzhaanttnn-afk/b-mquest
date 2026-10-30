@@ -211,3 +211,32 @@ export function rectangleWallsOp(model: BimModel, input: RectangleWallsInput): O
   }
   return { ok: true, model: next, createdId: first };
 }
+
+/**
+ * Paste Aligned to Selected Levels: copies walls (with their doors and
+ * windows) onto another Level at the same plan position. A copied wall whose
+ * top was tied to a Level becomes unconnected with the same height.
+ */
+export function copyWallsToLevelOp(model: BimModel, ids: string[], levelId: string): OpResult {
+  if (!model.levels.some((l) => l.id === levelId)) {
+    return fail('E_LEVEL', 'Hedef kat bulunamadı.');
+  }
+  const walls = ids.map((id) => wallById(model, id));
+  if (ids.length === 0 || walls.some((w) => !w)) {
+    return fail('E_NOT_FOUND', 'Önce kopyalanacak duvar(lar)ı seç.');
+  }
+  if ((walls as WallElement[]).every((w) => w.baseLevelId === levelId)) {
+    return fail('E_SAME_LEVEL', 'Duvarlar zaten bu katta; farklı bir kat seç.');
+  }
+  const res = cloneWalls(model, ids, (w) => ({ start: w.start, end: w.end }));
+  if (!res.ok) return res;
+  const created = new Set(res.model.elements.slice(model.elements.length).filter((e) => e.type === 'wall').map((e) => e.id));
+  for (const el of res.model.elements) {
+    if (el.type === 'wall' && created.has(el.id)) {
+      el.baseLevelId = levelId;
+      el.topConstraint = null;
+      el.topOffset = 0;
+    }
+  }
+  return res;
+}

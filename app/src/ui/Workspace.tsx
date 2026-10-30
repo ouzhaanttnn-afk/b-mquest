@@ -91,7 +91,7 @@ export interface WorkspaceProps {
 }
 
 const SCHEDULE_MISSIONS = ['m51', 'm52', 'm53', 'atolye'];
-const MODIFY_MISSIONS = ['m54', 'm55', 'm56', 'm57', 'm58', 'atolye'];
+const MODIFY_MISSIONS = ['m54', 'm55', 'm56', 'm57', 'm58', 'm60', 'atolye'];
 
 export const Workspace: React.FC<WorkspaceProps> = ({
   session,

@@ -381,3 +381,50 @@ test.describe('Kaydırma ve yerleşim (telefon / tablet)', () => {
     expect(r).toEqual({ cardScrolls: false, listScrolls: true, bodyLocked: true });
   });
 });
+
+test.describe('Bonus Bölüm 10 — arayüz', () => {
+  const upTo = (n: number) => async (page: import('@playwright/test').Page) =>
+    page.addInitScript((last) => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission','ten-missions','half-way','all-missions','perfect','five-gold','level-5','chapter-1','chapter-2','chapter-3','chapter-4','chapter-5','chapter-6','chapter-7','chapter-8','chapter-9'] }));
+      const completed: Record<string, unknown> = {};
+      for (let i = 1; i <= last; i++) completed[`m${String(i).padStart(2, '0')}`] = { bestScore: 100 };
+      window.localStorage.setItem(
+        'bimquest.save.v1',
+        JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed, drafts: {}, settings: { reducedMotion: true, sound: false } })
+      );
+    }, n);
+
+  test('m59: Edit Type → Çoğalt yalnız d1’i değiştirir', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await upTo(58)(page);
+    await page.goto('/');
+    await page.getByTestId('stage-tab-ch10').click();
+    await page.getByTestId('start-mission-m59').click();
+    await page.getByTestId('object-row-d1').click();
+    await page.getByTestId('edit-type-btn').click();
+    await page.getByTestId('type-duplicate-name').fill('Ana Giriş 1000 x 2100');
+    await page.getByTestId('type-duplicate-btn').click();
+    await expect(page.getByTestId('edit-type-btn')).toContainText('Ana Giriş 1000 x 2100');
+    await page.getByTestId('type-param-width-step+100').click();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+
+  test('m60: Değiştir → Kata kopyala dört duvarı 1. Kat’a taşır', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await upTo(59)(page);
+    await page.goto('/');
+    await page.getByTestId('stage-tab-ch10').click();
+    await page.getByTestId('start-mission-m60').click();
+    await page.getByTestId('modify-btn').click();
+    await page.getByTestId('modify-tab-level').click();
+    for (const w of ['w1', 'w2', 'w3', 'w4']) await page.getByTestId(`modify-wall-${w}`).check();
+    await page.getByTestId('modify-level').selectOption('l1');
+    await page.getByTestId('modify-apply-btn').click();
+    await expect(page.getByTestId('modify-message')).toHaveText('Uygulandı.');
+    await page.getByTestId('modify-sheet').getByRole('button', { name: /Kapat/ }).click();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+});

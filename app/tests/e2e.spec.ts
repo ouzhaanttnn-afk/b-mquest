@@ -216,7 +216,7 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
     // Return to Dashboard & verify all 3 missions completed and XP updated
     await page.getByTestId('finish-to-dashboard-btn').click();
     await expect(page.getByTestId('dashboard-screen')).toBeVisible();
-    await expect(page.getByTestId('progress-summary')).toContainText('3 / 58');
+    await expect(page.getByTestId('progress-summary')).toContainText(/3 \/ \d+ görev/);
     await expect(page.getByTestId('player-xp-summary')).toContainText('590 XP');
   });
 

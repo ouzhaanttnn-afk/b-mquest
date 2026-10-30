@@ -8,6 +8,7 @@ import {
   createRoomOp,
   createStairOp,
   createWindowOp,
+  duplicateTypeOp,
   setLevelElevationOp,
   setTypeParamOp,
   type CreateFloorInput,
@@ -19,6 +20,7 @@ import {
 } from './modelOps';
 import {
   alignWallOp,
+  copyWallsToLevelOp,
   copyWallsOp,
   mirrorWallsOp,
   offsetWallOp,
@@ -231,4 +233,35 @@ export function addLevelCommand(state: MissionSessionState): CommandResult {
   const op = addLevelOp(state.model);
   if (!op.ok) return { ok: false, state, error: op.error };
   return commitModelTransaction(state, op.model);
+}
+
+/** Edit Type → Duplicate (needs the Type permission; assigning needs typeId too). */
+export function duplicateTypeCommand(
+  state: MissionSessionState,
+  typeId: string,
+  name: unknown,
+  assignToId?: string
+): CommandResult {
+  if (!state.task.permissions.editableFields.includes('typeParams')) {
+    return {
+      ok: false,
+      state,
+      error: { code: 'E_PERMISSION_FIELD', field: 'typeParams', message: 'Bu görevde tip oluşturma izniniz yok.' },
+    };
+  }
+  const op = duplicateTypeOp(state.model, typeId, name, assignToId);
+  if (!op.ok) return { ok: false, state, error: op.error };
+  return commitModelTransaction(state, op.model);
+}
+
+/** Paste Aligned to Selected Levels. */
+export function copyWallsToLevelCommand(
+  state: MissionSessionState,
+  ids: string[],
+  levelId: string
+): CommandResult {
+  return (
+    noPermission(state, 'wall', 'duvar') ??
+    commitCreate(state, copyWallsToLevelOp(state.model, ids, levelId))
+  );
 }
