@@ -4,7 +4,7 @@ import { FINAL_STAGES, buildFinalMissionTask, finalLessonOverrides } from './fin
 
 export interface RevitLessonMeta {
   id: string;
-  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -222,7 +222,7 @@ export const REVIT_LESSONS_BY_ID: Record<string, RevitLessonMeta> = {
 
 const EXTRA_LESSONS: Array<{
   id: string;
-  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -902,6 +902,76 @@ const EXTRA_LESSONS: Array<{
     objective: 'Oda çizelgesinde iki odanın da numarasını ve adını doldur: r1 → 101 Salon, r2 → 102 Yatak Odası. Modelde uyarı kalmasın.',
     nextConcept: 'Mezuniyet: gerçek Revit',
     primaryFields: ['number', 'name'],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm54',
+    chapter: 9,
+    stepNumber: 54,
+    title: 'Kopyala',
+    learningConcept: 'Modify: Copy',
+    revitPath: 'Modify → Modify → Copy',
+    learningText: 'Copy komutu seçili elemanı bir yönde belirli mesafe kadar çoğaltır. Duvara bağlı kapı da kopyayla birlikte gelir ve yeni duvara bağlanır.',
+    whyItMatters: 'Tekrarlayan düzenleri tek tek çizmek yerine kopyalamak hem hızlıdır hem tutarlıdır.',
+    objective: 'Güney duvarını (w1) ve kapısını kuzeye doğru 4000 mm kopyala. Sonuçta iki paralel duvar ve iki kapı olsun.',
+    nextConcept: 'Mirror',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm55',
+    chapter: 9,
+    stepNumber: 55,
+    title: 'Aynala',
+    learningConcept: 'Modify: Mirror',
+    revitPath: 'Modify → Modify → Mirror (Draw Axis)',
+    learningText: 'Mirror, seçili elemanları bir eksene göre yansıtır. Simetrik planlarda yarıyı çizip aynalamak yarı zamanda iş bitirir.',
+    whyItMatters: 'Simetrik planlarda iki yarının birebir aynı olması aynalama ile garanti edilir.',
+    objective: 'Üç duvarlı yarım planı x = 3000 mm düşey ekseninde aynala. Sonuçta 6000 × 4000 mm kapalı bir kabuk oluşsun.',
+    nextConcept: 'Offset',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm56',
+    chapter: 9,
+    stepNumber: 56,
+    title: 'Öteleme',
+    learningConcept: 'Modify: Offset',
+    revitPath: 'Modify → Modify → Offset',
+    learningText: 'Offset, bir duvarı kendisine paralel olarak belirli mesafe kadar öteler. Duvar yönünün solu pozitiftir.',
+    whyItMatters: 'İç bölme duvarlarını dış duvara göre ölçülü yerleştirmenin en hızlı yoludur.',
+    objective: 'Güney duvarını (w1) 3000 mm kuzeye öteleyerek paralel bir bölme duvarı oluştur.',
+    nextConcept: 'Align',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm57',
+    chapter: 9,
+    stepNumber: 57,
+    title: 'Hizala',
+    learningConcept: 'Modify: Align',
+    revitPath: 'Modify → Modify → Align',
+    learningText: 'Align, bir elemanı referans elemanın çizgisine oturtur. Aks ve duvar yüzlerini hizalamak düzenli bir model için şarttır.',
+    whyItMatters: 'Birkaç milimetre kaymış duvarlar sonradan oda sınırı ve çizim hatalarına yol açar.',
+    objective: 'w2 duvarı w1 duvarından kaymış. w2’yi w1’in çizgisine hizala.',
+    nextConcept: 'Modify turu',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm58',
+    chapter: 9,
+    stepNumber: 58,
+    title: 'Simetrik Plan',
+    learningConcept: 'Modify: Mirror + Copy birlikte',
+    revitPath: 'Modify → Mirror, Copy, Offset, Align',
+    learningText: 'Gerçek projede Modify araçlarını birlikte kullanırsın: yarıyı çiz, aynala, kontrol et.',
+    whyItMatters: 'Hız ve tutarlılık, BIM modellemesinde ustalığın ölçüsüdür.',
+    objective: 'Yarım planı ve kapısını x = 3000 mm ekseninde aynala. 24 m² kapalı bir hacim ve iki kapı elde et.',
+    nextConcept: 'Mezuniyet: gerçek Revit',
+    primaryFields: [],
     FixType: 'multi_qa',
   },
 ];

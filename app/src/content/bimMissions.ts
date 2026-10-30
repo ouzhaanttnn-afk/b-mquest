@@ -821,6 +821,134 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
       { id: 'c_clean', type: 'modelClean', message: 'Odaların ad ve numarası boş kalmamalı.' },
     ],
   },
+  // ---- Bonus Bölüm 9: Modify araçları ------------------------------------
+  m54: {
+    lesson: {
+      objective:
+        'Güney duvarını (w1) ve kapısını kuzeye doğru 4000 mm kopyala. Sonuçta iki paralel duvar ve iki kapı olsun.',
+      hintLevels: hints(
+        'Modify paneli seçili duvarı çoğaltabilir.',
+        'Kopyalanacak olan w1 duvarı; kapısı da onunla gelir.',
+        'Kopya, X ve Z yönündeki ötelemelerle tarif edilir; kuzey, Z yönüdür.',
+        '1) w1’i seç. 2) Değiştir → Kopyala. 3) dx = 0, dz = 4000. 4) Kopyala ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0]),
+      door1('d1', 'w1', 2000, { mark: 'D-01' }),
+    ],
+    editable: [],
+    creatable: ['wall', 'door'],
+    seeds: [],
+    minutes: 5,
+    criteria: [
+      { id: 'c_w', type: 'exists', category: 'wall', where: { axisDir: 'h', axisPos: 4000, length: 6000 }, message: 'Kuzeyde (z = 4000 mm) 6000 mm uzunlukta paralel bir duvar olmalı.' },
+      { id: 'c_d', type: 'count', elementType: 'door', expected: 2, message: 'Modelde iki kapı olmalı.' },
+      { id: 'c_h', type: 'hosted', category: 'door', hostCategory: 'wall', min: 2, message: 'İki kapı da bir duvara bağlı olmalı.' },
+    ],
+  },
+  m55: {
+    lesson: {
+      objective:
+        'Üç duvarlı yarım planı x = 3000 mm düşey ekseninde aynala. Sonuçta 6000 × 4000 mm kapalı bir kabuk oluşsun.',
+      hintLevels: hints(
+        'Plan soldan sağa simetrik olmalı; yalnızca sol yarısı çizilmiş.',
+        'Üç duvarın üçü de aynalanmalı.',
+        'Ayna ekseni, yarım planın sağ ucundaki düşey çizgidir.',
+        '1) w1, w2, w3’ü seç (Shift ile ekle). 2) Değiştir → Aynala, Eksen: x, Konum: 3000. 3) Aynala ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [3000, 0]),
+      wall('w2', [0, 4000], [3000, 4000]),
+      wall('w3', [0, 0], [0, 4000]),
+    ],
+    editable: [],
+    creatable: ['wall'],
+    seeds: [],
+    minutes: 6,
+    criteria: [
+      { id: 'c_walls', type: 'metric', metric: 'wallCount', min: 6, max: 6, message: 'Toplam 6 duvar olmalı (3 asıl + 3 ayna).' },
+      { id: 'c_edge', type: 'exists', category: 'wall', where: { axisDir: 'v', axisPos: 6000 }, message: 'x = 6000 mm üzerinde düşey bir duvar olmalı.' },
+      { id: 'c_area', type: 'metric', metric: 'enclosedAreaM2', min: 24, max: 24, message: 'Duvarlar 24 m² kapalı alan oluşturmalı.' },
+    ],
+  },
+  m56: {
+    lesson: {
+      objective:
+        'Güney duvarını (w1) 3000 mm kuzeye öteleyerek paralel bir bölme duvarı oluştur.',
+      hintLevels: hints(
+        'Bölme duvarı güney duvarına paralel ve aynı uzunlukta olmalı.',
+        'Çoğaltılacak duvar w1; duvar yönünün solu pozitiftir.',
+        'Öteleme mesafesi, iki duvar arasındaki dik uzaklıktır.',
+        '1) w1’i seç. 2) Değiştir → Öteleme. 3) Mesafe: 3000. 4) Uygula ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [wall('w1', [0, 0], [6000, 0])],
+    editable: [],
+    creatable: ['wall'],
+    seeds: [],
+    minutes: 5,
+    criteria: [
+      { id: 'c_w', type: 'exists', category: 'wall', where: { axisDir: 'h', axisPos: 3000, length: 6000 }, message: 'z = 3000 mm üzerinde 6000 mm’lik paralel bir duvar olmalı.' },
+      { id: 'c_n', type: 'metric', metric: 'wallCount', min: 2, max: 2, message: 'Modelde yalnızca iki duvar olmalı.' },
+    ],
+  },
+  m57: {
+    lesson: {
+      objective: 'w2 duvarı w1 duvarından kaymış. w2’yi w1’in çizgisine hizala.',
+      hintLevels: hints(
+        'İki duvar aynı doğrultuda ama farklı hizada duruyor.',
+        'Kayan duvar w2; referans w1.',
+        'Hizalama, taşınan duvarı referansın çizgisine oturtur.',
+        '1) w2’yi seç. 2) Değiştir → Hizala. 3) Referans: w1. 4) Uygula ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [wall('w1', [0, 0], [3000, 0]), wall('w2', [3000, -300], [6000, -300])],
+    editable: ['start', 'end'],
+    seeds: ['w2'],
+    minutes: 4,
+    criteria: [
+      { id: 'c_al', type: 'compare', elementId: 'w2', field: 'axisPos', otherElementId: 'w1', otherField: 'axisPos', tolerance: 0, message: 'w2 ve w1 aynı çizgide (aynı z) olmalı.' },
+    ],
+  },
+  m58: {
+    lesson: {
+      objective:
+        'Yarım planı ve kapısını x = 3000 mm ekseninde aynala. 24 m² kapalı bir hacim ve iki kapı elde et.',
+      hintLevels: hints(
+        'Plan simetrik; yalnızca bir yarısı ve tek kapı var.',
+        'Duvarların hepsini aynala; kapı duvarıyla birlikte gelir.',
+        'Ayna ekseni, yarım planın sağ ucundaki düşey çizgidir.',
+        '1) Tüm duvarları seç. 2) Değiştir → Aynala, Eksen: x, Konum: 3000. 3) Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [3000, 0]),
+      wall('w2', [0, 4000], [3000, 4000]),
+      wall('w3', [0, 0], [0, 4000]),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+    ],
+    editable: [],
+    creatable: ['wall', 'door'],
+    seeds: [],
+    minutes: 6,
+    criteria: [
+      { id: 'c_area', type: 'metric', metric: 'enclosedAreaM2', min: 24, max: 24, message: 'Duvarlar 24 m² kapalı alan oluşturmalı.' },
+      { id: 'c_doors', type: 'metric', metric: 'doorCount', min: 2, max: 2, message: 'Modelde iki kapı olmalı.' },
+      { id: 'c_h', type: 'hosted', category: 'door', hostCategory: 'wall', min: 2, message: 'İki kapı da duvara bağlı olmalı.' },
+    ],
+  },
 };
 
 export function buildBimMissionTask(

@@ -24,6 +24,7 @@ import {
   type CreateWindowInput,
   type OpResult,
 } from './modelOps';
+import { alignWallOp, copyWallsOp, mirrorWallsOp, offsetWallOp } from './modifyOps';
 import { elementTypeOf } from './derived';
 import {
   createDimensionOp,
@@ -971,6 +972,64 @@ function commitCreate(state: MissionSessionState, op: OpResult): CommandResult {
     op.createdId ? { selectedId: op.createdId } : undefined,
     op.createdId
   );
+}
+
+// ---- Modify tools -----------------------------------------------------------
+
+export function copyWallsCommand(
+  state: MissionSessionState,
+  ids: string[],
+  dx: unknown,
+  dz: unknown
+): CommandResult {
+  return (
+    noPermission(state, 'wall', 'duvar') ??
+    commitCreate(state, copyWallsOp(state.model, ids, dx, dz))
+  );
+}
+
+export function mirrorWallsCommand(
+  state: MissionSessionState,
+  ids: string[],
+  axis: 'x' | 'z',
+  at: unknown
+): CommandResult {
+  return (
+    noPermission(state, 'wall', 'duvar') ??
+    commitCreate(state, mirrorWallsOp(state.model, ids, axis, at))
+  );
+}
+
+export function offsetWallCommand(
+  state: MissionSessionState,
+  id: string,
+  distance: unknown
+): CommandResult {
+  return (
+    noPermission(state, 'wall', 'duvar') ??
+    commitCreate(state, offsetWallOp(state.model, id, distance))
+  );
+}
+
+export function alignWallCommand(
+  state: MissionSessionState,
+  movingId: string,
+  refId: string
+): CommandResult {
+  const isSeed = state.task.initialModel.elements.some((e) => e.id === movingId);
+  if (isSeed && !state.task.permissions.editableSeedIds.includes(movingId)) {
+    return {
+      ok: false,
+      state,
+      error: {
+        code: 'E_PERMISSION_SEED',
+        message: `${movingId} başlangıç duvarı bu görevde sabitlenmiştir; hizalanamaz.`,
+      },
+    };
+  }
+  const op = alignWallOp(state.model, movingId, refId);
+  if (!op.ok) return { ok: false, state, error: op.error };
+  return commitModelTransaction(state, op.model);
 }
 
 export function createWindowCommand(

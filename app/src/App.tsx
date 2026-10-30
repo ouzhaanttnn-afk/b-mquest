@@ -22,6 +22,7 @@ import {
   loadMeta,
   markAnnounced,
   newAchievements,
+  recordAttempt,
   registerPlayDay,
   saveMeta,
   visibleStreak,
@@ -189,9 +190,16 @@ export function App() {
       nextSession: MissionSessionState,
       passingEvaluation?: SubmittedEvaluation
     ) => {
+      const prevEval = activeSession?.lastEvaluation ?? null;
+      const evalNow = nextSession.lastEvaluation;
       setActiveSession(nextSession);
 
       const missionId = nextSession.task.id;
+      if (evalNow && evalNow !== prevEval && !evalNow.stale) {
+        updateMeta(
+          recordAttempt(meta, missionId, evalNow.pass, nextSession.revealedHints.length)
+        );
+      }
       let nextSave: SaveEnvelopeV1 = {
         ...save,
         drafts: {
@@ -214,7 +222,7 @@ export function App() {
 
       persistSave(nextSave);
     },
-    [persistSave, save]
+    [persistSave, save, activeSession, meta, updateMeta]
   );
 
   const handleResetDraftConfirmed = useCallback(
@@ -339,6 +347,7 @@ export function App() {
       ) : !activeSession ? (
         <Dashboard
           streak={visibleStreak(meta, dayKey(new Date()))}
+          meta={meta}
           initialInfoOpen={openInfoOnDashboard}
           onBackToTitle={() => setShowTitle(true)}
           missions={catalog.missions}

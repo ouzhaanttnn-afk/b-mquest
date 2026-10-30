@@ -30,6 +30,9 @@ import { buildDraftsForElement } from './workspace/drafts';
 import { TopBar } from './workspace/TopBar';
 import { LevelsSheet } from './workspace/LevelsSheet';
 import { SchedulesSheet } from './workspace/SchedulesSheet';
+import { ModifySheet } from './workspace/ModifySheet';
+import { VisibilitySheet } from './workspace/VisibilitySheet';
+import { visibleModel } from '../domain/viewFilter';
 import { ProjectBrowser, SheetEditor } from './workspace/DocumentationPanels';
 import { ProjectDelivery } from './workspace/ProjectDelivery';
 import { MissionCard } from './workspace/MissionCard';
@@ -84,6 +87,7 @@ export interface WorkspaceProps {
 }
 
 const SCHEDULE_MISSIONS = ['m51', 'm52', 'm53'];
+const MODIFY_MISSIONS = ['m54', 'm55', 'm56', 'm57', 'm58'];
 
 export const Workspace: React.FC<WorkspaceProps> = ({
   session,
@@ -183,6 +187,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   );
   const [levelsOpen, setLevelsOpen] = useState(false);
   const [schedulesOpen, setSchedulesOpen] = useState(false);
+  const [modifyOpen, setModifyOpen] = useState(false);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
+  const [hiddenCats, setHiddenCats] = useState<Set<string>>(() => new Set());
+  const displayModel = useMemo(() => visibleModel(model, hiddenCats), [model, hiddenCats]);
   const [projectOpen, setProjectOpen] = useState(false);
   const [sheetId, setSheetId] = useState<string | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -826,6 +834,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onOpenLevels={() => setLevelsOpen(true)}
           onOpenSchedules={() => setSchedulesOpen(true)}
           showSchedules={SCHEDULE_MISSIONS.includes(task.id)}
+          onOpenModify={() => setModifyOpen(true)}
+          onOpenVisibility={() => setVisibilityOpen(true)}
+          hiddenCount={hiddenCats.size}
+          showModify={MODIFY_MISSIONS.includes(task.id)}
           warningCount={
             hasModelCheckGoal || modelIssues.length > 0 ? modelIssues.length : null
           }
@@ -958,7 +970,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           viewMode={viewMode}
           setViewMode={setViewMode}
           task={task}
-          model={model}
+          model={displayModel}
           selectedId={selectedId}
           failedElementIds={failedElementIds}
           activeTool={activeTool}
@@ -1138,6 +1150,28 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         evaluated={lastEvaluation !== null}
         onFocus={(id) => handleSelectElement(id)}
         onClose={() => setWarningsOpen(false)}
+      />
+      <VisibilitySheet
+        open={visibilityOpen}
+        model={model}
+        hidden={hiddenCats}
+        onToggle={(c) =>
+          setHiddenCats((prev) => {
+            const next = new Set(prev);
+            if (next.has(c)) next.delete(c);
+            else next.add(c);
+            return next;
+          })
+        }
+        onShowAll={() => setHiddenCats(new Set())}
+        onClose={() => setVisibilityOpen(false)}
+      />
+      <ModifySheet
+        open={modifyOpen}
+        session={session}
+        selectedId={selectedId}
+        applyResult={applyResult}
+        onClose={() => setModifyOpen(false)}
       />
       <SchedulesSheet
         open={schedulesOpen}

@@ -100,8 +100,8 @@ describe('Faz 1 — gerçek BIM nesnelerine bağlı görevler', () => {
     expect(res.criteria.find((c) => c.id === 'c_cl')?.actual).toContain('r1');
   });
 
-  it('53 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
-    expect(Object.keys(missions)).toHaveLength(53);
+  it('58 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
+    expect(Object.keys(missions)).toHaveLength(58);
   });
 });
 
@@ -132,5 +132,53 @@ describe('Bonus Bölüm 8 — çizelgeler', () => {
       edit('r2', 'name', 'Yatak Odası'),
     ]);
     expect(passes(s).pass).toBe(true);
+  });
+});
+
+import {
+  alignWallCommand,
+  copyWallsCommand,
+  mirrorWallsCommand,
+  offsetWallCommand,
+} from '../src/domain/commands';
+
+describe('Bonus Bölüm 9 — Modify araçları', () => {
+  it('hepsi başlangıçta kalır', () => {
+    for (const id of ['m54', 'm55', 'm56', 'm57', 'm58']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+  it('m54: kopya duvarla birlikte kapıyı da getirir ve yeni duvara bağlar', () => {
+    const s = run('m54', [(st) => copyWallsCommand(st, ['w1'], 0, 4000)]);
+    expect(passes(s).pass).toBe(true);
+    const door = s.model.elements.filter((e) => e.type === 'door');
+    expect(door.map((d) => (d as { hostWallId: string }).hostWallId).sort()).toEqual(['w1', 'w2']);
+  });
+  it('m55: aynalama kapalı 24 m² kabuk üretir', () => {
+    const s = run('m55', [(st) => mirrorWallsCommand(st, ['w1', 'w2', 'w3'], 'x', 3000)]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m56: öteleme paralel duvar üretir; sıfır mesafe reddedilir', () => {
+    const s0 = createInitialSession(missions.m56);
+    expect(offsetWallCommand(s0, 'w1', 0).ok).toBe(false);
+    expect(passes(run('m56', [(st) => offsetWallCommand(st, 'w1', 3000)])).pass).toBe(true);
+  });
+  it('m57: hizalama w2’yi w1 çizgisine getirir; paralel olmayan reddedilir', () => {
+    expect(passes(run('m57', [(st) => alignWallCommand(st, 'w2', 'w1')])).pass).toBe(true);
+    const s55 = createInitialSession(missions.m55);
+    expect(alignWallCommand(s55, 'w1', 'w3').ok).toBe(false);
+  });
+  it('m58: kapı aynalanır', () => {
+    const s = run('m58', [(st) => mirrorWallsCommand(st, ['w1', 'w2', 'w3'], 'x', 3000)]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('geri al kopyayı geri alır', () => {
+    let s = createInitialSession(missions.m54);
+    const r = copyWallsCommand(s, ['w1'], 0, 4000);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      s = r.state;
+      expect(s.model.elements.length).toBe(4);
+    }
   });
 });

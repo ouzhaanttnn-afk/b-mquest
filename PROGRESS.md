@@ -9,7 +9,7 @@ Uygulama klasörü: `app/`.
 2. **Görevler ekranı** (`Dashboard`): sıradaki göreve götüren hero kartı ("Selin Mimar" notuyla), seviye çubuğu, gün serisi, başarım listesi, bölüm sekmeleri ve görev kartları.
 3. **Uygulama ekranı** (`Workspace`): 2B plan + 3B sahne, Properties, araç çubuğu, Rehber Turu, koç çubuğu, Kontrol Et, değerlendirme.
 
-## Müfredat: 8 bölüm, 53 görev
+## Müfredat: 9 bölüm, 58 görev
 
 | Bölüm | Görevler | Konu |
 |---|---|---|
@@ -21,6 +21,7 @@ Uygulama klasörü: `app/`.
 | 6 | 38–43 | Model kontrolü |
 | 7 | 44–50 | Final proje (konut teslimi) |
 | 8 (bonus) | 51–53 | Çizelgeler (Schedules): kapı, yangın sınıfı, oda |
+| 9 (bonus) | 54–58 | Modify araçları: Copy, Mirror, Offset, Align |
 
 ## Oyun hissi katmanı
 
@@ -29,6 +30,9 @@ Uygulama klasörü: `app/`.
 - Görev bitişinde konfeti ve fanfar, yeni başarımda bildirim.
 - Revit klavye kısayolları (iki harf, art arda): WA duvar, DR kapı, WN pencere, SB döşeme, RF çatı, RM oda, ST merdiven, GR aks, DI ölçü, TG etiket. Görev o aracı izin veriyorsa çalışır.
 - Çizelge ekranı (`SchedulesSheet`): hücre düzenlemek modeldeki nesneyi değiştirir.
+- Modify paneli (`ModifySheet`, `domain/modifyOps.ts`): Kopyala, Aynala, Öteleme, Hizala. Duvara bağlı kapı/pencere kopyayla birlikte yeni duvara bağlanır.
+- Görünürlük (`VisibilitySheet`, `domain/viewFilter.ts`): kategorileri plan ve 3B'de aç/kapat; yalnızca görüntüyü etkiler, değerlendirme etkilenmez.
+- İstatistiklerim (Veri & Ayarlar): toplam kontrol, ilk bakışta başarı oranı, en çok uğraşılan görev. Yalnızca bu cihazda tutulur, hiçbir yere gönderilmez.
 
 ## Teknik
 
@@ -40,7 +44,7 @@ Uygulama klasörü: `app/`.
 ```bash
 cd app
 npx tsc -b
-npm test            # vitest, 122 test
+npm test            # vitest, 134 test
 npm run build
 npm run test:e2e    # Playwright
 ```
@@ -49,7 +53,11 @@ Bilinen: `bim-docs` (m36/m37) ve `bim-final` (m50) e2e testleri PNG indirme dosy
 
 ## Henüz yok
 
-- Modify araçları (Move, Copy, Mirror, Align, Trim, Offset).
-- Family editörü, Visibility/Graphics, malzemeler.
+- Trim ve Array araçları; Modify araçları şimdilik yalnızca duvarlarda çalışır.
+- Family editörü, malzemeler.
 - Kalan eski görevlerin (m04–m08, m11, m13–m16, m23, m26–m29) bir kısmı ortak şablon duvar/kapı seti kullanır.
-- Analitik ve bulut kaydı.
+- Bulut kaydı ve hesap; uzaktan analitik (şimdiki istatistikler yerel).
+
+## Bilinen kayıt kuralı
+
+Kayıt şeması `m01`–`m99` kimliklerini kabul eder (`MISSION_ID_PATTERN`). Yeni görev eklerken `tests/game-meta.test.ts` içindeki kayıt turu testi bunu doğrular.

@@ -14,6 +14,14 @@ export interface GameMeta {
   streak: number;
   bestStreak: number;
   announced: string[];
+  /** Per-mission practice stats, kept on this device only. */
+  stats: Record<string, MissionStats>;
+}
+
+export interface MissionStats {
+  attempts: number;
+  passes: number;
+  hintsUsed: number;
 }
 
 export const EMPTY_META: GameMeta = {
@@ -21,6 +29,7 @@ export const EMPTY_META: GameMeta = {
   streak: 0,
   bestStreak: 0,
   announced: [],
+  stats: {},
 };
 
 type Completed = Record<string, { bestScore: number }>;
@@ -40,7 +49,7 @@ const goldCount = (c: Completed) =>
 const chapterAchievements: Achievement[] = SEVEN_CHAPTER_CURRICULUM.map(
   (ch) => ({
     id: `chapter-${ch.chapterNumber}`,
-    icon: ['🧱', '📏', '🏠', '🗂️', '📐', '🔎', '🏆', '📊'][ch.chapterNumber - 1],
+    icon: ['🧱', '📏', '🏠', '🗂️', '📐', '🔎', '🏆', '📊', '🛠️'][ch.chapterNumber - 1],
     title: `Bölüm ${ch.chapterNumber} Tamam`,
     description: ch.title.replace(/^Bölüm \d+: /, ''),
     earned: (c) => ch.missions.every((m) => m.id in c),
@@ -148,6 +157,64 @@ export function visibleStreak(meta: GameMeta, today: string): number {
   return daysBetween(meta.lastPlayDay, today) <= 1 ? meta.streak : 0;
 }
 
+function sanitizeStats(raw: unknown): Record<string, MissionStats> {
+  const out: Record<string, MissionStats> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^m\d{2}$/.test(id) || !v || typeof v !== 'object') continue;
+    const r = v as Partial<MissionStats>;
+    out[id] = {
+      attempts: Number.isFinite(r.attempts) ? Number(r.attempts) : 0,
+      passes: Number.isFinite(r.passes) ? Number(r.passes) : 0,
+      hintsUsed: Number.isFinite(r.hintsUsed) ? Number(r.hintsUsed) : 0,
+    };
+  }
+  return out;
+}
+
+/** One press of "Kontrol et": counts the attempt, a pass and the hints used. */
+export function recordAttempt(
+  meta: GameMeta,
+  missionId: string,
+  pass: boolean,
+  hintsUsed: number
+): GameMeta {
+  const cur = meta.stats[missionId] ?? { attempts: 0, passes: 0, hintsUsed: 0 };
+  return {
+    ...meta,
+    stats: {
+      ...meta.stats,
+      [missionId]: {
+        attempts: cur.attempts + 1,
+        passes: cur.passes + (pass ? 1 : 0),
+        hintsUsed: cur.hintsUsed + (pass ? hintsUsed : 0),
+      },
+    },
+  };
+}
+
+export interface StatsSummary {
+  attempts: number;
+  passes: number;
+  passRatePct: number;
+  hardest: { id: string; attempts: number } | null;
+}
+
+export function summarizeStats(meta: GameMeta): StatsSummary {
+  const rows = Object.entries(meta.stats);
+  const attempts = rows.reduce((n, [, r]) => n + r.attempts, 0);
+  const passes = rows.reduce((n, [, r]) => n + r.passes, 0);
+  const hardest = rows
+    .filter(([, r]) => r.attempts > 1)
+    .sort((a, b) => b[1].attempts - a[1].attempts)[0];
+  return {
+    attempts,
+    passes,
+    passRatePct: attempts ? Math.round((passes / attempts) * 100) : 0,
+    hardest: hardest ? { id: hardest[0], attempts: hardest[1].attempts } : null,
+  };
+}
+
 export function markAnnounced(meta: GameMeta, ids: string[]): GameMeta {
   const announced = Array.from(new Set([...meta.announced, ...ids]));
   return { ...meta, announced };
@@ -165,6 +232,7 @@ export function loadMeta(): GameMeta {
       announced: Array.isArray(p.announced)
         ? p.announced.filter((x): x is string => typeof x === 'string')
         : [],
+      stats: sanitizeStats(p.stats),
     };
   } catch {
     return EMPTY_META;

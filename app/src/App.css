@@ -2717,3 +2717,15 @@ select:focus-visible,
   min-height: 200px;
   color: var(--text-secondary);
 }
+
+/* Schedules and Modify sheets */
+.bq-sched-note { margin: 8px 0; color: var(--text-secondary); }
+.bq-sched-scroll { overflow-x: auto; }
+.bq-sched-table { width: 100%; border-collapse: collapse; }
+.bq-sched-table th, .bq-sched-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+.bq-sched-input { width: 100%; min-width: 90px; min-height: 36px; font-size: 16px; }
+.bq-modify-walls { border: 1px solid var(--border-subtle); border-radius: 8px; margin: 8px 0; padding: 6px 10px; display: grid; gap: 4px; }
+.bq-modify-wall { font-size: 13px; }
+.bq-modify-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.bq-modify-row .bq-field input, .bq-modify-row .bq-field select { font-size: 16px; min-height: 40px; }
+.bq-stats-list { margin: 4px 0 0; padding-left: 18px; line-height: 1.7; }

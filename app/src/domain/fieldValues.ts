@@ -52,6 +52,13 @@ export function fieldValue(
     if (field === 'axisPos') return vertical ? el.start[0] : el.start[1];
     if (field === 'axisDir') return vertical ? 'v' : 'h';
   }
+  if (el.type === 'wall') {
+    const horizontal = el.start[1] === el.end[1];
+    const vertical = el.start[0] === el.end[0];
+    if (field === 'axisDir') return horizontal ? 'h' : vertical ? 'v' : 'd';
+    if (field === 'axisPos') return horizontal ? el.start[1] : vertical ? el.start[0] : null;
+    if (field === 'length') return Math.round(Math.hypot(el.end[0] - el.start[0], el.end[1] - el.start[1]));
+  }
   if (el.type === 'roof' && field === 'baseElevation') {
     return levelById(model, el.baseLevelId)?.elevation ?? null;
   }

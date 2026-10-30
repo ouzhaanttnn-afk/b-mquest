@@ -14,6 +14,10 @@ export interface TopBarProps {
   setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
   onOpenLevels: () => void;
   onOpenSchedules: () => void;
+  onOpenModify: () => void;
+  onOpenVisibility: () => void;
+  hiddenCount: number;
+  showModify: boolean;
   showSchedules: boolean;
   showLevels: boolean;
   /** null = hide the button. */
@@ -42,6 +46,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   setActiveTool,
   onOpenLevels,
   onOpenSchedules,
+  onOpenModify,
+  onOpenVisibility,
+  hiddenCount,
+  showModify,
   showSchedules,
   showLevels,
   warningCount,
@@ -160,6 +168,28 @@ export const TopBar: React.FC<TopBarProps> = ({
               title="Model uyarıları"
             >
               <span>Uyarılar ({warningCount})</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="bq-tool-btn"
+            data-testid="visibility-btn"
+            onClick={onOpenVisibility}
+            title="Görünürlük: kategorileri aç/kapat"
+          >
+            <span>Görünürlük{hiddenCount > 0 ? ` (${hiddenCount})` : ''}</span>
+          </button>
+
+          {showModify && (
+            <button
+              type="button"
+              className="bq-tool-btn"
+              data-testid="modify-btn"
+              onClick={onOpenModify}
+              title="Modify: Kopyala, Aynala, Öteleme, Hizala"
+            >
+              <span>Değiştir</span>
             </button>
           )}
 

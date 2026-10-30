@@ -61,3 +61,41 @@ describe('levelProgress', () => {
     expect(levelProgress({ m01: { bestScore: 50 } })).toMatchObject({ level: 1, pct: 50 });
   });
 });
+
+import { recordAttempt, summarizeStats } from '../src/domain/gameMeta';
+
+describe('stats', () => {
+  it('counts attempts, passes and finds the hardest mission', () => {
+    let m = recordAttempt(EMPTY_META, 'm05', false, 0);
+    m = recordAttempt(m, 'm05', false, 1);
+    m = recordAttempt(m, 'm05', true, 2);
+    m = recordAttempt(m, 'm06', true, 0);
+    const s = summarizeStats(m);
+    expect(s).toMatchObject({ attempts: 4, passes: 2, passRatePct: 50 });
+    expect(s.hardest).toEqual({ id: 'm05', attempts: 3 });
+    expect(m.stats.m05.hintsUsed).toBe(2);
+  });
+});
+
+import { loadValidatedCatalog } from '../src/content/content';
+import { parseAndValidateSaveJson } from '../src/domain/persistence';
+
+describe('save file accepts every catalog mission id', () => {
+  it('bonus missions (m51+) survive a save round-trip', () => {
+    const cat = loadValidatedCatalog();
+    if (!cat.ok) throw new Error(cat.diagnostic);
+    const completed = Object.fromEntries(
+      cat.catalog.missions.map((m) => [m.id, { bestScore: 90 }])
+    );
+    const text = JSON.stringify({
+      saveVersion: 1,
+      contentVersion: '1.0.0',
+      completed,
+      drafts: {},
+      settings: { sound: true, reducedMotion: false },
+    });
+    const res = parseAndValidateSaveJson(text, cat.catalog.missionsById);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    if (res.ok) expect(Object.keys(res.save.completed)).toHaveLength(cat.catalog.missions.length);
+  });
+});

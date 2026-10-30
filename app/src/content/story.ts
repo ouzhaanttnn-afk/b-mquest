@@ -21,6 +21,8 @@ export const CHAPTER_STORIES: Record<string, string> = {
     'Teslimden önce model denetimi: gizli hataları bul. Revit uyarıları seni kurtarmaz, sen kendini kurtar.',
   ch08:
     'Proje teslim edildi ama şantiye şefi bir kapı listesi ve mahal listesi istiyor. Çizelgeler tam bunun için.',
+  ch09:
+    'Selin Mimar: “Bir şey daha: usta modelleyici çizmez, çoğaltır. Copy, Mirror, Offset ve Align ile hız kazan.”',
   ch07:
     'Final: boş projeden başlayıp eksiksiz bir proje teslim ediyorsun. Bu kez yol tarifi yok.',
 };

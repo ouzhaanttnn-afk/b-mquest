@@ -8,7 +8,7 @@ import {
   calculateTotalPlayerXp,
 } from '../domain/pedagogy';
 import { isMissionUnlocked } from '../domain/persistence';
-import { ACHIEVEMENTS, earnedAchievementIds, levelProgress } from '../domain/gameMeta';
+import { ACHIEVEMENTS, earnedAchievementIds, levelProgress, summarizeStats, type GameMeta } from '../domain/gameMeta';
 import { CHAPTER_STORIES, MENTOR_LINES, STORY_MENTOR, STORY_PROJECT } from '../content/story';
 import type {
   BadgeType,
@@ -22,6 +22,7 @@ export interface DashboardProps {
   save: SaveEnvelopeV1;
   theme: 'light' | 'dark';
   streak: number;
+  meta: GameMeta;
   initialInfoOpen?: boolean;
   onBackToTitle?: () => void;
   storageWarning: string | null;
@@ -63,6 +64,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   save,
   theme,
   streak,
+  meta,
   initialInfoOpen = false,
   onBackToTitle,
   storageWarning,
@@ -125,6 +127,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalCurriculumCount = getTotalCurriculumMissionCount();
 
   const progress = levelProgress(save.completed);
+  const statsSummary = summarizeStats(meta);
   const earnedIds = earnedAchievementIds(save.completed);
   const nextMission =
     missions.find(
@@ -568,10 +571,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         })}
       </section>
 
-      {/* Compact 8-Chapter / 53-Mission Roadmap Accordion */}
+      {/* Compact 9-Chapter / 58-Mission Roadmap Accordion */}
       <section
         className="bq-curriculum-section"
-        aria-label="8 Bölüm ve 53 Görevlik Revit Eğitim Mimarisi"
+        aria-label="9 Bölüm ve 58 Görevlik Revit Eğitim Mimarisi"
         data-testid="curriculum-chapters"
       >
         <div className="bq-curriculum-header">
@@ -710,6 +713,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        <div className="bq-settings-group" data-testid="my-stats">
+          <h3>İstatistiklerim (yalnızca bu cihazda)</h3>
+          {statsSummary.attempts === 0 ? (
+            <p className="bq-sched-note">Henüz kontrol yapmadın.</p>
+          ) : (
+            <ul className="bq-stats-list">
+              <li>Toplam kontrol: <strong>{statsSummary.attempts}</strong></li>
+              <li>İlk bakışta başarı oranı: <strong>%{statsSummary.passRatePct}</strong></li>
+              {statsSummary.hardest && (
+                <li>
+                  En çok uğraştığın görev:{' '}
+                  <strong>
+                    {statsSummary.hardest.id.toUpperCase()} ({statsSummary.hardest.attempts} deneme)
+                  </strong>
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+
         <div className="bq-settings-group bq-settings-actions-col">
           <button
             type="button"
@@ -833,7 +856,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <strong>3. Kontrol Et & Düzelt:</strong> Turuncu <strong>Kontrol et</strong> butonuna bas. Hata varsa sistem neden yanlış olduğunu ve nasıl düzelteceğini söyler.
               </li>
               <li>
-                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 53 görevlik haritada ilerle!
+                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 58 görevlik haritada ilerle!
               </li>
             </ul>
             <div className="bq-modal-actions">

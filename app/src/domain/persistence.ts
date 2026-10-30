@@ -5,8 +5,8 @@ import type { BimModel, MissionTask, SaveEnvelopeV1 } from './types';
 
 export const SAVE_STORAGE_KEY = 'bimquest.save.v1';
 export const MAX_IMPORT_BYTES = 1024 * 1024; // 1 MiB UTF-8
-export const MISSION_ID_PATTERN = '^m(0[1-9]|[1-4][0-9]|50)$';
-const MISSION_ID_REGEX = /^m(0[1-9]|[1-4][0-9]|50)$/;
+export const MISSION_ID_PATTERN = '^m(0[1-9]|[1-9][0-9])$';
+const MISSION_ID_REGEX = /^m(0[1-9]|[1-9][0-9])$/;
 
 const ajv = new Ajv2020({ allErrors: true, strict: true });
 ajv.addSchema(taskSchemaJson);

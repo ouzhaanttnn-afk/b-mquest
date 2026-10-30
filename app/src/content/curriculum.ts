@@ -12,7 +12,7 @@ export interface PlannedMissionSummary {
 }
 
 export interface CurriculumChapter {
-  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   id: string;
   title: string;
   subtitle: string;
@@ -123,6 +123,16 @@ export const SEVEN_CHAPTER_CURRICULUM: CurriculumChapter[] = [
     missionRangeLabel: 'Görev 51 – 53',
     pedagogyNote: 'Bonus — Revit’te metraj ve mahal listesinin çıktığı yer',
     missions: buildChapterMissions(51, 53),
+  },
+  {
+    chapterNumber: 9,
+    id: 'ch09',
+    title: 'Bölüm 9: Bonus — Modify Araçları',
+    subtitle:
+      'Revit’te hız kazandıran düzenleme araçları: Copy, Mirror, Offset, Align. Duvara bağlı kapılar kopyayla birlikte gelir.',
+    missionRangeLabel: 'Görev 54 – 58',
+    pedagogyNote: 'Bonus — Modify sekmesi: çizmek yerine çoğaltarak ve hizalayarak modelle',
+    missions: buildChapterMissions(54, 58),
   },
 ];
 
