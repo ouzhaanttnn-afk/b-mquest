@@ -12,7 +12,7 @@ export interface PlannedMissionSummary {
 }
 
 export interface CurriculumChapter {
-  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   id: string;
   title: string;
   subtitle: string;
@@ -113,6 +113,16 @@ export const SEVEN_CHAPTER_CURRICULUM: CurriculumChapter[] = [
     missionRangeLabel: 'Görev 44 – 50',
     pedagogyNote: 'Proje Briefi + Başarı Kriterleri — Hangi butona basılacağı söylenmez, gerçek Revit iş akışı uygulanır',
     missions: buildChapterMissions(44, 50),
+  },
+  {
+    chapterNumber: 8,
+    id: 'ch08',
+    title: 'Bölüm 8: Bonus — Çizelgeler (Schedules)',
+    subtitle:
+      'Model verisini tablo olarak okuma ve düzenleme: kapı çizelgesi, poz numaraları, yangın sınıfı ve oda çizelgesi. Final projeyi bitirenler için.',
+    missionRangeLabel: 'Görev 51 – 53',
+    pedagogyNote: 'Bonus — Revit’te metraj ve mahal listesinin çıktığı yer',
+    missions: buildChapterMissions(51, 53),
   },
 ];
 

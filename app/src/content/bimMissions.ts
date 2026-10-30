@@ -731,6 +731,96 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
       { id: 'c_clean', type: 'modelClean', message: 'Modelde hiç uyarı kalmamalı.' },
     ],
   },
+  // ---- Bonus Bölüm 8: Çizelgeler ----------------------------------------
+  m51: {
+    lesson: {
+      objective:
+        'Kapı çizelgesini aç. Poz numaralarını d1 → D-01, d2 → D-02, d3 → D-03, d4 → D-04 olacak şekilde düzelt.',
+      hintLevels: hints(
+        'Üst çubuktaki Çizelgeler düğmesi model verisini tablo olarak gösterir.',
+        'Kapı çizelgesinde Poz sütunundaki tekrar eden ve düzensiz hücrelere bak.',
+        'Bir hücreyi değiştirmek modeldeki kapının Mark değerini değiştirir.',
+        '1) Çizelgeler → Kapı Çizelgesi. 2) Her satırın Poz hücresini düzelt (Enter ile onayla). 3) Kapat ve Kontrol Et.'
+      ),
+      primaryFields: ['mark'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+      door1('d2', 'w1', 3000, { mark: 'D-01' }),
+      door1('d3', 'w3', 1500, { mark: 'D-03' }),
+      door1('d4', 'w3', 4000, { mark: 'D-3' }),
+    ],
+    editable: ['mark'],
+    seeds: ['d1', 'd2', 'd3', 'd4'],
+    minutes: 6,
+    criteria: [
+      { id: 'c1', type: 'property', elementId: 'd1', field: 'mark', expected: 'D-01', tolerance: 0, message: 'd1 kapısının pozu D-01 olmalı.' },
+      { id: 'c2', type: 'property', elementId: 'd2', field: 'mark', expected: 'D-02', tolerance: 0, message: 'd2 kapısının pozu D-02 olmalı.' },
+      { id: 'c3', type: 'property', elementId: 'd3', field: 'mark', expected: 'D-03', tolerance: 0, message: 'd3 kapısının pozu D-03 olmalı.' },
+      { id: 'c4', type: 'property', elementId: 'd4', field: 'mark', expected: 'D-04', tolerance: 0, message: 'd4 kapısının pozu D-04 olmalı.' },
+    ],
+  },
+  m52: {
+    lesson: {
+      objective:
+        'Koridora açılan d1, d2 ve d3 kapılarının yangın sınıfını (Fire Rating) çizelgeden EI30 yap. Oda içi d4 kapısına dokunma.',
+      hintLevels: hints(
+        'Kapı çizelgesinde Yangın sütununu üstten alta tara.',
+        'Üç kapının yangın sınıfı eksik; dördüncüsü oda içi kapı.',
+        'Hücreye EI30 yaz ve Enter ile onayla.',
+        '1) Çizelgeler → Kapı Çizelgesi. 2) d1, d2, d3 satırlarında Yangın hücresine EI30 yaz. 3) Kapat ve Kontrol Et.'
+      ),
+      primaryFields: ['fireRating'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+      door1('d2', 'w1', 3000, { mark: 'D-02' }),
+      door1('d3', 'w3', 1500, { mark: 'D-03' }),
+      door1('d4', 'w3', 4000, { mark: 'D-04' }),
+    ],
+    editable: ['fireRating'],
+    seeds: ['d1', 'd2', 'd3'],
+    minutes: 6,
+    criteria: [
+      { id: 'c1', type: 'property', elementId: 'd1', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd1 kapısı EI30 olmalı.' },
+      { id: 'c2', type: 'property', elementId: 'd2', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd2 kapısı EI30 olmalı.' },
+      { id: 'c3', type: 'property', elementId: 'd3', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd3 kapısı EI30 olmalı.' },
+    ],
+  },
+  m53: {
+    lesson: {
+      objective:
+        'Oda çizelgesinde iki odanın da numarasını ve adını doldur: r1 → 101 Salon, r2 → 102 Yatak Odası. Modelde uyarı kalmasın.',
+      hintLevels: hints(
+        'Oda çizelgesinde boş kalan hücreler eksik veriyi gösterir.',
+        'İki odanın hem numarası hem adı eksik.',
+        'Numara ve Ad sütunlarındaki hücreleri doldurup Enter ile onayla.',
+        '1) Çizelgeler → Oda Çizelgesi. 2) r1: 101 / Salon. 3) r2: 102 / Yatak Odası. 4) Kapat ve Kontrol Et.'
+      ),
+      primaryFields: ['number', 'name'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      wall('w5', [3000, 0], [3000, 4000]),
+      { id: 'r1', type: 'room', name: 'Oda', number: '', levelId: 'l0', seedPoint: [1500, 2000] },
+      { id: 'r2', type: 'room', name: 'Oda', number: '', levelId: 'l0', seedPoint: [4500, 2000] },
+    ],
+    editable: ['number', 'name'],
+    seeds: ['r1', 'r2'],
+    minutes: 6,
+    criteria: [
+      { id: 'c1', type: 'property', elementId: 'r1', field: 'number', expected: '101', tolerance: 0, message: 'r1 oda numarası 101 olmalı.' },
+      { id: 'c2', type: 'property', elementId: 'r2', field: 'number', expected: '102', tolerance: 0, message: 'r2 oda numarası 102 olmalı.' },
+      { id: 'c3', type: 'property', elementId: 'r1', field: 'name', expected: 'Salon', tolerance: 0, message: 'r1 odasının adı Salon olmalı.' },
+      { id: 'c4', type: 'property', elementId: 'r2', field: 'name', expected: 'Yatak Odası', tolerance: 0, message: 'r2 odasının adı Yatak Odası olmalı.' },
+      { id: 'c_clean', type: 'modelClean', message: 'Odaların ad ve numarası boş kalmamalı.' },
+    ],
+  },
 };
 
 export function buildBimMissionTask(

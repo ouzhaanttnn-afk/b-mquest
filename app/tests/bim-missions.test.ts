@@ -100,7 +100,37 @@ describe('Faz 1 — gerçek BIM nesnelerine bağlı görevler', () => {
     expect(res.criteria.find((c) => c.id === 'c_cl')?.actual).toContain('r1');
   });
 
-  it('50 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
-    expect(Object.keys(missions)).toHaveLength(50);
+  it('53 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
+    expect(Object.keys(missions)).toHaveLength(53);
+  });
+});
+
+describe('Bonus Bölüm 8 — çizelgeler', () => {
+  const edit = (id: string, field: string, v: string) => (s: MissionSessionState) =>
+    updateElementProperty(s, id, field as never, v);
+
+  it('m51: başlangıçta kalır, poz düzeltilince geçer', () => {
+    expect(evaluate(missions.m51, missions.m51.initialModel, 0).pass).toBe(false);
+    const s = run('m51', [
+      edit('d2', 'mark', 'D-02'),
+      edit('d4', 'mark', 'D-04'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m52: yalnızca d1-d3 düzenlenebilir', () => {
+    const s0 = createInitialSession(missions.m52);
+    expect(updateElementProperty(s0, 'd4', 'fireRating', 'EI30').ok).toBe(false);
+    const s = run('m52', ['d1', 'd2', 'd3'].map((d) => edit(d, 'fireRating', 'EI30')));
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m53: oda numarası ve adı doldurulunca geçer', () => {
+    expect(evaluate(missions.m53, missions.m53.initialModel, 0).pass).toBe(false);
+    const s = run('m53', [
+      edit('r1', 'number', '101'),
+      edit('r1', 'name', 'Salon'),
+      edit('r2', 'number', '102'),
+      edit('r2', 'name', 'Yatak Odası'),
+    ]);
+    expect(passes(s).pass).toBe(true);
   });
 });

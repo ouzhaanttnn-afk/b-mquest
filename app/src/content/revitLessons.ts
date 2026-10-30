@@ -4,7 +4,7 @@ import { FINAL_STAGES, buildFinalMissionTask, finalLessonOverrides } from './fin
 
 export interface RevitLessonMeta {
   id: string;
-  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -222,7 +222,7 @@ export const REVIT_LESSONS_BY_ID: Record<string, RevitLessonMeta> = {
 
 const EXTRA_LESSONS: Array<{
   id: string;
-  chapter: 2 | 3 | 4 | 5 | 6 | 7;
+  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -861,6 +861,49 @@ const EXTRA_LESSONS: Array<{
     primaryFields: ['hostWallId', 'offset', 'width', 'height', 'mark', 'fireRating'],
     FixType: 'door_create',
   },
+  // BONUS BÖLÜM 8 — ÇİZELGELER (Schedules)
+  {
+    id: 'm51',
+    chapter: 8,
+    stepNumber: 51,
+    title: 'Kapı Çizelgesi',
+    learningConcept: 'Door Schedule & Mark',
+    revitPath: 'View → Create → Schedules → Schedule/Quantities → Doors',
+    learningText: 'Çizelge, model verisinin tablo halidir. Bir hücreyi değiştirmek modeldeki nesneyi değiştirir; şantiyeye giden kapı listesi buradan çıkar.',
+    whyItMatters: 'Tekrarlayan veya boş poz numaraları metrajda ve şantiye siparişinde karışıklığa yol açar.',
+    objective: 'Kapı çizelgesini aç. Poz numaralarını d1 → D-01, d2 → D-02, d3 → D-03, d4 → D-04 olacak şekilde düzelt.',
+    nextConcept: 'Çizelgeden yangın sınıfı yönetimi',
+    primaryFields: ['mark'],
+    FixType: 'door_mark',
+  },
+  {
+    id: 'm52',
+    chapter: 8,
+    stepNumber: 52,
+    title: 'Yangın Kapıları',
+    learningConcept: 'Schedule ile toplu parametre denetimi',
+    revitPath: 'Door Schedule → Fire Rating sütunu',
+    learningText: 'Çizelge, aynı parametreyi tüm elemanlarda tek bakışta karşılaştırmanın en hızlı yoludur. Eksik değerler boş hücre olarak göze çarpar.',
+    whyItMatters: 'Kaçış yoluna açılan kapılarda yangın sınıfı eksikliği ruhsat sürecini durdurur.',
+    objective: 'Koridora açılan d1, d2 ve d3 kapılarının yangın sınıfını (Fire Rating) çizelgeden EI30 yap. Oda içi d4 kapısına dokunma.',
+    nextConcept: 'Oda çizelgesi',
+    primaryFields: ['fireRating'],
+    FixType: 'door_fire',
+  },
+  {
+    id: 'm53',
+    chapter: 8,
+    stepNumber: 53,
+    title: 'Oda Çizelgesi',
+    learningConcept: 'Room Schedule: Numara, Ad, Alan',
+    revitPath: 'View → Create → Schedules → Schedule/Quantities → Rooms',
+    learningText: 'Oda çizelgesi mahal listesini ve alanlarını verir. Numarası veya adı boş oda, çizelgede ve paftada eksik görünür.',
+    whyItMatters: 'Mahal listesi mimari projenin teslim belgelerinden biridir; alanlar modelden otomatik gelir.',
+    objective: 'Oda çizelgesinde iki odanın da numarasını ve adını doldur: r1 → 101 Salon, r2 → 102 Yatak Odası. Modelde uyarı kalmasın.',
+    nextConcept: 'Mezuniyet: gerçek Revit',
+    primaryFields: ['number', 'name'],
+    FixType: 'multi_qa',
+  },
 ];
 
 for (const item of EXTRA_LESSONS) {
@@ -894,7 +937,7 @@ for (const item of EXTRA_LESSONS) {
     primaryFields: item.primaryFields,
     secondaryFields: ['name', 'baseLevelId', 'thickness', 'height'],
     difficultyPhase:
-      item.chapter === 7
+      item.chapter >= 7
         ? 'final'
         : isAdvanced
         ? 'advanced'

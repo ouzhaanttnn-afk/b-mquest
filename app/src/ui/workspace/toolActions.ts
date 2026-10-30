@@ -39,23 +39,37 @@ export interface ToolDef {
   label: string;
   group: 'Mimari' | 'Referans' | 'Görünüm' | 'Açıklama';
   hint: string;
+  /** Real Revit keyboard shortcut (two letters, typed in sequence). */
+  keys?: string;
 }
 
 /** Revit-style tabs: Architecture and Datum, shown as one scrollable row. */
 export const TOOL_DEFS: ToolDef[] = [
-  { id: 'wall', label: 'Duvar', group: 'Mimari', hint: 'Başlangıç noktasına parmağını bas, bitiş noktasına sürükleyip bırak. (İki noktaya sırayla dokunmak da olur.)' },
-  { id: 'door', label: 'Kapı', group: 'Mimari', hint: 'Bir duvara dokun: kapı oraya yerleşir. Seçip duvar boyunca sürükleyerek kaydır.' },
-  { id: 'window', label: 'Pencere', group: 'Mimari', hint: 'Bir duvara dokun: pencere oraya yerleşir. Seçip duvar boyunca sürükleyerek kaydır.' },
-  { id: 'floor', label: 'Döşeme', group: 'Mimari', hint: 'Duvarlara dokunarak seç (Pick Walls), sonra "Döşeme Oluştur".' },
-  { id: 'roof', label: 'Çatı', group: 'Mimari', hint: 'Duvarlara dokunarak seç, katı/eğimi/çıkmayı belirle, sonra "Çatı Oluştur".' },
-  { id: 'room', label: 'Oda', group: 'Mimari', hint: 'Kapalı bir alanın içine dokun. Alan kapalı değilse boşluk kırmızı işaretlenir.' },
-  { id: 'stair', label: 'Merdiven', group: 'Mimari', hint: 'Merdivenin başlangıç noktasına dokun.' },
-  { id: 'grid', label: 'Aks', group: 'Referans', hint: 'Başlangıçtan bitişe sürükleyip bırak: aks oluşur, adı otomatik verilir.' },
+  { id: 'wall', keys: 'WA', label: 'Duvar', group: 'Mimari', hint: 'Başlangıç noktasına parmağını bas, bitiş noktasına sürükleyip bırak. (İki noktaya sırayla dokunmak da olur.)' },
+  { id: 'door', keys: 'DR', label: 'Kapı', group: 'Mimari', hint: 'Bir duvara dokun: kapı oraya yerleşir. Seçip duvar boyunca sürükleyerek kaydır.' },
+  { id: 'window', keys: 'WN', label: 'Pencere', group: 'Mimari', hint: 'Bir duvara dokun: pencere oraya yerleşir. Seçip duvar boyunca sürükleyerek kaydır.' },
+  { id: 'floor', keys: 'SB', label: 'Döşeme', group: 'Mimari', hint: 'Duvarlara dokunarak seç (Pick Walls), sonra "Döşeme Oluştur".' },
+  { id: 'roof', keys: 'RF', label: 'Çatı', group: 'Mimari', hint: 'Duvarlara dokunarak seç, katı/eğimi/çıkmayı belirle, sonra "Çatı Oluştur".' },
+  { id: 'room', keys: 'RM', label: 'Oda', group: 'Mimari', hint: 'Kapalı bir alanın içine dokun. Alan kapalı değilse boşluk kırmızı işaretlenir.' },
+  { id: 'stair', keys: 'ST', label: 'Merdiven', group: 'Mimari', hint: 'Merdivenin başlangıç noktasına dokun.' },
+  { id: 'grid', keys: 'GR', label: 'Aks', group: 'Referans', hint: 'Başlangıçtan bitişe sürükleyip bırak: aks oluşur, adı otomatik verilir.' },
   { id: 'section', label: 'Kesit', group: 'Görünüm', hint: 'Başlangıçtan bitişe sürükleyip bırak: kesit çizgisi oluşur. Yönü sonra çevirebilirsin.' },
   { id: 'elevation', label: 'Cephe', group: 'Görünüm', hint: 'Bir yön seç (K / G / D / B): o cephenin görünümü eklenir.' },
-  { id: 'dimension', label: 'Ölçü', group: 'Açıklama', hint: 'Birbirine paralel iki duvara dokun: aralarındaki ölçü çizilir ve model değişince güncellenir.' },
-  { id: 'tag', label: 'Etiket', group: 'Açıklama', hint: 'Bir kapıya, pencereye veya odaya dokun: etiketi eklenir.' },
+  { id: 'dimension', keys: 'DI', label: 'Ölçü', group: 'Açıklama', hint: 'Birbirine paralel iki duvara dokun: aralarındaki ölçü çizilir ve model değişince güncellenir.' },
+  { id: 'tag', keys: 'TG', label: 'Etiket', group: 'Açıklama', hint: 'Bir kapıya, pencereye veya odaya dokun: etiketi eklenir.' },
 ];
+
+/** Tool whose Revit shortcut equals the typed letters, if the mission allows it. */
+export function toolForShortcut(
+  typed: string,
+  creatable: readonly string[]
+): ToolId | null {
+  const keys = typed.toUpperCase();
+  const def = TOOL_DEFS.find((t) => t.keys === keys);
+  if (!def) return null;
+  const type = def.id === 'section' || def.id === 'elevation' ? 'view' : def.id;
+  return creatable.includes(type) ? def.id : null;
+}
 
 const round50 = (v: number) => Math.round(v / 50) * 50;
 

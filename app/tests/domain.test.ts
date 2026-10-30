@@ -540,13 +540,13 @@ describe('Layer 2 — Domain, Reference Parity & Persistence Suite (D01–D15, P
     expect(xpSummary.level).toBe(2);
   });
 
-  it('D17: 7-Chapter / 50-Mission Revit architecture & all 50 playable missions validate without engine changes', async () => {
+  it('D17: 8-Chapter / 53-Mission Revit architecture & all 53 playable missions validate without engine changes', async () => {
     const { SIX_CHAPTER_CURRICULUM, SEVEN_CHAPTER_CURRICULUM, getTotalCurriculumMissionCount } =
       await import('../src/content/curriculum');
-    expect(SEVEN_CHAPTER_CURRICULUM).toHaveLength(7);
-    expect(SIX_CHAPTER_CURRICULUM).toHaveLength(7);
-    expect(getTotalCurriculumMissionCount()).toBe(50);
-    expect(catalogRes.catalog.missions).toHaveLength(50);
+    expect(SEVEN_CHAPTER_CURRICULUM).toHaveLength(8);
+    expect(SIX_CHAPTER_CURRICULUM).toHaveLength(8);
+    expect(getTotalCurriculumMissionCount()).toBe(53);
+    expect(catalogRes.catalog.missions).toHaveLength(53);
 
     // Every single mission m01..m50 starts in a failing state and has valid schema
     for (const task of catalogRes.catalog.missions) {

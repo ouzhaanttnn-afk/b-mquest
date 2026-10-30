@@ -2,6 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+  });
+});
+
 const SHOTS = path.resolve(process.cwd(), 'evidence', 'screenshots');
 test.beforeAll(() => fs.mkdirSync(SHOTS, { recursive: true }));
 

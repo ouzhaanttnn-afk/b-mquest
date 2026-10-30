@@ -13,6 +13,8 @@ export interface TopBarProps {
   activeTool: ToolId;
   setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
   onOpenLevels: () => void;
+  onOpenSchedules: () => void;
+  showSchedules: boolean;
   showLevels: boolean;
   /** null = hide the button. */
   warningCount: number | null;
@@ -39,6 +41,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   activeTool,
   setActiveTool,
   onOpenLevels,
+  onOpenSchedules,
+  showSchedules,
   showLevels,
   warningCount,
   onOpenWarnings,
@@ -123,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 setFieldError(null);
               }}
               aria-pressed={activeTool === t.id}
-              title={t.group}
+              title={t.keys ? `${t.group} · Revit kısayolu: ${t.keys}` : t.group}
             >
               {t.id === 'wall' || t.id === 'door' ? (
                 <svg width="18" height="18" aria-hidden="true">
@@ -131,6 +135,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </svg>
               ) : null}
               <span>{t.label}</span>
+              {t.keys && <kbd className="bq-kbd" aria-hidden="true">{t.keys}</kbd>}
             </button>
           ))}
 
@@ -155,6 +160,18 @@ export const TopBar: React.FC<TopBarProps> = ({
               title="Model uyarıları"
             >
               <span>Uyarılar ({warningCount})</span>
+            </button>
+          )}
+
+          {showSchedules && (
+            <button
+              type="button"
+              className="bq-tool-btn"
+              data-testid="schedules-btn"
+              onClick={onOpenSchedules}
+              title="Proje Tarayıcısı · Çizelgeler"
+            >
+              <span>Çizelgeler</span>
             </button>
           )}
 
