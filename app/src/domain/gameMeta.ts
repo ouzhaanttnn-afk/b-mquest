@@ -20,6 +20,10 @@ export interface GameMeta {
   introDone: boolean;
   /** Name printed on the graduation certificate. */
   playerName: string;
+  /** Haptic feedback switched off by the player. */
+  hapticsOff: boolean;
+  /** Hour (0-23) of the daily reminder, or null when it is off. */
+  reminderHour: number | null;
 }
 
 export interface MissionStats {
@@ -36,6 +40,8 @@ export const EMPTY_META: GameMeta = {
   stats: {},
   introDone: false,
   playerName: '',
+  hapticsOff: false,
+  reminderHour: null,
 };
 
 type Completed = Record<string, { bestScore: number }>;
@@ -241,6 +247,11 @@ export function loadMeta(): GameMeta {
       stats: sanitizeStats(p.stats),
       introDone: p.introDone === true,
       playerName: typeof p.playerName === 'string' ? p.playerName.slice(0, 40) : '',
+      hapticsOff: p.hapticsOff === true,
+      reminderHour:
+        typeof p.reminderHour === 'number' && p.reminderHour >= 0 && p.reminderHour <= 23
+          ? Math.round(p.reminderHour)
+          : null,
     };
   } catch {
     return EMPTY_META;

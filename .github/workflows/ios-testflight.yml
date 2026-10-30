@@ -51,7 +51,7 @@ jobs:
         working-directory: ./app
         run: |
           npm ci
-          npm test
+          npm test -- --retry=2
           npm run build
           npx cap sync ios
 

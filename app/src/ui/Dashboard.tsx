@@ -18,6 +18,8 @@ import type {
 import { playSound } from './sound';
 import { HelpSheet } from './HelpSheet';
 import { CertificateSheet } from './CertificateSheet';
+import { AboutSheet } from './AboutSheet';
+import { workshopUnlocked } from '../content/workshop';
 import { certificateUnlocked } from '../domain/certificate';
 
 export interface DashboardProps {
@@ -27,6 +29,9 @@ export interface DashboardProps {
   streak: number;
   meta: GameMeta;
   onSetPlayerName: (name: string) => void;
+  onStartWorkshop: () => void;
+  onSetHaptics: (on: boolean) => void;
+  onSetReminder: (on: boolean) => Promise<{ ok: boolean; reason?: string }>;
   initialInfoOpen?: boolean;
   onBackToTitle?: () => void;
   storageWarning: string | null;
@@ -70,6 +75,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   streak,
   meta,
   onSetPlayerName,
+  onStartWorkshop,
+  onSetHaptics,
+  onSetReminder,
   initialInfoOpen = false,
   onBackToTitle,
   storageWarning,
@@ -93,6 +101,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [infoModalOpen, setInfoModalOpen] = useState(initialInfoOpen);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [certificateOpen, setCertificateOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [reminderNote, setReminderNote] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,6 +403,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
         )}
       </section>
+
+      {workshopUnlocked(save.completed) && (
+        <button
+          type="button"
+          className="bq-workshop-card"
+          data-testid="workshop-btn"
+          onClick={() => {
+            playSound('click');
+            onStartWorkshop();
+          }}
+        >
+          <span className="bq-workshop-icon" aria-hidden="true">🛠️</span>
+          <span>
+            <strong>Serbest Atölye</strong>
+            <small>Görevsiz, tüm araçlar açık. Kendi evini kur; modelin cihazında kalır.</small>
+          </span>
+        </button>
+      )}
 
       {/* Compact Stage Header + 7-Chapter Tabs + Connected Blueprint Route Track */}
       <div className="bq-stage-banner">
@@ -713,6 +741,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       >
         <div className="bq-settings-group">
           <h3>Tercihler & Kayıt Yönetimi</h3>
+          {reminderNote && (
+            <p className="bq-sched-note" role="status" data-testid="reminder-note">{reminderNote}</p>
+          )}
           <div className="bq-settings-row">
             <label className="bq-toggle-label">
               <input
@@ -733,6 +764,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 data-testid="toggle-sound"
               />
               <span>Ses Efektleri</span>
+            </label>
+            <label className="bq-toggle-label">
+              <input
+                type="checkbox"
+                checked={!meta.hapticsOff}
+                onChange={(e) => onSetHaptics(e.target.checked)}
+                data-testid="toggle-haptics"
+              />
+              <span>Titreşim</span>
+            </label>
+            <label className="bq-toggle-label">
+              <input
+                type="checkbox"
+                checked={meta.reminderHour !== null}
+                onChange={async (e) => {
+                  const res = await onSetReminder(e.target.checked);
+                  setReminderNote(
+                    res.ok
+                      ? null
+                      : res.reason === 'web'
+                      ? 'Hatırlatma yalnızca iPhone/iPad uygulamasında çalışır.'
+                      : 'Bildirim izni verilmedi. Ayarlar → Bildirimler’den açabilirsin.'
+                  );
+                }}
+                data-testid="toggle-reminder"
+              />
+              <span>Günlük hatırlatma (19:00)</span>
             </label>
           </div>
         </div>
@@ -758,6 +816,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <div className="bq-settings-group bq-settings-actions-col">
+          <button
+            type="button"
+            className="bq-btn bq-btn-secondary bq-btn-compact"
+            data-testid="about-btn"
+            onClick={() => setAboutOpen(true)}
+          >
+            Hakkında & Gizlilik
+          </button>
           <button
             type="button"
             className="bq-btn bq-btn-secondary bq-btn-compact"
@@ -813,6 +879,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
       </section>
+
+      {aboutOpen && <AboutSheet onClose={() => setAboutOpen(false)} />}
 
       {certificateOpen && (
         <CertificateSheet

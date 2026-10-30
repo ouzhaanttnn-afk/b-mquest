@@ -109,3 +109,15 @@ Her faz sonunda: `npx tsc -b`, `npm test`, `npm run build`, `npx playwright test
 | 7 Kapsam | Yapılmadı | Family editörü, çok katlı tek proje vb. |
 
 Ek (kullanıcı geri bildirimiyle): duvar çizmek zor geldiği için "Ölçüyle çiz" eklendi: yön oklarıyla ölçülü duvar zinciri ve tek dokunuşta 4 duvarlı oda; çizim sırasında canlı uzunluk etiketi.
+
+## 5. Yayın ve ürün olgunluğu turu (30 Ekim 2026)
+
+Web araştırmasından çıkan kararlar (kaynaklar ikincil; Apple'ın güncel metniyle doğrulanmalı):
+- **4.2 riski:** Capacitor ile sarılmış uygulamalar "yeterli native işlev yok" gerekçesiyle reddedilebiliyor. Önlem: gerçek cihaz özellikleri eklendi (haptics, yerel bildirim, paylaşım) ve inceleme notlarına yazıldı. Garanti değildir.
+- **Gizlilik manifestosu:** `PrivacyInfo.xcprivacy` eklendi (izleme yok, toplanan veri yok).
+- **iPhone'da titreşim:** `navigator.vibrate` iOS'ta yok; Capacitor Haptics ile çözüldü.
+- **Mağaza paketi:** `store/` (metinler, gizlilik politikası, kontrol listesi, ekran görüntüsü üreticisi ve çıktıları).
+
+Bu turda ekran görüntülerinden bulunup düzeltilenler: iPad dikey düzen, 3B kamera uzaklığı, kalın sarı vurgu, kuzey oku yönü, ↑ oklarının ters yöne çizmesi.
+
+Kalanlar: Faz 6 (büyük dosyaları bölme), Faz 7 (Family editörü, çok katlı tek proje), eski şablon görevlerin (m04–m06, m13–m16, m26–m29) çeşitlendirilmesi, Xcode'da gerçek derleme ve cihaz denemesi.

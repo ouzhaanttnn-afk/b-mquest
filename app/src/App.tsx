@@ -31,8 +31,16 @@ import {
 } from './domain/gameMeta';
 import { calculateTotalPlayerXp } from './domain/pedagogy';
 import { playSound } from './ui/sound';
+import { disableDailyReminder, enableDailyReminder, setHapticsEnabled } from './native/native';
 import { Dashboard } from './ui/Dashboard';
 import { TitleScreen } from './ui/TitleScreen';
+import {
+  buildWorkshopTask,
+  clearWorkshopModel,
+  isWorkshop,
+  loadWorkshopModel,
+  saveWorkshopModel,
+} from './content/workshop';
 import { FirstRunTour } from './ui/FirstRunTour';
 const Workspace = lazy(() =>
   import('./ui/Workspace').then((m) => ({ default: m.Workspace }))
@@ -92,6 +100,17 @@ export function App() {
     }
     setOpenInfoOnDashboard(withInfo);
     setShowTitle(false);
+  }, []);
+
+  useEffect(() => {
+    setHapticsEnabled(!meta.hapticsOff);
+  }, [meta.hapticsOff]);
+
+  // Re-arm the daily reminder after an app update or a reinstall of the schedule.
+  useEffect(() => {
+    if (meta.reminderHour !== null) void enableDailyReminder(meta.reminderHour);
+    // Only on first load: toggling is handled in handleSetReminder.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateMeta = useCallback((next: GameMeta) => {
@@ -163,6 +182,15 @@ export function App() {
     [recoveryIssue]
   );
 
+  const handleStartWorkshop = useCallback(() => {
+    const saved = loadWorkshopModel();
+    const task = buildWorkshopTask(saved ?? undefined);
+    setActiveSession(
+      createInitialSession(task, saved ? { model: saved, revealedHints: [] } : undefined)
+    );
+    touchPlayDay();
+  }, [touchPlayDay]);
+
   const handleStartMission = useCallback(
     (missionId: string, resumeDraft: boolean) => {
       const task = catalog.missionsById[missionId];
@@ -194,6 +222,12 @@ export function App() {
       nextSession: MissionSessionState,
       passingEvaluation?: SubmittedEvaluation
     ) => {
+      if (isWorkshop(nextSession.task.id)) {
+        // The sandbox never touches the mission save file.
+        setActiveSession(nextSession);
+        saveWorkshopModel(nextSession.model);
+        return;
+      }
       const prevEval = activeSession?.lastEvaluation ?? null;
       const evalNow = nextSession.lastEvaluation;
       setActiveSession(nextSession);
@@ -232,6 +266,11 @@ export function App() {
   const handleResetDraftConfirmed = useCallback(
     (resetState: MissionSessionState) => {
       const missionId = resetState.task.id;
+      if (isWorkshop(missionId)) {
+        clearWorkshopModel();
+        setActiveSession(createInitialSession(buildWorkshopTask()));
+        return;
+      }
       const carried = carryOverDraft(resetState.task, save);
       setActiveSession(
         carried ? createInitialSession(resetState.task, carried) : resetState
@@ -353,7 +392,19 @@ export function App() {
         <Dashboard
           streak={visibleStreak(meta, today)}
           meta={meta}
+          onStartWorkshop={handleStartWorkshop}
           onSetPlayerName={(name) => updateMeta({ ...meta, playerName: name })}
+          onSetHaptics={(on) => updateMeta({ ...meta, hapticsOff: !on })}
+          onSetReminder={async (on) => {
+            if (!on) {
+              await disableDailyReminder();
+              updateMeta({ ...meta, reminderHour: null });
+              return { ok: true };
+            }
+            const res = await enableDailyReminder(19);
+            if (res.ok) updateMeta({ ...meta, reminderHour: 19 });
+            return res;
+          }}
           initialInfoOpen={openInfoOnDashboard}
           onBackToTitle={() => setShowTitle(true)}
           missions={catalog.missions}

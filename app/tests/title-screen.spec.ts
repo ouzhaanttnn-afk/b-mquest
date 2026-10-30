@@ -225,11 +225,85 @@ test.describe('Duvar çizmeyi kolaylaştıranlar', () => {
     await page.getByTestId('start-mission-m02').click();
     await page.getByTestId('tool-wall-btn').click();
     await page.getByTestId('wall-helpers-toggle').click();
-    for (const [dir, len] of [['E', '6000'], ['N', '4000'], ['W', '6000'], ['S', '4000']]) {
+    for (const [dir, len] of [['R', '6000'], ['D', '4000'], ['L', '6000'], ['U', '4000']]) {
       await page.getByTestId('wall-len').fill(len);
       await page.getByTestId(`wall-dir-${dir}`).click();
     }
     await page.getByTestId('check-btn').click();
     await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+});
+
+test.describe('Serbest Atölye', () => {
+  const seed = async (page: import('@playwright/test').Page) =>
+    page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      if (!window.localStorage.getItem('bimquest.meta.v1')) {
+        window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission'] }));
+      }
+      if (!window.localStorage.getItem('bimquest.save.v1')) {
+        window.localStorage.setItem(
+          'bimquest.save.v1',
+          JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed: { m01: { bestScore: 100 }, m02: { bestScore: 100 } }, drafts: {}, settings: { reducedMotion: true, sound: false } })
+        );
+      }
+    });
+
+  test('atölye m02 sonrası açılır, model ayrı saklanır ve geri gelir', async ({ page }) => {
+    await seed(page);
+    await page.goto('/');
+    await page.getByTestId('workshop-btn').click();
+    await expect(page.getByTestId('workspace-screen')).toBeVisible();
+    await page.getByTestId('tool-wall-btn').click();
+    await page.getByTestId('wall-helpers-toggle').click();
+    await page.getByTestId('wall-rect-btn').click();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toHaveCount(0);
+
+    const stored = await page.evaluate(() => ({
+      save: window.localStorage.getItem('bimquest.save.v1') ?? '',
+      workshop: window.localStorage.getItem('bimquest.workshop.v1') ?? '',
+    }));
+    expect(stored.save).not.toContain('atolye');
+    expect(JSON.parse(stored.workshop).elements).toHaveLength(4);
+
+    await page.getByTestId('back-dashboard-btn').click();
+    await page.getByTestId('workshop-btn').click();
+    await expect(page.getByTestId('plan-wall-w4')).toBeAttached();
+  });
+
+  test('atölye düğmesi m02 bitmeden görünmez', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+    });
+    await page.goto('/');
+    await expect(page.getByTestId('workshop-btn')).toHaveCount(0);
+  });
+});
+
+test.describe('Hakkında, gizlilik ve ayarlar', () => {
+  test('hakkında ekranı gizlilik özetini ve sürümü gösterir; titreşim ve hatırlatma ayarları durur', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      if (!window.localStorage.getItem('bimquest.meta.v1')) {
+        window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+      }
+    });
+    await page.goto('/');
+    await page.getByTestId('settings-toggle-btn').click();
+    await page.getByTestId('about-btn').click();
+    await expect(page.getByTestId('about-sheet')).toBeVisible();
+    await expect(page.getByTestId('app-version')).toHaveText('1.0.0');
+    await expect(page.getByTestId('privacy-summary')).toContainText('Hiçbir kişisel veri toplanmaz');
+    await page.getByTestId('about-sheet').getByRole('button', { name: /Kapat/ }).click();
+
+    await page.getByTestId('toggle-haptics').uncheck();
+    await page.getByTestId('toggle-reminder').click();
+    await expect(page.getByTestId('reminder-note')).toContainText('yalnızca iPhone');
+    await expect(page.getByTestId('toggle-reminder')).not.toBeChecked();
+    await page.reload();
+    await page.getByTestId('settings-toggle-btn').click();
+    await expect(page.getByTestId('toggle-haptics')).not.toBeChecked();
   });
 });

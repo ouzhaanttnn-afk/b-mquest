@@ -574,10 +574,10 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           <text x={-110} y={1020} fill="#38BDF8" fontSize={140} fontWeight="700">
             +Z
           </text>
-          {/* Architectural North Compass */}
+          {/* North compass: in this model north is +Z, which is drawn downwards */}
           <g transform="translate(6420, -240)">
             <circle cx={0} cy={0} r={190} fill={labelBgDefault} stroke="#38BDF8" strokeWidth={18} />
-            <polygon points="0,-135 -48,60 0,25 48,60" fill="#38BDF8" />
+            <polygon points="0,135 -48,-60 0,-25 48,-60" fill="#38BDF8" />
             <text x={0} y={310} textAnchor="middle" fill="#38BDF8" fontSize={110} fontWeight="800">
               K
             </text>
@@ -1116,7 +1116,8 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
                 x2={w.end[0]}
                 y2={w.end[1]}
                 stroke="#FACC15"
-                strokeWidth={w.thickness + 260}
+                strokeWidth={w.thickness + 140}
+                opacity={0.6}
                 strokeLinecap="round"
                 pointerEvents="none"
               />

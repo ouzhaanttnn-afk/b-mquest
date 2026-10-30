@@ -4,6 +4,8 @@
  * using the browser's native AudioContext and triggers subtle mobile haptics.
  */
 
+import { haptic, type HapticKind } from '../native/native';
+
 export type SoundEffectType =
   | 'click'
   | 'select'
@@ -54,14 +56,8 @@ export function setSoundMuted(muted: boolean): void {
   }
 }
 
-export function triggerHaptic(pattern: number | number[] = 10): void {
-  try {
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      navigator.vibrate(pattern);
-    }
-  } catch {
-    // Ignore on unsupported devices
-  }
+export function triggerHaptic(kind: HapticKind = 'light'): void {
+  void haptic(kind);
 }
 
 function playTone(
@@ -96,13 +92,13 @@ export function playSound(effect: SoundEffectType): void {
   if (isSoundMuted()) return;
 
   if (effect === 'select') {
-    triggerHaptic(8);
+    triggerHaptic('light');
   } else if (effect === 'snap' || effect === 'build') {
-    triggerHaptic(15);
+    triggerHaptic('medium');
   } else if (effect === 'success') {
-    triggerHaptic([18, 40, 30]);
+    triggerHaptic('success');
   } else if (effect === 'error') {
-    triggerHaptic([30, 50, 30]);
+    triggerHaptic('error');
   }
 
   const ctx = getAudioContext();

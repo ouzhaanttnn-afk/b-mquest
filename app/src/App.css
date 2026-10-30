@@ -2751,3 +2751,17 @@ select:focus-visible,
 .bq-wall-helper { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; }
 .bq-dir-btn { min-width: 44px; min-height: 44px; font-size: 20px; }
 .bq-wall-helpers > summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-bright); min-height: 32px; display: flex; align-items: center; }
+.bq-about-list { margin: 4px 0 12px; padding-left: 18px; line-height: 1.7; }
+
+.bq-workshop-card { display: flex; gap: 12px; align-items: center; width: calc(100% - 24px); margin: 8px 12px 0; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--accent-bright); background: var(--bg-surface); color: var(--text-primary); text-align: left; cursor: pointer; min-height: 56px; }
+.bq-workshop-card strong, .bq-workshop-card small { display: block; }
+.bq-workshop-card small { color: var(--text-secondary); }
+.bq-workshop-icon { font-size: 28px; }
+
+/* Portrait tablets and tall windows: stack plan above 3D instead of two narrow columns */
+@media (min-width: 620px) and (orientation: portrait) {
+  .bq-viewports-grid.mode-split {
+    grid-template-columns: 1fr;
+    grid-auto-rows: minmax(360px, 1fr);
+  }
+}

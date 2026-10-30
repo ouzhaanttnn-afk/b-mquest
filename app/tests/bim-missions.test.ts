@@ -226,7 +226,7 @@ describe('Duvar çizmeyi kolaylaştıranlar', () => {
   it('ölçüyle duvar zinciri: 4 yön, zincir kapanır', () => {
     let s = createInitialSession(missions.m02);
     let chain = EMPTY_CHAIN;
-    for (const [dir, len] of [['E', 6000], ['N', 4000], ['W', 6000], ['S', 4000]] as const) {
+    for (const [dir, len] of [['R', 6000], ['D', 4000], ['L', 6000], ['U', 4000]] as const) {
       const o = wallByLength(s, chain, dir, len, d);
       expect(o.result?.ok, `${dir}`).toBe(true);
       if (o.result?.ok) s = o.result.state;
@@ -237,7 +237,7 @@ describe('Duvar çizmeyi kolaylaştıranlar', () => {
   });
   it('geçersiz uzunluk reddedilir', () => {
     const s = createInitialSession(missions.m02);
-    expect(wallByLength(s, EMPTY_CHAIN, 'E', 50, d).result).toBeNull();
-    expect(wallByLength(s, EMPTY_CHAIN, 'E', 1.5, d).result).toBeNull();
+    expect(wallByLength(s, EMPTY_CHAIN, 'R', 50, d).result).toBeNull();
+    expect(wallByLength(s, EMPTY_CHAIN, 'R', 1.5, d).result).toBeNull();
   });
 });

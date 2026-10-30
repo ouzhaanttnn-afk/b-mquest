@@ -544,9 +544,27 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   }, []);
 
   const handleCreated = useCallback(
-    ({ gl }: { gl: { domElement: HTMLCanvasElement } }) => {
+    ({
+      gl,
+      camera,
+      size,
+    }: {
+      gl: { domElement: HTMLCanvasElement };
+      camera: { position: { x: number; y: number; z: number } };
+      size: { width: number; height: number };
+    }) => {
       const canvas = gl.domElement;
       glCanvasRef.current = canvas;
+      // A tall, narrow pane sees less sideways: back the camera off so the whole
+      // building stays in view (the vertical field of view is fixed).
+      const aspect = size.width / Math.max(1, size.height);
+      if (aspect > 0 && aspect < 1) {
+        const f = frame();
+        const k = Math.min(2.6, 1 / Math.max(0.4, aspect));
+        camera.position.x = f.cx + (camera.position.x - f.cx) * k;
+        camera.position.z = f.cz + (camera.position.z - f.cz) * k;
+        camera.position.y *= k;
+      }
       const onLost = (e: Event) => {
         e.preventDefault();
         if (isMountedRef.current) {
@@ -561,7 +579,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
       canvas.addEventListener('webglcontextlost', onLost, false);
       canvas.addEventListener('webglcontextrestored', onRestored, false);
     },
-    []
+    [frame]
   );
 
   if (!webglSupported) {

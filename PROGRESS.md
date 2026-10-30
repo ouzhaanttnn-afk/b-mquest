@@ -34,6 +34,12 @@ Uygulama klasörü: `app/`.
 - Görünürlük (`VisibilitySheet`, `domain/viewFilter.ts`): kategorileri plan ve 3B'de aç/kapat; yalnızca görüntüyü etkiler, değerlendirme etkilenmez.
 - İstatistiklerim (Veri & Ayarlar): toplam kontrol, ilk bakışta başarı oranı, en çok uğraşılan görev. Yalnızca bu cihazda tutulur, hiçbir yere gönderilmez.
 
+- Serbest Atölye (`content/workshop.ts`): görevsiz, tüm araçlar açık; m02 sonrası açılır. Model `bimquest.workshop.v1` anahtarında ayrı saklanır, görev kayıt dosyasına karışmaz.
+- Cihaz özellikleri (`native/native.ts`): dokunsal geri bildirim (Capacitor Haptics; iPhone'da `navigator.vibrate` çalışmadığı için), isteğe bağlı günlük hatırlatma (yerel bildirim), sertifika paylaşımı (paylaşım sayfası). Web'de sessizce yedeğe düşer.
+- Hakkında & Gizlilik ekranı, gizlilik manifestosu (`PrivacyInfo.xcprivacy`).
+- Yön okları ekran yönünü izler (↑ yukarı = −Z). Kuzey oku, görev verisindeki gerçek kuzeye (+Z, aşağı) bakacak şekilde düzeltildi.
+- iPad dikey modunda plan ve 3B alt alta; dar panelde 3B kamera geri çekilir.
+
 ## Teknik
 
 - 3B sahne `React.lazy` ile ayrıldı; ana paket ~1,7 MB → ~0,74 MB.
@@ -44,7 +50,7 @@ Uygulama klasörü: `app/`.
 ```bash
 cd app
 npx tsc -b
-npm test            # vitest, 134 test
+npm test            # vitest, 161 test
 npm run build
 npm run test:e2e    # Playwright
 ```

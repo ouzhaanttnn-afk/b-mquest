@@ -126,10 +126,10 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
                 </label>
                 {(
                   [
-                    ['W', '←', 'Batı'],
-                    ['E', '→', 'Doğu'],
-                    ['N', '↑', 'Kuzey'],
-                    ['S', '↓', 'Güney'],
+                    ['L', '←', 'Sola'],
+                    ['R', '→', 'Sağa'],
+                    ['U', '↑', 'Yukarı'],
+                    ['D', '↓', 'Aşağı'],
                   ] as const
                 ).map(([d, arrow, label]) => (
                   <button
@@ -137,7 +137,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
                     type="button"
                     className="bq-btn bq-btn-secondary bq-btn-compact bq-dir-btn"
                     data-testid={`wall-dir-${d}`}
-                    aria-label={`${label} yönüne ${len} mm duvar ekle`}
+                    aria-label={`${label} ${len} mm duvar ekle`}
                     onClick={() => onWallByLength(d, Number(len))}
                   >
                     {arrow}

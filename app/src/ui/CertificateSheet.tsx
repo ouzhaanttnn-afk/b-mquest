@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { buildCertificate, cleanName } from '../domain/certificate';
 import { svgToPngDownload } from '../plan/SheetSvg';
+import { shareText } from '../native/native';
 
 interface Props {
   completed: Record<string, { bestScore: number }>;
@@ -17,6 +18,7 @@ export const CertificateSheet: React.FC<Props> = ({ completed, name, onNameChang
   const [draft, setDraft] = useState(name);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [today] = useState(() => new Date());
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const data = buildCertificate(completed, draft, today);
   return (
     <div
@@ -67,7 +69,22 @@ export const CertificateSheet: React.FC<Props> = ({ completed, name, onNameChang
           <text x="900" y="705" textAnchor="middle" fontSize="22" fill="#94A3B8" fontFamily="sans-serif">altın rozet</text>
           <text x={W / 2} y="780" textAnchor="middle" fontSize="22" fill="#64748B" fontFamily="sans-serif">{data.dateLabel}</text>
         </svg>
+        {shareNote && <p className="bq-sched-note" role="status" data-testid="certificate-share-note">{shareNote}</p>}
         <div className="bq-modal-actions">
+          <button
+            type="button"
+            className="bq-btn bq-btn-secondary"
+            data-testid="certificate-share"
+            onClick={async () => {
+              const out = await shareText(
+                'BIM QUEST',
+                `${data.name}, BIM QUEST’te ${data.missions} görevi tamamladı (${data.totalXp} XP, Sv.${data.level}). Revit’i oynayarak öğren!`
+              );
+              setShareNote(out === 'copied' ? 'Metin panoya kopyalandı.' : out === 'unavailable' ? 'Paylaşım bu cihazda kullanılamıyor.' : null);
+            }}
+          >
+            Paylaş
+          </button>
           <button
             type="button"
             className="bq-btn bq-btn-primary"

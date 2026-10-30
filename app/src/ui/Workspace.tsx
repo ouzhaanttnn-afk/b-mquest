@@ -41,6 +41,7 @@ import { CoachBar, coachStep } from './workspace/CoachBar';
 import { WarningsSheet } from './workspace/WarningsSheet';
 import { checkModel, checkOptionsFor } from '../domain/modelCheck';
 import { getChapterForMissionId } from '../content/curriculum';
+import { isWorkshop } from '../content/workshop';
 import { ToolOptionsBar, type ToolOptions } from './workspace/ToolOptionsBar';
 import {
   EMPTY_CHAIN,
@@ -89,8 +90,8 @@ export interface WorkspaceProps {
   onExportSave: () => void;
 }
 
-const SCHEDULE_MISSIONS = ['m51', 'm52', 'm53'];
-const MODIFY_MISSIONS = ['m54', 'm55', 'm56', 'm57', 'm58'];
+const SCHEDULE_MISSIONS = ['m51', 'm52', 'm53', 'atolye'];
+const MODIFY_MISSIONS = ['m54', 'm55', 'm56', 'm57', 'm58', 'atolye'];
 
 export const Workspace: React.FC<WorkspaceProps> = ({
   session,
@@ -580,11 +581,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       ...session,
       lastEvaluation: submitted,
     };
-    onSessionChange(nextSession, evalRes.pass ? submitted : undefined);
+    const sandbox = isWorkshop(task.id);
+    onSessionChange(nextSession, evalRes.pass && !sandbox ? submitted : undefined);
     setMobileDrawerTab('check');
     if (evalRes.pass) {
       playSound('success');
-      setRecapModalOpen(true);
+      if (sandbox) setStatusToast('Model temiz: uyarı yok.');
+      else setRecapModalOpen(true);
     } else {
       playSound('error');
     }
