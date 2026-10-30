@@ -555,12 +555,12 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
     }) => {
       const canvas = gl.domElement;
       glCanvasRef.current = canvas;
-      // A tall, narrow pane sees less sideways: back the camera off so the whole
+      // A square or tall pane sees less sideways: back the camera off so the whole
       // building stays in view (the vertical field of view is fixed).
       const aspect = size.width / Math.max(1, size.height);
-      if (aspect > 0 && aspect < 1) {
+      if (aspect > 0 && aspect < 1.4) {
         const f = frame();
-        const k = Math.min(2.6, 1 / Math.max(0.4, aspect));
+        const k = Math.min(2.8, Math.max(1, 1.25 / Math.max(0.4, aspect)));
         camera.position.x = f.cx + (camera.position.x - f.cx) * k;
         camera.position.z = f.cz + (camera.position.z - f.cz) * k;
         camera.position.y *= k;

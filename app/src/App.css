@@ -3072,3 +3072,8 @@ body:has(.bq-modal-backdrop) {
     padding-bottom: 16px;
   }
 }
+
+.bq-workshop-card + .bq-stage-banner,
+.bq-hero + .bq-stage-banner {
+  margin-top: 14px;
+}
