@@ -12,6 +12,12 @@ test.describe('Giriş ekranı ve ana görev ekranı', () => {
     await expect(page.getByTestId('title-play-btn')).toContainText('Oyuna Başla');
     await page.getByTestId('title-play-btn').click();
     await expect(page.getByTestId('dashboard-screen')).toBeVisible();
+    await expect(page.getByTestId('first-run-tour')).toBeVisible();
+    await expect(page.getByTestId('tour-title')).toContainText('Plan ve 3B');
+    await page.getByTestId('tour-next').click();
+    await page.getByTestId('tour-next').click();
+    await page.getByTestId('tour-next').click();
+    await expect(page.getByTestId('first-run-tour')).toBeHidden();
     await expect(page.getByTestId('hero-card')).toContainText('İlk görevin');
 
     // Same session: reload skips the title screen.
@@ -39,6 +45,7 @@ test.describe('Giriş ekranı ve ana görev ekranı', () => {
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await page.getByTestId('title-play-btn').click();
+    await page.getByTestId('tour-skip').click();
     await page.getByTestId('achievements-btn').click();
     await expect(page.getByTestId('achievements-modal')).toBeVisible();
     await expect(page.getByTestId('ach-first-mission')).toBeVisible();
@@ -53,6 +60,7 @@ test.describe('Giriş ekranı ve ana görev ekranı', () => {
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await page.getByTestId('title-play-btn').click();
+    await page.getByTestId('tour-skip').click();
     const over = () =>
       page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(await over()).toBeLessThanOrEqual(0);
@@ -66,6 +74,9 @@ test.describe('Bonus bölüm: çizelgeler', () => {
   test('m51: çizelgede poz düzeltilince model değişir ve Kontrol Et geçer', async ({ page }) => {
     await page.addInitScript(() => {
       window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+    if (!window.localStorage.getItem('bimquest.meta.v1')) {
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+    }
       const done = (s: number) => ({ bestScore: s });
       const completed: Record<string, unknown> = {};
       for (let i = 1; i <= 50; i++) completed[`m${String(i).padStart(2, '0')}`] = done(100);
@@ -93,6 +104,9 @@ test.describe('Bonus bölüm: Modify araçları', () => {
   test('m55: üç duvarı aynala, Kontrol Et geçer', async ({ page }) => {
     await page.addInitScript(() => {
       window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+    if (!window.localStorage.getItem('bimquest.meta.v1')) {
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+    }
       const completed: Record<string, unknown> = {};
       for (let i = 1; i <= 54; i++) completed[`m${String(i).padStart(2, '0')}`] = { bestScore: 100 };
       window.localStorage.setItem(
@@ -117,7 +131,10 @@ test.describe('Bonus bölüm: Modify araçları', () => {
 
 test.describe('Görünürlük', () => {
   test('kategori kapatılınca düğme sayıyı gösterir, Hepsini göster sıfırlar', async ({ page }) => {
-    await page.addInitScript(() => window.sessionStorage.setItem('bimquest.titleSeen.v1', '1'));
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+    });
     await page.goto('/');
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
@@ -130,5 +147,23 @@ test.describe('Görünürlük', () => {
     await page.getByTestId('vg-show-all').click();
     await page.getByTestId('visibility-sheet').getByRole('button', { name: /Kapat/ }).click();
     await expect(page.getByTestId('visibility-btn')).not.toContainText('(');
+  });
+});
+
+test.describe('Yardım ve sözlük', () => {
+  test('sözlükte kavram aranır, kısayol kartı açılır', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
+    });
+    await page.goto('/');
+    await page.getByTestId('help-btn').click();
+    await expect(page.getByTestId('help-sheet')).toBeVisible();
+    await page.getByTestId('help-search').fill('KESIT');
+    await expect(page.getByTestId('help-entry-m31')).toBeVisible();
+    await page.getByTestId('help-search').fill('zzzzqq');
+    await expect(page.getByTestId('help-count')).toContainText('0 sonuç');
+    await page.getByTestId('help-tab-keys').click();
+    await expect(page.getByTestId('help-shortcuts')).toContainText('WA');
   });
 });

@@ -139,6 +139,77 @@ const WN900: ElementType = {
 };
 
 export const BIM_MISSION_SPECS: Record<string, Spec> = {
+  // ---- Faz 1 düzeltmesi: konusuyla uyuşmayan görevler yeniden yazıldı -----
+  m07: {
+    lesson: {
+      objective:
+        'Projede yalnızca Zemin Kat var. 3300 mm kot yüksekliğinde ikinci bir kat (Level) ekle.',
+      hintLevels: hints(
+        'Çok katlı bir bina için yatay referans düzlemlerine ihtiyaç var.',
+        'Eklemen gereken şey bir duvar değil, bir Level nesnesi.',
+        'Katlar bölümünde yeni kat ekleyebilir ve kotunu değiştirebilirsin.',
+        '1) Katlar’ı aç. 2) Kat ekle. 3) Yeni katın kotunu 3300 mm yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['elevation'],
+    },
+    levels: [L0],
+    elements: [...box()],
+    editable: ['elevation'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_n', type: 'metric', metric: 'levelCount', min: 2, max: 2, message: 'Projede iki kat (Level) olmalı.' },
+      { id: 'c_e', type: 'metric', metric: 'maxLevelElevation', min: 3300, max: 3300, message: 'Üst katın kotu 3300 mm olmalı.' },
+    ],
+  },
+  m11: {
+    lesson: {
+      objective:
+        'Düşey duvar A aksından 150 mm kaymış. Duvarı A aksının üzerine oturt.',
+      hintLevels: hints(
+        'Plana bak: duvar ile aks aynı çizgide değil.',
+        'Kayan şey aks değil, duvar (w1). Aks referanstır.',
+        'Duvarın başlangıç ve bitiş X değerleri aksın X değeriyle aynı olmalı.',
+        '1) w1’i seç. 2) Başlangıç ve bitiş X koordinatını aksın konumuna getir (ya da duvarı taşı). 3) Kontrol Et.'
+      ),
+      primaryFields: ['start', 'end'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [150, 0], [150, 4000]),
+      { id: 'ga', type: 'grid', name: 'A', start: [0, -1000], end: [0, 5000] },
+    ],
+    editable: ['start', 'end'],
+    seeds: ['w1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_al', type: 'compare', elementId: 'w1', field: 'axisPos', otherElementId: 'ga', otherField: 'axisPos', tolerance: 0, message: 'Duvar A aksının üzerinde olmalı.' },
+      { id: 'c_len', type: 'exists', category: 'wall', where: { id: 'w1', length: 4000 }, message: 'Duvar boyu 4000 mm kalmalı.' },
+    ],
+  },
+  m23: {
+    lesson: {
+      objective:
+        'd1 kapısı yanlış tipte (800 × 2100). Kapıyı standart 900 × 2100 mm tipine geçir.',
+      hintLevels: hints(
+        'Kapının ölçüsü tek başına değil, tipine bağlı olarak değişir.',
+        'Değişecek olan kapının genişliği değil, tipi.',
+        'Properties panelindeki Tip seçicisinden 900 × 2100 tipini seç.',
+        '1) d1’i seç. 2) Tip seçicisinden 900 x 2100mm’yi seç. 3) Genişliğin 900 olduğunu gör. 4) Kontrol Et.'
+      ),
+      primaryFields: ['typeId'],
+    },
+    levels: [L0],
+    elements: [...box(), door1('d1', 'w1', 2550, { width: 800, typeId: 'dt800', mark: 'D-01' })],
+    types: [DT800, DT900],
+    editable: ['typeId'],
+    seeds: ['d1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_t', type: 'property', elementId: 'd1', field: 'typeId', expected: 'dt900', tolerance: 0, message: 'd1 kapısı 900 x 2100mm tipini kullanmalı.' },
+      { id: 'c_w', type: 'exists', category: 'door', where: { id: 'd1', width: 900 }, message: 'd1 genişliği 900 mm olmalı.' },
+    ],
+  },
+
   // ---- Bölüm 2: Level, Grid ---------------------------------------------
   m09: {
     lesson: {

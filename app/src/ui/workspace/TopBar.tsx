@@ -1,3 +1,4 @@
+import { HelpSheet } from '../HelpSheet';
 import React from 'react';
 import { TOOL_DEFS, type ToolId } from './toolActions';
 import type { MissionSessionState } from '../../domain/commands';
@@ -270,6 +271,8 @@ export const TopBar: React.FC<TopBarProps> = ({
               <span>Rehber Turu</span>
             </button>
           )}
+
+          <HelpSheet className="bq-tool-btn" />
 
           <button
             type="button"

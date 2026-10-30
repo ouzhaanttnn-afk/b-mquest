@@ -16,6 +16,7 @@ import type {
   SaveEnvelopeV1,
 } from '../domain/types';
 import { playSound } from './sound';
+import { HelpSheet } from './HelpSheet';
 
 export interface DashboardProps {
   missions: MissionTask[];
@@ -217,6 +218,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <span className="bq-i-badge">i</span>
           </button>
+
+          <HelpSheet />
 
           <button
             type="button"

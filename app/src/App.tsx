@@ -33,6 +33,7 @@ import { calculateTotalPlayerXp } from './domain/pedagogy';
 import { playSound } from './ui/sound';
 import { Dashboard } from './ui/Dashboard';
 import { TitleScreen } from './ui/TitleScreen';
+import { FirstRunTour } from './ui/FirstRunTour';
 import { Workspace } from './ui/Workspace';
 
 const THEME_STORAGE_KEY = 'bimquest.theme.v1';
@@ -79,6 +80,7 @@ export function App() {
   const [openInfoOnDashboard, setOpenInfoOnDashboard] = useState(false);
   const [meta, setMeta] = useState<GameMeta>(() => loadMeta());
   const [toast, setToast] = useState<Achievement | null>(null);
+  const [today] = useState(() => dayKey(new Date()));
 
   const leaveTitle = useCallback((withInfo: boolean) => {
     try {
@@ -340,13 +342,14 @@ export function App() {
           hasProgress={Object.keys(save.completed).length > 0}
           level={calculateTotalPlayerXp(save.completed).level}
           rankTitle={calculateTotalPlayerXp(save.completed).rankTitle}
-          streak={visibleStreak(meta, dayKey(new Date()))}
+          streak={visibleStreak(meta, today)}
           onPlay={() => leaveTitle(false)}
           onHowToPlay={() => leaveTitle(true)}
         />
       ) : !activeSession ? (
+        <>
         <Dashboard
-          streak={visibleStreak(meta, dayKey(new Date()))}
+          streak={visibleStreak(meta, today)}
           meta={meta}
           initialInfoOpen={openInfoOnDashboard}
           onBackToTitle={() => setShowTitle(true)}
@@ -363,6 +366,10 @@ export function App() {
           onClearAllData={handleClearAllData}
           onDismissRecoveryIssue={handleDismissRecoveryIssue}
         />
+        {!meta.introDone && Object.keys(save.completed).length === 0 && !openInfoOnDashboard && (
+          <FirstRunTour onDone={() => updateMeta({ ...meta, introDone: true })} />
+        )}
+        </>
       ) : (
         <Workspace
           session={activeSession}

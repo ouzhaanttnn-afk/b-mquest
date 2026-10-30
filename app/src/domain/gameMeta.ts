@@ -16,6 +16,8 @@ export interface GameMeta {
   announced: string[];
   /** Per-mission practice stats, kept on this device only. */
   stats: Record<string, MissionStats>;
+  /** The three-card first-run tour has been seen or skipped. */
+  introDone: boolean;
 }
 
 export interface MissionStats {
@@ -30,6 +32,7 @@ export const EMPTY_META: GameMeta = {
   bestStreak: 0,
   announced: [],
   stats: {},
+  introDone: false,
 };
 
 type Completed = Record<string, { bestScore: number }>;
@@ -233,6 +236,7 @@ export function loadMeta(): GameMeta {
         ? p.announced.filter((x): x is string => typeof x === 'string')
         : [],
       stats: sanitizeStats(p.stats),
+      introDone: p.introDone === true,
     };
   } catch {
     return EMPTY_META;

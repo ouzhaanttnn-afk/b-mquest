@@ -2729,3 +2729,19 @@ select:focus-visible,
 .bq-modify-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
 .bq-modify-row .bq-field input, .bq-modify-row .bq-field select { font-size: 16px; min-height: 40px; }
 .bq-stats-list { margin: 4px 0 0; padding-left: 18px; line-height: 1.7; }
+
+/* Error boundary */
+.bq-error-screen { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 24px 16px; max-width: 520px; margin: 0 auto; }
+.bq-error-actions { display: flex; flex-direction: column; gap: 8px; }
+.bq-error-detail { overflow-x: auto; color: var(--text-secondary); font-size: 11px; }
+
+/* Help sheet and first-run tour */
+.bq-help-search { width: 100%; min-height: 44px; font-size: 16px; padding: 0 12px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-primary); }
+.bq-help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-height: 52vh; overflow-y: auto; }
+.bq-help-list li { padding: 10px; border-radius: 8px; background: var(--bg-elevated); }
+.bq-help-list p { margin: 4px 0; color: var(--text-secondary); }
+.bq-help-mission { display: block; font-size: 11px; color: var(--accent-bright); }
+.bq-tour-dots { display: flex; gap: 6px; justify-content: center; margin: 8px 0; }
+.bq-tour-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-subtle); }
+.bq-tour-dot.on { background: var(--accent-bright); }
+.bq-tour-icon { font-size: 40px; text-align: center; }

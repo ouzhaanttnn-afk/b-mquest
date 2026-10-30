@@ -182,3 +182,30 @@ describe('Bonus Bölüm 9 — Modify araçları', () => {
     }
   });
 });
+
+import { addLevelCommand, setLevelElevationCommand as setElev, moveWallCommand } from '../src/domain/commands';
+
+describe('Faz 1 — yeniden yazılan görevler', () => {
+  it('m07: kat eklenir ve kotu 3300 yapılınca geçer', () => {
+    expect(evaluate(missions.m07, missions.m07.initialModel, 0).pass).toBe(false);
+    const s = run('m07', [(st) => addLevelCommand(st), (st) => setElev(st, 'l1', 3300)]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m07: varsayılan 3000 mm kot yetmez', () => {
+    const s = run('m07', [(st) => addLevelCommand(st)]);
+    expect(evaluate(s.task, s.model, 0).pass).toBe(false);
+  });
+  it('m11: duvarı aksa oturtunca geçer, aksı kaydırarak çözülemez', () => {
+    expect(evaluate(missions.m11, missions.m11.initialModel, 0).pass).toBe(false);
+    const s = run('m11', [(st) => moveWallCommand(st, 'w1', -150, 0)]);
+    expect(passes(s).pass).toBe(true);
+    const s0 = createInitialSession(missions.m11);
+    expect(moveWallCommand(s0, 'ga', 150, 0).ok).toBe(false);
+  });
+  it('m23: tip değişince genişlik de değişir; genişlik tek başına düzenlenemez', () => {
+    const s0 = createInitialSession(missions.m23);
+    expect(updateElementProperty(s0, 'd1', 'width', 900).ok).toBe(false);
+    const s = run('m23', [(st) => updateElementProperty(st, 'd1', 'typeId', 'dt900')]);
+    expect(passes(s).pass).toBe(true);
+  });
+});
