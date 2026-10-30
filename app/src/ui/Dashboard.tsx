@@ -8,6 +8,8 @@ import {
   calculateTotalPlayerXp,
 } from '../domain/pedagogy';
 import { isMissionUnlocked } from '../domain/persistence';
+import { ACHIEVEMENTS, earnedAchievementIds, levelProgress, summarizeStats, type GameMeta } from '../domain/gameMeta';
+import { CHAPTER_STORIES, MENTOR_LINES, STORY_MENTOR, STORY_PROJECT } from '../content/story';
 import type {
   BadgeType,
   MissionTask,
@@ -19,6 +21,10 @@ export interface DashboardProps {
   missions: MissionTask[];
   save: SaveEnvelopeV1;
   theme: 'light' | 'dark';
+  streak: number;
+  meta: GameMeta;
+  initialInfoOpen?: boolean;
+  onBackToTitle?: () => void;
   storageWarning: string | null;
   recoveryIssue: {
     reason: string;
@@ -57,6 +63,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   missions,
   save,
   theme,
+  streak,
+  meta,
+  initialInfoOpen = false,
+  onBackToTitle,
   storageWarning,
   recoveryIssue,
   onToggleTheme,
@@ -75,7 +85,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [selectedStageChapterId, setSelectedStageChapterId] = useState<string>('ch01');
   const [expandedChapterId, setExpandedChapterId] = useState<string>('');
-  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(initialInfoOpen);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,11 +123,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const completedCount = Object.keys(save.completed).length;
-  const coreCompletedCount = ['m01', 'm02', 'm03'].filter(
-    (id) => id in save.completed
-  ).length;
   const xpStats = calculateTotalPlayerXp(save.completed);
   const totalCurriculumCount = getTotalCurriculumMissionCount();
+
+  const progress = levelProgress(save.completed);
+  const statsSummary = summarizeStats(meta);
+  const earnedIds = earnedAchievementIds(save.completed);
+  const nextMission =
+    missions.find(
+      (m) =>
+        !(m.id in save.completed) && isMissionUnlocked(m, save.completed).unlocked
+    ) ?? null;
+  const nextChapter = nextMission
+    ? SIX_CHAPTER_CURRICULUM.find((ch) =>
+        ch.missions.some((cm) => cm.id === nextMission.id)
+      )
+    : undefined;
+  const nextHasDraft = nextMission ? Boolean(save.drafts[nextMission.id]) : false;
+  const allDone = missions.length > 0 && !nextMission;
 
   const activeChapter =
     SIX_CHAPTER_CURRICULUM.find((ch) => ch.id === selectedStageChapterId) ??
@@ -133,13 +157,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Compact Game Topbar */}
       <header className="bq-dash-header">
         <div className="bq-brand-row">
-          <img
-            src="./assets/brand/logo-horizontal.svg"
-            alt="BIM QUEST"
-            className="bq-brand-logo"
-            width={240}
-            height={48}
-          />
+          <button
+            type="button"
+            className="bq-brand-btn"
+            data-testid="brand-title-btn"
+            onClick={onBackToTitle}
+            disabled={!onBackToTitle}
+            aria-label="Ana ekrana dön"
+          >
+            <img
+              src="./assets/brand/logo-horizontal.svg"
+              alt="BIM QUEST"
+              className="bq-brand-logo"
+              width={240}
+              height={48}
+            />
+          </button>
         </div>
 
         {/* Compact Player HUD Stats & Quick Controls */}
@@ -150,21 +183,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span>Sv.{xpStats.level} {xpStats.rankTitle}</span>
           </div>
 
-          <div className="bq-hud-pill">
-            <span>
-              🎯 {coreCompletedCount} / 3 Çekirdek · {completedCount} / {missions.length} Görev
-            </span>
+          <div className="bq-hud-pill" data-testid="mission-count-pill">
+            ✓ {completedCount} / {missions.length} görev
           </div>
+
+          {streak > 0 && (
+            <div className="bq-hud-pill" data-testid="streak-pill" title="Üst üste oynadığın gün sayısı">
+              🔥 {streak} gün
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="bq-icon-pill-btn"
+            data-testid="achievements-btn"
+            onClick={() => {
+              playSound('click');
+              setAchievementsOpen(true);
+            }}
+            aria-label="Başarımlar"
+            title="Başarımlar"
+          >
+            <span>🏅 {earnedIds.length}/{ACHIEVEMENTS.length}</span>
+          </button>
 
           <button
             type="button"
             className="bq-icon-pill-btn"
             data-testid="dashboard-info-btn"
             onClick={() => setInfoModalOpen(true)}
+            aria-label="Nasıl Oynanır?"
             title="Oyun Rehberi & Nasıl Oynanır (ⓘ)"
           >
             <span className="bq-i-badge">i</span>
-            <span>Nasıl Oynanır?</span>
           </button>
 
           <button
@@ -172,9 +223,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className="bq-icon-pill-btn"
             data-testid="theme-toggle-btn"
             onClick={onToggleTheme}
+            aria-label="Tema değiştir"
             title="Koyu / Açık Tema Değiştir"
           >
-            <span>{theme === 'dark' ? '☀️ Açık' : '🌙 Koyu'}</span>
+            <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
           </button>
 
           <button
@@ -182,9 +234,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className="bq-icon-pill-btn"
             data-testid="settings-toggle-btn"
             onClick={() => setSettingsOpen((v) => !v)}
+            aria-label="Kayıt ve Ayarlar"
             title="Kayıt & Ayarlar"
           >
-            <span>⚙️ Veri & Ayarlar</span>
+            <span>⚙️</span>
           </button>
 
           <input
@@ -195,6 +248,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
             data-testid="import-file-input"
             onChange={handleFileChange}
           />
+        </div>
+
+        <div className="bq-level-bar" data-testid="level-bar" aria-label={`Seviye ${progress.level} ilerlemesi`}>
+          <span className="bq-level-bar-fill" style={{ width: `${progress.pct}%` }} />
+          <span className="bq-level-bar-txt">
+            Sv.{progress.level} → {progress.level + 1} · {progress.intoLevel}/{progress.perLevel} XP
+          </span>
         </div>
       </header>
 
@@ -270,10 +330,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
+      {/* Hero: what to do next */}
+      <section className="bq-hero" data-testid="hero-card" aria-label="Sıradaki görev">
+        <div className="bq-hero-mentor" aria-hidden="true">👷</div>
+        <div className="bq-hero-body">
+          <span className="bq-hero-kicker">{STORY_PROJECT}</span>
+          {allDone ? (
+            <>
+              <h2>Proje teslim edildi!</h2>
+              <p>{STORY_MENTOR}: “{MENTOR_LINES.done}”</p>
+            </>
+          ) : nextMission ? (
+            <>
+              <h2>
+                {completedCount === 0 ? 'İlk görevin' : 'Sıradaki görev'}:{' '}
+                {nextMission.title}
+              </h2>
+              <p>
+                {STORY_MENTOR}: “
+                {completedCount === 0 ? MENTOR_LINES.start : MENTOR_LINES.return}{' '}
+                {nextChapter ? CHAPTER_STORIES[nextChapter.id] : ''}”
+              </p>
+            </>
+          ) : null}
+        </div>
+        {nextMission && (
+          <button
+            type="button"
+            className="bq-btn bq-btn-primary bq-hero-cta"
+            data-testid="hero-continue-btn"
+            onClick={() => {
+              playSound('click');
+              if (nextChapter) setSelectedStageChapterId(nextChapter.id);
+              onStartMission(nextMission.id, true);
+            }}
+          >
+            ▶ {nextHasDraft ? 'Devam Et' : 'Başla'}
+          </button>
+        )}
+      </section>
+
       {/* Compact Stage Header + 7-Chapter Tabs + Connected Blueprint Route Track */}
       <div className="bq-stage-banner">
         <div className="bq-stage-title-block">
           <h1>{activeChapter.title}</h1>
+          <p className="bq-chapter-story">“{CHAPTER_STORIES[activeChapter.id]}”</p>
           <p>{activeChapter.pedagogyNote} — {activeChapter.subtitle}</p>
           <div className="bq-chapter-pill-bar" role="tablist" aria-label="Bölüm Seçimi">
             {SIX_CHAPTER_CURRICULUM.map((ch) => {
@@ -470,15 +571,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         })}
       </section>
 
-      {/* Compact 7-Chapter / 50-Mission Roadmap Accordion */}
+      {/* Compact 9-Chapter / 58-Mission Roadmap Accordion */}
       <section
         className="bq-curriculum-section"
-        aria-label="7 Ana Bölüm ve 50 Görevlik Revit Eğitim Mimarisi"
+        aria-label="9 Bölüm ve 58 Görevlik Revit Eğitim Mimarisi"
         data-testid="curriculum-chapters"
       >
         <div className="bq-curriculum-header">
           <div className="bq-curriculum-title-row">
-            <h2>🗺️ 7 Bölüm · {totalCurriculumCount} Görevlik Revit Müfredat Haritası</h2>
+            <h2>🗺️ 7 Bölüm · {totalCurriculumCount} Görev</h2>
             <span className="bq-chip-tag">Bölüm seçerek tüm görevleri incele ve oyna</span>
           </div>
         </div>
@@ -612,6 +713,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        <div className="bq-settings-group" data-testid="my-stats">
+          <h3>İstatistiklerim (yalnızca bu cihazda)</h3>
+          {statsSummary.attempts === 0 ? (
+            <p className="bq-sched-note">Henüz kontrol yapmadın.</p>
+          ) : (
+            <ul className="bq-stats-list">
+              <li>Toplam kontrol: <strong>{statsSummary.attempts}</strong></li>
+              <li>İlk bakışta başarı oranı: <strong>%{statsSummary.passRatePct}</strong></li>
+              {statsSummary.hardest && (
+                <li>
+                  En çok uğraştığın görev:{' '}
+                  <strong>
+                    {statsSummary.hardest.id.toUpperCase()} ({statsSummary.hardest.attempts} deneme)
+                  </strong>
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+
         <div className="bq-settings-group bq-settings-actions-col">
           <button
             type="button"
@@ -669,6 +790,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </section>
 
+      {achievementsOpen && (
+        <div
+          className="bq-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ach-title"
+          data-testid="achievements-modal"
+          onClick={() => setAchievementsOpen(false)}
+        >
+          <div className="bq-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="bq-form-title-row">
+              <h2 id="ach-title">🏅 Başarımlar ({earnedIds.length}/{ACHIEVEMENTS.length})</h2>
+              <button type="button" className="bq-chip-btn" onClick={() => setAchievementsOpen(false)}>
+                ✕ Kapat
+              </button>
+            </div>
+            <ul className="bq-ach-list">
+              {ACHIEVEMENTS.map((a) => {
+                const got = earnedIds.includes(a.id);
+                return (
+                  <li key={a.id} className={`bq-ach-item ${got ? 'earned' : ''}`} data-testid={`ach-${a.id}`}>
+                    <span className="bq-ach-icon" aria-hidden="true">{got ? a.icon : '🔒'}</span>
+                    <span>
+                      <strong>{a.title}</strong>
+                      <small>{a.description}</small>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* `i` (Nasıl Oynanır & BIM Rehberi) Modal */}
       {infoModalOpen && (
         <div
@@ -701,7 +856,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <strong>3. Kontrol Et & Düzelt:</strong> Turuncu <strong>Kontrol et</strong> butonuna bas. Hata varsa sistem neden yanlış olduğunu ve nasıl düzelteceğini söyler.
               </li>
               <li>
-                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 40 görevlik haritada ilerle!
+                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 58 görevlik haritada ilerle!
               </li>
             </ul>
             <div className="bq-modal-actions">

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import type { MissionTask, BimModel, EditableField, SubmittedEvaluation } from '../../domain/types';
 import type { MissionSessionState } from '../../domain/commands';
 import type { DoorDraftPreview, PlanToolProps, WallDraftPreview } from '../../plan/PlanViewport';
 import type { ToolId } from './toolActions';
 import { PlanViewport } from '../../plan/PlanViewport';
 import { updateElementProperty } from '../../domain/commands';
-import { SceneViewport } from '../../scene/SceneViewport';
+const SceneViewport = lazy(() =>
+  import('../../scene/SceneViewport').then((m) => ({ default: m.SceneViewport }))
+);
 import type { ViewElement } from '../../domain/types';
 import { ViewPane } from './DocumentationPanels';
 
@@ -133,6 +135,7 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
 
             {(viewMode === 'split' || viewMode === '3d') && (
               <div className="bq-viewport-pane">
+                <Suspense fallback={<div className="bq-scene-loading" role="status">3B sahne yükleniyor…</div>}>
                 <SceneViewport
                   task={task}
                   model={model}
@@ -143,6 +146,7 @@ export const StageViewports: React.FC<StageViewportsProps> = ({
                   theme={theme}
                   onSelect={handleSelectElement}
                 />
+                </Suspense>
               </div>
             )}
           </div>

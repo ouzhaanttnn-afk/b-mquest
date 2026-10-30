@@ -1,48 +1,63 @@
-# BIM QUEST — Geliştirme İlerleme ve Kalite Raporu (`PROGRESS.md`)
+# BIM QUEST — Durum (`PROGRESS.md`)
 
-**Güncel Durum:** **%100 Tamamlandı** (Zorunlu kabul kriterleri, Oyun HUD & `ⓘ` Bilgi Sistemi, Dark/Light Tema, 2B Plan & 3B Sahne Yüksek Kontrastlı Mimari Görünüm ve Apple TestFlight CI/CD hattı tamamlandı)  
-**Yerel Çalışma Adresi:** `http://127.0.0.1:5173/`
+Revit'i oynayarak öğreten mobil öncelikli oyun. React + TypeScript + Vite, three.js, Capacitor (iOS).
+Uygulama klasörü: `app/`.
 
----
+## Oyun akışı
 
-## 1. Tamamlanan Geliştirme Aşamaları
+1. **Giriş ekranı** (`TitleScreen`): logo, "Oyuna Başla / Devam Et", "Nasıl Oynanır?". Oturum başına bir kez gösterilir; logoya dokununca geri döner.
+2. **Görevler ekranı** (`Dashboard`): sıradaki göreve götüren hero kartı ("Selin Mimar" notuyla), seviye çubuğu, gün serisi, başarım listesi, bölüm sekmeleri ve görev kartları.
+3. **Uygulama ekranı** (`Workspace`): 2B plan + 3B sahne, Properties, araç çubuğu, Rehber Turu, koç çubuğu, Kontrol Et, değerlendirme.
 
-### %20 — Merkezi BIM Veri Modeli, Komut Motoru ve 40 Görevlik Müfredat Altyapısı
-- **Merkezi Veri Modeli ([`types.ts`](file:///c:/Users/Gaming/Desktop/BIM/app/src/domain/types.ts)):** Katlar (`Level`), Duvarlar (`WallElement`) ve Kapılar (`DoorElement`) tek bir merkezi `BimModel` (JSON Schema v1.0) üzerinde tutulur.
-- **Düzenlenebilir Modelleme Komutları ([`commands.ts`](file:///c:/Users/Gaming/Desktop/BIM/app/src/domain/commands.ts)):**
-  - Duvar oluşturma (`createWallCommand`), seçme, taşıma (`moveWallCommand` + 2B uç nokta sürükleme tutamaçları `onDragWallEndpoint`), silme (`deleteElementCommand`) ve ölçü/özellik düzenleme (`updateElementProperty`).
-  - Taşıyıcı duvara bağlı kapı oluşturma (`createDoorCommand`) ve taşıyıcı duvar / ofset / genişlik / yükseklik / eşik / Mark / yangın sınıfı güncelleme.
-  - 50 adımlı Geri Al / İleri Al (`undoCommand`, `redoCommand`).
-- **6 Bölüm / 40 Görevlik Genişletilebilir Mimari ([`curriculum.ts`](file:///c:/Users/Gaming/Desktop/BIM/app/src/domain/curriculum.ts), [`missions.json`](file:///c:/Users/Gaming/Desktop/BIM/app/public/data/missions.json), [`persistence.ts`](file:///c:/Users/Gaming/Desktop/BIM/app/src/domain/persistence.ts)):**
-  - 6 ana bölüm altında 40 görevlik müfredat veri odaklı olarak tanımlandı.
-  - Kayıt dosyası (`bimquest.save.v1`) dinamik görev kimliklerini ve oyuncu XP puanını (`xp`) yeni görevler eklendiğinde bozulmadan korur.
+## Müfredat: 9 bölüm, 58 görev
 
-### %65 — Oyun Logosu, Kompakt Oyun HUD'u, `ⓘ` Bilgi Butonları ve Dark/Light Mode
-- **Oyun Logosu ve App Store İkonu:**
-  - [`logo-horizontal.svg`](file:///c:/Users/Gaming/Desktop/BIM/app/public/assets/brand/logo-horizontal.svg), [`favicon.svg`](file:///c:/Users/Gaming/Desktop/BIM/app/public/assets/brand/favicon.svg) ve TestFlight `1024×1024` ikonu [`app-icon-1024.svg`](file:///c:/Users/Gaming/Desktop/BIM/app/public/assets/brand/app-icon-1024.svg) oluşturuldu.
-- **Kompakt Oyun Tarzı Arayüz ve `ⓘ` (`i`) Bilgi Butonları ([`Dashboard.tsx`](file:///c:/Users/Gaming/Desktop/BIM/app/src/ui/Dashboard.tsx), [`Workspace.tsx`](file:///c:/Users/Gaming/Desktop/BIM/app/src/ui/Workspace.tsx)):**
-  - Uzun açıklamalar ekranı kalabalıklaştırmaz; üst barda ve sol panelde **`ⓘ` (`i`) butonları** ile açılır/kapanır bilgi kartları ve tam ekran **ⓘ Mimari BIM Kılavuzu** penceresi eklendi.
-  - Üst barda canlı **🎯 %İlerleme Çubuğu** (`live-progress-pill`) ve oyuncu **Seviye / XP** göstergesi yer alır.
-- **Dark Mode & Light Mode Desteği ([`App.tsx`](file:///c:/Users/Gaming/Desktop/BIM/app/src/App.tsx), [`App.css`](file:///c:/Users/Gaming/Desktop/BIM/app/src/App.css)):**
-  - Hem Koyu Tema (`🌙 Koyu`) hem Açık Tema (`☀️ Açık`) tüm arayüzde, 2B Planda ve 3B Sahnede anlık olarak çalışır.
+| Bölüm | Görevler | Konu |
+|---|---|---|
+| 1 | 01–06 | Revit & BIM temelleri |
+| 2 | 07–12 | Level, Grid |
+| 3 | 13–22 | Temel mimari modelleme |
+| 4 | 23–29 | BIM bilgisi ve parametreler |
+| 5 | 30–37 | View, Section, Elevation, Sheet |
+| 6 | 38–43 | Model kontrolü |
+| 7 | 44–50 | Final proje (konut teslimi) |
+| 8 (bonus) | 51–53 | Çizelgeler (Schedules): kapı, yangın sınıfı, oda |
+| 9 (bonus) | 54–58 | Modify araçları: Copy, Mirror, Offset, Align |
 
-### %85 — Belirginleştirilmiş 2B Mimari Plan & 3B Canlı Sahne Düzeni
-- **2B Mimari Kat Planı ([`PlanViewport.tsx`](file:///c:/Users/Gaming/Desktop/BIM/app/src/plan/PlanViewport.tsx)):**
-  - Mavi/Camgöbeği (`#38BDF8`) mimari pafta çerçevesi, `📐 2B MİMARİ KAT PLANI (ÜSTTEN GÖRÜNÜŞ · mm)` başlığı, Kuzey oku (`K ↑`), dış ölçü çizgisi (`6000 mm (6.0 m)`), otomatik **MAHAL 101 · 24.0 m² · Hacim: 72.0 m³** damgası ve seçili duvarda turuncu uç nokta sürükleme tutamaçları eklendi.
-- **3B Canlı Mimari Sahne ([`SceneViewport.tsx`](file:///c:/Users/Gaming/Desktop/BIM/app/src/scene/SceneViewport.tsx)):**
-  - Turuncu (`#F97316`) 3B stüdyo çerçevesi, `🧊 3B CANLI MİMARİ SAHNE (PERSPEKTİF · m)` başlığı, binanın altında gerçek **3B Betonarme Temel Plakası (`6.6m × 4.6m`)** ve **Oda İçi Zemin Kaplaması (`6.0m × 4.0m`)**, yakınlaştırılmış kamera açısı ve **👁️ Oda İçi (1.65 m Göz Hizası)** kamera modu eklendi.
-- **Dar Pencerelerde Ezilmeyi Önleyen Yan Yana Düzen ([`App.css`](file:///c:/Users/Gaming/Desktop/BIM/app/src/App.css), [`index.css`](file:///c:/Users/Gaming/Desktop/BIM/app/src/index.css)):**
-  - Vite şablonundan kalan `#root` kısıtlaması temizlendi; `620px` ve üzeri tüm pencerelerde 2B Plan ve 3B Sahne yan yana (`1fr 1fr`) ve en az `360px` yükseklikle tam boyutta görüntülenir.
+## Oyun hissi katmanı
 
-### %100 — Apple TestFlight (`AuthKey_SNPBS4JDJA`) & GitHub Actions Otomasyonu ve E2E Testler
-- **Capacitor iOS Yapılandırması:** [`capacitor.config.json`](file:///c:/Users/Gaming/Desktop/BIM/app/capacitor.config.json) (`com.bimquest.studio`).
-- **GitHub Actions TestFlight İş Akışı:** [`.github/workflows/ios-testflight.yml`](file:///c:/Users/Gaming/Desktop/BIM/.github/workflows/ios-testflight.yml) (`APPSTORE_KEY_ID: SNPBS4JDJA` ile macOS üzerinde otomatik `.ipa` derleme ve TestFlight yükleme).
-- **Test Sonuçları:**
-  - **Vitest Birim & Entegrasyon Testleri:** `15 / 15` geçti (`tests/domain.test.ts`).
-  - **Playwright Tarayıcı E2E Testleri:** `2 / 2` geçti (`tests/e2e.spec.ts`).
+- Hikâye çerçevesi: `src/content/story.ts` (Kadıköy Konutu projesi, bölüm başına mentor notu).
+- Seri, başarımlar ve seviye ilerlemesi: `src/domain/gameMeta.ts` (kayıt dosyasından ayrı, `bimquest.meta.v1`; başarımlar `completed` verisinden türetilir).
+- Görev bitişinde konfeti ve fanfar, yeni başarımda bildirim.
+- Revit klavye kısayolları (iki harf, art arda): WA duvar, DR kapı, WN pencere, SB döşeme, RF çatı, RM oda, ST merdiven, GR aks, DI ölçü, TG etiket. Görev o aracı izin veriyorsa çalışır.
+- Çizelge ekranı (`SchedulesSheet`): hücre düzenlemek modeldeki nesneyi değiştirir.
+- Modify paneli (`ModifySheet`, `domain/modifyOps.ts`): Kopyala, Aynala, Öteleme, Hizala. Duvara bağlı kapı/pencere kopyayla birlikte yeni duvara bağlanır.
+- Görünürlük (`VisibilitySheet`, `domain/viewFilter.ts`): kategorileri plan ve 3B'de aç/kapat; yalnızca görüntüyü etkiler, değerlendirme etkilenmez.
+- İstatistiklerim (Veri & Ayarlar): toplam kontrol, ilk bakışta başarı oranı, en çok uğraşılan görev. Yalnızca bu cihazda tutulur, hiçbir yere gönderilmez.
 
----
+## Teknik
 
-## 2. Açık Sorunlar (Open Issues)
+- 3B sahne `React.lazy` ile ayrıldı; ana paket ~1,7 MB → ~0,74 MB.
+- `npm test` artık tüm vitest dosyalarını çalıştırır.
 
-- **Açık Teknik Sorun:** Yok (0 bilinen hata).
+## Test
+
+```bash
+cd app
+npx tsc -b
+npm test            # vitest, 134 test
+npm run build
+npm run test:e2e    # Playwright
+```
+
+Bilinen: `bim-docs` (m36/m37) ve `bim-final` (m50) e2e testleri PNG indirme dosya adını denetliyor; bazı Chromium sürümlerinde ad `download` geliyor ve bu iki test başarısız oluyor (oyun koduyla ilgili değil).
+
+## Henüz yok
+
+- Trim ve Array araçları; Modify araçları şimdilik yalnızca duvarlarda çalışır.
+- Family editörü, malzemeler.
+- Kalan eski görevlerin (m04–m08, m11, m13–m16, m23, m26–m29) bir kısmı ortak şablon duvar/kapı seti kullanır.
+- Bulut kaydı ve hesap; uzaktan analitik (şimdiki istatistikler yerel).
+
+## Bilinen kayıt kuralı
+
+Kayıt şeması `m01`–`m99` kimliklerini kabul eder (`MISSION_ID_PATTERN`). Yeni görev eklerken `tests/game-meta.test.ts` içindeki kayıt turu testi bunu doğrular.

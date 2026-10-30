@@ -29,6 +29,10 @@ import { isSoundMuted, playSound } from './sound';
 import { buildDraftsForElement } from './workspace/drafts';
 import { TopBar } from './workspace/TopBar';
 import { LevelsSheet } from './workspace/LevelsSheet';
+import { SchedulesSheet } from './workspace/SchedulesSheet';
+import { ModifySheet } from './workspace/ModifySheet';
+import { VisibilitySheet } from './workspace/VisibilitySheet';
+import { visibleModel } from '../domain/viewFilter';
 import { ProjectBrowser, SheetEditor } from './workspace/DocumentationPanels';
 import { ProjectDelivery } from './workspace/ProjectDelivery';
 import { MissionCard } from './workspace/MissionCard';
@@ -50,6 +54,7 @@ import {
   placeRoomAt,
   roofFromWalls,
   stairAt,
+  toolForShortcut,
   wallChainTap,
   type ChainState,
   type ToolId,
@@ -80,6 +85,9 @@ export interface WorkspaceProps {
   onGoToNextMission: (nextMissionId: string) => void;
   onExportSave: () => void;
 }
+
+const SCHEDULE_MISSIONS = ['m51', 'm52', 'm53'];
+const MODIFY_MISSIONS = ['m54', 'm55', 'm56', 'm57', 'm58'];
 
 export const Workspace: React.FC<WorkspaceProps> = ({
   session,
@@ -178,6 +186,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     session.model.levels[0]?.id ?? 'l0'
   );
   const [levelsOpen, setLevelsOpen] = useState(false);
+  const [schedulesOpen, setSchedulesOpen] = useState(false);
+  const [modifyOpen, setModifyOpen] = useState(false);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
+  const [hiddenCats, setHiddenCats] = useState<Set<string>>(() => new Set());
+  const displayModel = useMemo(() => visibleModel(model, hiddenCats), [model, hiddenCats]);
   const [projectOpen, setProjectOpen] = useState(false);
   const [sheetId, setSheetId] = useState<string | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -243,7 +256,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
   }, [resetModalOpen]);
 
-  // Keyboard shortcuts: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Escape
+  const shortcutBuf = useRef({ keys: '', at: 0 });
+
+  // Keyboard shortcuts: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Escape, Revit tool keys
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -276,6 +291,29 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       }
 
       const isMod = e.ctrlKey || e.metaKey;
+
+      // Revit-style two-letter tool shortcuts (WA = Wall, DR = Door, ...)
+      if (!isMod && !e.altKey && /^[a-zA-Z]$/.test(e.key)) {
+        const now = Date.now();
+        const typed =
+          now - shortcutBuf.current.at <= 900
+            ? (shortcutBuf.current.keys + e.key).slice(-2)
+            : e.key;
+        shortcutBuf.current = { keys: typed, at: now };
+        const tool =
+          typed.length === 2
+            ? toolForShortcut(typed, session.task.permissions.creatableTypes)
+            : null;
+        if (tool) {
+          shortcutBuf.current = { keys: '', at: 0 };
+          setActiveTool(tool);
+          setMobileDrawerTab('inspector');
+          setFieldError(null);
+          playSound('click');
+        }
+        return;
+      }
+
       if (isMod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -794,6 +832,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           activeTool={activeTool}
           setActiveTool={setActiveTool}
           onOpenLevels={() => setLevelsOpen(true)}
+          onOpenSchedules={() => setSchedulesOpen(true)}
+          showSchedules={SCHEDULE_MISSIONS.includes(task.id)}
+          onOpenModify={() => setModifyOpen(true)}
+          onOpenVisibility={() => setVisibilityOpen(true)}
+          hiddenCount={hiddenCats.size}
+          showModify={MODIFY_MISSIONS.includes(task.id)}
           warningCount={
             hasModelCheckGoal || modelIssues.length > 0 ? modelIssues.length : null
           }
@@ -926,7 +970,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           viewMode={viewMode}
           setViewMode={setViewMode}
           task={task}
-          model={model}
+          model={displayModel}
           selectedId={selectedId}
           failedElementIds={failedElementIds}
           activeTool={activeTool}
@@ -1106,6 +1150,34 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         evaluated={lastEvaluation !== null}
         onFocus={(id) => handleSelectElement(id)}
         onClose={() => setWarningsOpen(false)}
+      />
+      <VisibilitySheet
+        open={visibilityOpen}
+        model={model}
+        hidden={hiddenCats}
+        onToggle={(c) =>
+          setHiddenCats((prev) => {
+            const next = new Set(prev);
+            if (next.has(c)) next.delete(c);
+            else next.add(c);
+            return next;
+          })
+        }
+        onShowAll={() => setHiddenCats(new Set())}
+        onClose={() => setVisibilityOpen(false)}
+      />
+      <ModifySheet
+        open={modifyOpen}
+        session={session}
+        selectedId={selectedId}
+        applyResult={applyResult}
+        onClose={() => setModifyOpen(false)}
+      />
+      <SchedulesSheet
+        open={schedulesOpen}
+        session={session}
+        applyResult={applyResult}
+        onClose={() => setSchedulesOpen(false)}
       />
       <LevelsSheet
         open={levelsOpen}

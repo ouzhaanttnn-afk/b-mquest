@@ -189,3 +189,17 @@ describe('Faz 2 — araçlar (dokunarak modelleme)', () => {
     expect(flipped.model.elements.find((e) => e.id === door.id)).toMatchObject({ flip: true });
   });
 });
+
+import { toolForShortcut } from '../src/ui/workspace/toolActions';
+
+describe('Revit keyboard shortcuts', () => {
+  it('maps two-letter Revit keys to tools the mission allows', () => {
+    expect(toolForShortcut('wa', ['wall', 'door'])).toBe('wall');
+    expect(toolForShortcut('DR', ['wall', 'door'])).toBe('door');
+    expect(toolForShortcut('SB', ['floor'])).toBe('floor');
+  });
+  it('ignores tools the mission does not allow and unknown keys', () => {
+    expect(toolForShortcut('WN', ['wall'])).toBeNull();
+    expect(toolForShortcut('ZZ', ['wall'])).toBeNull();
+  });
+});

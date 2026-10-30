@@ -13,6 +13,12 @@ export interface TopBarProps {
   activeTool: ToolId;
   setActiveTool: React.Dispatch<React.SetStateAction<ToolId>>;
   onOpenLevels: () => void;
+  onOpenSchedules: () => void;
+  onOpenModify: () => void;
+  onOpenVisibility: () => void;
+  hiddenCount: number;
+  showModify: boolean;
+  showSchedules: boolean;
   showLevels: boolean;
   /** null = hide the button. */
   warningCount: number | null;
@@ -39,6 +45,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   activeTool,
   setActiveTool,
   onOpenLevels,
+  onOpenSchedules,
+  onOpenModify,
+  onOpenVisibility,
+  hiddenCount,
+  showModify,
+  showSchedules,
   showLevels,
   warningCount,
   onOpenWarnings,
@@ -123,7 +135,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 setFieldError(null);
               }}
               aria-pressed={activeTool === t.id}
-              title={t.group}
+              title={t.keys ? `${t.group} · Revit kısayolu: ${t.keys}` : t.group}
             >
               {t.id === 'wall' || t.id === 'door' ? (
                 <svg width="18" height="18" aria-hidden="true">
@@ -131,6 +143,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </svg>
               ) : null}
               <span>{t.label}</span>
+              {t.keys && <kbd className="bq-kbd" aria-hidden="true">{t.keys}</kbd>}
             </button>
           ))}
 
@@ -155,6 +168,40 @@ export const TopBar: React.FC<TopBarProps> = ({
               title="Model uyarıları"
             >
               <span>Uyarılar ({warningCount})</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="bq-tool-btn"
+            data-testid="visibility-btn"
+            onClick={onOpenVisibility}
+            title="Görünürlük: kategorileri aç/kapat"
+          >
+            <span>Görünürlük{hiddenCount > 0 ? ` (${hiddenCount})` : ''}</span>
+          </button>
+
+          {showModify && (
+            <button
+              type="button"
+              className="bq-tool-btn"
+              data-testid="modify-btn"
+              onClick={onOpenModify}
+              title="Modify: Kopyala, Aynala, Öteleme, Hizala"
+            >
+              <span>Değiştir</span>
+            </button>
+          )}
+
+          {showSchedules && (
+            <button
+              type="button"
+              className="bq-tool-btn"
+              data-testid="schedules-btn"
+              onClick={onOpenSchedules}
+              title="Proje Tarayıcısı · Çizelgeler"
+            >
+              <span>Çizelgeler</span>
             </button>
           )}
 

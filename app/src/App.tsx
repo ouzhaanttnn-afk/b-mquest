@@ -17,10 +17,34 @@ import {
   writeToBrowserStorage,
 } from './domain/persistence';
 import type { SaveEnvelopeV1, SubmittedEvaluation } from './domain/types';
+import {
+  dayKey,
+  loadMeta,
+  markAnnounced,
+  newAchievements,
+  recordAttempt,
+  registerPlayDay,
+  saveMeta,
+  visibleStreak,
+  type Achievement,
+  type GameMeta,
+} from './domain/gameMeta';
+import { calculateTotalPlayerXp } from './domain/pedagogy';
+import { playSound } from './ui/sound';
 import { Dashboard } from './ui/Dashboard';
+import { TitleScreen } from './ui/TitleScreen';
 import { Workspace } from './ui/Workspace';
 
 const THEME_STORAGE_KEY = 'bimquest.theme.v1';
+const TITLE_SEEN_KEY = 'bimquest.titleSeen.v1';
+
+function titleAlreadySeen(): boolean {
+  try {
+    return window.sessionStorage.getItem(TITLE_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 const catalogResult = loadValidatedCatalog();
 const catalog = catalogResult.ok
@@ -50,6 +74,52 @@ export function App() {
 
   const [activeSession, setActiveSession] =
     useState<MissionSessionState | null>(null);
+
+  const [showTitle, setShowTitle] = useState(() => !titleAlreadySeen());
+  const [openInfoOnDashboard, setOpenInfoOnDashboard] = useState(false);
+  const [meta, setMeta] = useState<GameMeta>(() => loadMeta());
+  const [toast, setToast] = useState<Achievement | null>(null);
+
+  const leaveTitle = useCallback((withInfo: boolean) => {
+    try {
+      window.sessionStorage.setItem(TITLE_SEEN_KEY, '1');
+    } catch {
+      // Ignore storage errors
+    }
+    setOpenInfoOnDashboard(withInfo);
+    setShowTitle(false);
+  }, []);
+
+  const updateMeta = useCallback((next: GameMeta) => {
+    setMeta(next);
+    saveMeta(next);
+  }, []);
+
+  // A play day counts when a mission is opened.
+  const touchPlayDay = useCallback(() => {
+    updateMeta(registerPlayDay(meta, dayKey(new Date())));
+  }, [meta, updateMeta]);
+
+  // Announce achievements the player has not been told about yet, one by one.
+  useEffect(() => {
+    if (toast) return;
+    const pending = newAchievements(save.completed, meta);
+    if (pending.length === 0) return;
+    // Progress that existed before this feature is marked as seen silently.
+    if (meta.announced.length === 0 && Object.keys(save.completed).length > 1 && meta.lastPlayDay === null) {
+      updateMeta(markAnnounced(meta, pending.map((a) => a.id)));
+      return;
+    }
+    setToast(pending[0]);
+    updateMeta(markAnnounced(meta, [pending[0].id]));
+    playSound('success');
+  }, [save.completed, meta, toast, updateMeta]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 4200);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   // Sync theme attribute to document root
   useEffect(() => {
@@ -110,8 +180,9 @@ export function App() {
         existingDraft ?? carryOverDraft(task, save)
       );
       setActiveSession(session);
+      touchPlayDay();
     },
-    [persistSave, save]
+    [persistSave, save, touchPlayDay]
   );
 
   const handleSessionChange = useCallback(
@@ -119,9 +190,16 @@ export function App() {
       nextSession: MissionSessionState,
       passingEvaluation?: SubmittedEvaluation
     ) => {
+      const prevEval = activeSession?.lastEvaluation ?? null;
+      const evalNow = nextSession.lastEvaluation;
       setActiveSession(nextSession);
 
       const missionId = nextSession.task.id;
+      if (evalNow && evalNow !== prevEval && !evalNow.stale) {
+        updateMeta(
+          recordAttempt(meta, missionId, evalNow.pass, nextSession.revealedHints.length)
+        );
+      }
       let nextSave: SaveEnvelopeV1 = {
         ...save,
         drafts: {
@@ -144,7 +222,7 @@ export function App() {
 
       persistSave(nextSave);
     },
-    [persistSave, save]
+    [persistSave, save, activeSession, meta, updateMeta]
   );
 
   const handleResetDraftConfirmed = useCallback(
@@ -248,8 +326,30 @@ export function App() {
         save.settings.reducedMotion ? 'reduced-motion' : ''
       }`}
     >
-      {!activeSession ? (
+      {toast && (
+        <div className="bq-ach-toast" role="status" data-testid="achievement-toast">
+          <span className="bq-ach-toast-icon" aria-hidden="true">{toast.icon}</span>
+          <span>
+            <strong>Başarım: {toast.title}</strong>
+            <small>{toast.description}</small>
+          </span>
+        </div>
+      )}
+      {showTitle && !activeSession ? (
+        <TitleScreen
+          hasProgress={Object.keys(save.completed).length > 0}
+          level={calculateTotalPlayerXp(save.completed).level}
+          rankTitle={calculateTotalPlayerXp(save.completed).rankTitle}
+          streak={visibleStreak(meta, dayKey(new Date()))}
+          onPlay={() => leaveTitle(false)}
+          onHowToPlay={() => leaveTitle(true)}
+        />
+      ) : !activeSession ? (
         <Dashboard
+          streak={visibleStreak(meta, dayKey(new Date()))}
+          meta={meta}
+          initialInfoOpen={openInfoOnDashboard}
+          onBackToTitle={() => setShowTitle(true)}
           missions={catalog.missions}
           save={save}
           theme={theme}

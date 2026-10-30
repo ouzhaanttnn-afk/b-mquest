@@ -92,6 +92,9 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
     <div className="bq-tool-options" data-testid="tool-options-bar">
       <p className="bq-tool-hint" data-testid="tool-hint">
         <strong>{def?.label}:</strong> {def?.hint}
+        {def?.keys && (
+          <span className="bq-kbd-note"> Revit’te kısayol: <kbd className="bq-kbd">{def.keys}</kbd></span>
+        )}
       </p>
       <div className="bq-tool-opt-row">
         {model.levels.length > 1 &&

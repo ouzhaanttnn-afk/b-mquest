@@ -731,6 +731,224 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
       { id: 'c_clean', type: 'modelClean', message: 'Modelde hiç uyarı kalmamalı.' },
     ],
   },
+  // ---- Bonus Bölüm 8: Çizelgeler ----------------------------------------
+  m51: {
+    lesson: {
+      objective:
+        'Kapı çizelgesini aç. Poz numaralarını d1 → D-01, d2 → D-02, d3 → D-03, d4 → D-04 olacak şekilde düzelt.',
+      hintLevels: hints(
+        'Üst çubuktaki Çizelgeler düğmesi model verisini tablo olarak gösterir.',
+        'Kapı çizelgesinde Poz sütunundaki tekrar eden ve düzensiz hücrelere bak.',
+        'Bir hücreyi değiştirmek modeldeki kapının Mark değerini değiştirir.',
+        '1) Çizelgeler → Kapı Çizelgesi. 2) Her satırın Poz hücresini düzelt (Enter ile onayla). 3) Kapat ve Kontrol Et.'
+      ),
+      primaryFields: ['mark'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+      door1('d2', 'w1', 3000, { mark: 'D-01' }),
+      door1('d3', 'w3', 1500, { mark: 'D-03' }),
+      door1('d4', 'w3', 4000, { mark: 'D-3' }),
+    ],
+    editable: ['mark'],
+    seeds: ['d1', 'd2', 'd3', 'd4'],
+    minutes: 6,
+    criteria: [
+      { id: 'c1', type: 'property', elementId: 'd1', field: 'mark', expected: 'D-01', tolerance: 0, message: 'd1 kapısının pozu D-01 olmalı.' },
+      { id: 'c2', type: 'property', elementId: 'd2', field: 'mark', expected: 'D-02', tolerance: 0, message: 'd2 kapısının pozu D-02 olmalı.' },
+      { id: 'c3', type: 'property', elementId: 'd3', field: 'mark', expected: 'D-03', tolerance: 0, message: 'd3 kapısının pozu D-03 olmalı.' },
+      { id: 'c4', type: 'property', elementId: 'd4', field: 'mark', expected: 'D-04', tolerance: 0, message: 'd4 kapısının pozu D-04 olmalı.' },
+    ],
+  },
+  m52: {
+    lesson: {
+      objective:
+        'Koridora açılan d1, d2 ve d3 kapılarının yangın sınıfını (Fire Rating) çizelgeden EI30 yap. Oda içi d4 kapısına dokunma.',
+      hintLevels: hints(
+        'Kapı çizelgesinde Yangın sütununu üstten alta tara.',
+        'Üç kapının yangın sınıfı eksik; dördüncüsü oda içi kapı.',
+        'Hücreye EI30 yaz ve Enter ile onayla.',
+        '1) Çizelgeler → Kapı Çizelgesi. 2) d1, d2, d3 satırlarında Yangın hücresine EI30 yaz. 3) Kapat ve Kontrol Et.'
+      ),
+      primaryFields: ['fireRating'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+      door1('d2', 'w1', 3000, { mark: 'D-02' }),
+      door1('d3', 'w3', 1500, { mark: 'D-03' }),
+      door1('d4', 'w3', 4000, { mark: 'D-04' }),
+    ],
+    editable: ['fireRating'],
+    seeds: ['d1', 'd2', 'd3'],
+    minutes: 6,
+    criteria: [
+      { id: 'c1', type: 'property', elementId: 'd1', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd1 kapısı EI30 olmalı.' },
+      { id: 'c2', type: 'property', elementId: 'd2', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd2 kapısı EI30 olmalı.' },
+      { id: 'c3', type: 'property', elementId: 'd3', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd3 kapısı EI30 olmalı.' },
+    ],
+  },
+  m53: {
+    lesson: {
+      objective:
+        'Oda çizelgesinde iki odanın da numarasını ve adını doldur: r1 → 101 Salon, r2 → 102 Yatak Odası. Modelde uyarı kalmasın.',
+      hintLevels: hints(
+        'Oda çizelgesinde boş kalan hücreler eksik veriyi gösterir.',
+        'İki odanın hem numarası hem adı eksik.',
+        'Numara ve Ad sütunlarındaki hücreleri doldurup Enter ile onayla.',
+        '1) Çizelgeler → Oda Çizelgesi. 2) r1: 101 / Salon. 3) r2: 102 / Yatak Odası. 4) Kapat ve Kontrol Et.'
+      ),
+      primaryFields: ['number', 'name'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      wall('w5', [3000, 0], [3000, 4000]),
+      { id: 'r1', type: 'room', name: 'Oda', number: '', levelId: 'l0', seedPoint: [1500, 2000] },
+      { id: 'r2', type: 'room', name: 'Oda', number: '', levelId: 'l0', seedPoint: [4500, 2000] },
+    ],
+    editable: ['number', 'name'],
+    seeds: ['r1', 'r2'],
+    minutes: 6,
+    criteria: [
+      { id: 'c1', type: 'property', elementId: 'r1', field: 'number', expected: '101', tolerance: 0, message: 'r1 oda numarası 101 olmalı.' },
+      { id: 'c2', type: 'property', elementId: 'r2', field: 'number', expected: '102', tolerance: 0, message: 'r2 oda numarası 102 olmalı.' },
+      { id: 'c3', type: 'property', elementId: 'r1', field: 'name', expected: 'Salon', tolerance: 0, message: 'r1 odasının adı Salon olmalı.' },
+      { id: 'c4', type: 'property', elementId: 'r2', field: 'name', expected: 'Yatak Odası', tolerance: 0, message: 'r2 odasının adı Yatak Odası olmalı.' },
+      { id: 'c_clean', type: 'modelClean', message: 'Odaların ad ve numarası boş kalmamalı.' },
+    ],
+  },
+  // ---- Bonus Bölüm 9: Modify araçları ------------------------------------
+  m54: {
+    lesson: {
+      objective:
+        'Güney duvarını (w1) ve kapısını kuzeye doğru 4000 mm kopyala. Sonuçta iki paralel duvar ve iki kapı olsun.',
+      hintLevels: hints(
+        'Modify paneli seçili duvarı çoğaltabilir.',
+        'Kopyalanacak olan w1 duvarı; kapısı da onunla gelir.',
+        'Kopya, X ve Z yönündeki ötelemelerle tarif edilir; kuzey, Z yönüdür.',
+        '1) w1’i seç. 2) Değiştir → Kopyala. 3) dx = 0, dz = 4000. 4) Kopyala ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0]),
+      door1('d1', 'w1', 2000, { mark: 'D-01' }),
+    ],
+    editable: [],
+    creatable: ['wall', 'door'],
+    seeds: [],
+    minutes: 5,
+    criteria: [
+      { id: 'c_w', type: 'exists', category: 'wall', where: { axisDir: 'h', axisPos: 4000, length: 6000 }, message: 'Kuzeyde (z = 4000 mm) 6000 mm uzunlukta paralel bir duvar olmalı.' },
+      { id: 'c_d', type: 'count', elementType: 'door', expected: 2, message: 'Modelde iki kapı olmalı.' },
+      { id: 'c_h', type: 'hosted', category: 'door', hostCategory: 'wall', min: 2, message: 'İki kapı da bir duvara bağlı olmalı.' },
+    ],
+  },
+  m55: {
+    lesson: {
+      objective:
+        'Üç duvarlı yarım planı x = 3000 mm düşey ekseninde aynala. Sonuçta 6000 × 4000 mm kapalı bir kabuk oluşsun.',
+      hintLevels: hints(
+        'Plan soldan sağa simetrik olmalı; yalnızca sol yarısı çizilmiş.',
+        'Üç duvarın üçü de aynalanmalı.',
+        'Ayna ekseni, yarım planın sağ ucundaki düşey çizgidir.',
+        '1) w1, w2, w3’ü seç (Shift ile ekle). 2) Değiştir → Aynala, Eksen: x, Konum: 3000. 3) Aynala ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [3000, 0]),
+      wall('w2', [0, 4000], [3000, 4000]),
+      wall('w3', [0, 0], [0, 4000]),
+    ],
+    editable: [],
+    creatable: ['wall'],
+    seeds: [],
+    minutes: 6,
+    criteria: [
+      { id: 'c_walls', type: 'metric', metric: 'wallCount', min: 6, max: 6, message: 'Toplam 6 duvar olmalı (3 asıl + 3 ayna).' },
+      { id: 'c_edge', type: 'exists', category: 'wall', where: { axisDir: 'v', axisPos: 6000 }, message: 'x = 6000 mm üzerinde düşey bir duvar olmalı.' },
+      { id: 'c_area', type: 'metric', metric: 'enclosedAreaM2', min: 24, max: 24, message: 'Duvarlar 24 m² kapalı alan oluşturmalı.' },
+    ],
+  },
+  m56: {
+    lesson: {
+      objective:
+        'Güney duvarını (w1) 3000 mm kuzeye öteleyerek paralel bir bölme duvarı oluştur.',
+      hintLevels: hints(
+        'Bölme duvarı güney duvarına paralel ve aynı uzunlukta olmalı.',
+        'Çoğaltılacak duvar w1; duvar yönünün solu pozitiftir.',
+        'Öteleme mesafesi, iki duvar arasındaki dik uzaklıktır.',
+        '1) w1’i seç. 2) Değiştir → Öteleme. 3) Mesafe: 3000. 4) Uygula ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [wall('w1', [0, 0], [6000, 0])],
+    editable: [],
+    creatable: ['wall'],
+    seeds: [],
+    minutes: 5,
+    criteria: [
+      { id: 'c_w', type: 'exists', category: 'wall', where: { axisDir: 'h', axisPos: 3000, length: 6000 }, message: 'z = 3000 mm üzerinde 6000 mm’lik paralel bir duvar olmalı.' },
+      { id: 'c_n', type: 'metric', metric: 'wallCount', min: 2, max: 2, message: 'Modelde yalnızca iki duvar olmalı.' },
+    ],
+  },
+  m57: {
+    lesson: {
+      objective: 'w2 duvarı w1 duvarından kaymış. w2’yi w1’in çizgisine hizala.',
+      hintLevels: hints(
+        'İki duvar aynı doğrultuda ama farklı hizada duruyor.',
+        'Kayan duvar w2; referans w1.',
+        'Hizalama, taşınan duvarı referansın çizgisine oturtur.',
+        '1) w2’yi seç. 2) Değiştir → Hizala. 3) Referans: w1. 4) Uygula ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [wall('w1', [0, 0], [3000, 0]), wall('w2', [3000, -300], [6000, -300])],
+    editable: ['start', 'end'],
+    seeds: ['w2'],
+    minutes: 4,
+    criteria: [
+      { id: 'c_al', type: 'compare', elementId: 'w2', field: 'axisPos', otherElementId: 'w1', otherField: 'axisPos', tolerance: 0, message: 'w2 ve w1 aynı çizgide (aynı z) olmalı.' },
+    ],
+  },
+  m58: {
+    lesson: {
+      objective:
+        'Yarım planı ve kapısını x = 3000 mm ekseninde aynala. 24 m² kapalı bir hacim ve iki kapı elde et.',
+      hintLevels: hints(
+        'Plan simetrik; yalnızca bir yarısı ve tek kapı var.',
+        'Duvarların hepsini aynala; kapı duvarıyla birlikte gelir.',
+        'Ayna ekseni, yarım planın sağ ucundaki düşey çizgidir.',
+        '1) Tüm duvarları seç. 2) Değiştir → Aynala, Eksen: x, Konum: 3000. 3) Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [3000, 0]),
+      wall('w2', [0, 4000], [3000, 4000]),
+      wall('w3', [0, 0], [0, 4000]),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+    ],
+    editable: [],
+    creatable: ['wall', 'door'],
+    seeds: [],
+    minutes: 6,
+    criteria: [
+      { id: 'c_area', type: 'metric', metric: 'enclosedAreaM2', min: 24, max: 24, message: 'Duvarlar 24 m² kapalı alan oluşturmalı.' },
+      { id: 'c_doors', type: 'metric', metric: 'doorCount', min: 2, max: 2, message: 'Modelde iki kapı olmalı.' },
+      { id: 'c_h', type: 'hosted', category: 'door', hostCategory: 'wall', min: 2, message: 'İki kapı da duvara bağlı olmalı.' },
+    ],
+  },
 };
 
 export function buildBimMissionTask(
