@@ -285,6 +285,90 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
     ],
   },
 
+  m05: {
+    lesson: {
+      objective:
+        'Kuzey duvarı (w3) iki ayrı yerden bozulmuş: yanlış tipte (Generic - 100mm) ve yüksekliği 2600 mm. Tipini Generic - 200mm yap, yüksekliğini 3000 mm yap.',
+      hintLevels: hints(
+        'Kalınlık ile yükseklik aynı yerden değişmez: biri tipte, biri nesnede tutulur.',
+        'Bozuk olan tek duvar w3; diğer üçü doğru.',
+        'Kalınlık Tip (Type) seçiciden, yükseklik Properties’teki nesne (Instance) alanından değişir.',
+        '1) w3’ü seç. 2) Tip seçicide Generic - 200mm’i seç. 3) Yüksekliği 3000 yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['typeId', 'height'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0], { typeId: 'wt200' }),
+      wall('w2', [6000, 0], [6000, 4000], { typeId: 'wt200' }),
+      wall('w3', [6000, 4000], [0, 4000], { typeId: 'wt100', thickness: 100, height: 2600 }),
+      wall('w4', [0, 4000], [0, 0], { typeId: 'wt200' }),
+    ],
+    types: [WT200, WT100],
+    editable: ['typeId', 'height'],
+    seeds: ['w3'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_t', type: 'property', elementId: 'w3', field: 'typeId', expected: 'wt200', tolerance: 0, message: 'w3, Generic - 200mm tipini kullanmalı (Type).' },
+      { id: 'c_h', type: 'property', elementId: 'w3', field: 'height', expected: 3000, tolerance: 0, message: 'w3 yüksekliği 3000 mm olmalı (Instance).' },
+      { id: 'c_k', type: 'allEqual', category: 'wall', field: 'thickness', message: 'Tüm duvarların kalınlığı eşit olmalı.' },
+    ],
+  },
+  m26: {
+    lesson: {
+      objective:
+        'Kuzey duvarı (w3) kaçış koridoruna bakıyor. Bu duvardaki kapılar EI30 olmalı; diğer kapılar yangın sınıfsız (none) kalmalı.',
+      hintLevels: hints(
+        'Hangi kapının hangi duvarda olduğuna bak; kural duvara göre.',
+        'Kuzey duvarında iki kapı var; güneydeki kapıya dokunma.',
+        'Yangın sınıfı (Fire Rating) kapının nesne özelliğidir.',
+        '1) Kuzey duvarındaki iki kapıyı bul (Host: w3). 2) Her birinde Yangın Sınıfı: EI30. 3) Güney kapısını none bırak. 4) Kontrol Et.'
+      ),
+      primaryFields: ['fireRating'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 2550, { mark: 'D-01' }),
+      door1('d2', 'w3', 1200, { mark: 'D-02' }),
+      door1('d3', 'w3', 3800, { mark: 'D-03', fireRating: 'EI60' }),
+    ],
+    editable: ['fireRating'],
+    seeds: ['d1', 'd2', 'd3'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_2', type: 'property', elementId: 'd2', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'Kuzey duvarındaki d2 EI30 olmalı.' },
+      { id: 'c_3', type: 'property', elementId: 'd3', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'Kuzey duvarındaki d3 EI30 olmalı (EI60 gereğinden fazla).' },
+      { id: 'c_1', type: 'property', elementId: 'd1', field: 'fireRating', expected: 'none', tolerance: 0, message: 'Güney duvarındaki d1 yangın sınıfsız kalmalı.' },
+    ],
+  },
+  m27: {
+    lesson: {
+      objective:
+        'Pozlar karışmış: kapının pozu W-01, pencerenin pozu D-01 yazılmış. Kapı pozları D-, pencere pozları W- ile başlar; ikisini düzelt.',
+      hintLevels: hints(
+        'Poz (Mark), nesnenin kategorisini de anlatır: D kapı, W pencere.',
+        'Bir kapı ve bir pencere birbirinin pozunu almış.',
+        'Mark alanı her nesnenin Identity Data bölümünde.',
+        '1) Kapıyı seç, Mark: D-01. 2) Pencereyi seç, Mark: W-01. 3) Kontrol Et.'
+      ),
+      primaryFields: ['mark'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 2550, { mark: 'W-01' }),
+      window1('win1', 'w3', 2400, { mark: 'D-01' }),
+    ],
+    editable: ['mark'],
+    seeds: ['d1', 'win1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_d', type: 'property', elementId: 'd1', field: 'mark', expected: 'D-01', tolerance: 0, message: 'Kapının pozu D-01 olmalı.' },
+      { id: 'c_w', type: 'property', elementId: 'win1', field: 'mark', expected: 'W-01', tolerance: 0, message: 'Pencerenin pozu W-01 olmalı.' },
+    ],
+  },
+
   // ---- Bölüm 2: Level, Grid ---------------------------------------------
   m09: {
     lesson: {

@@ -284,3 +284,41 @@ describe('Çeşitlendirilen görevler: m13, m14, m28', () => {
     expect(passes(s).pass).toBe(true);
   });
 });
+
+describe('Yeniden yazılan m05, m26, m27', () => {
+  it('başlangıçta kalırlar', () => {
+    for (const id of ['m05', 'm26', 'm27']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+  it('m05: yalnız tip ya da yalnız yükseklik yetmez; ikisi birlikte geçer', () => {
+    const onlyType = run('m05', [(st) => updateElementProperty(st, 'w3', 'typeId', 'wt200')]);
+    expect(evaluate(onlyType.task, onlyType.model, 0).pass).toBe(false);
+    expect(onlyType.model.elements.find((e) => e.id === 'w3')).toMatchObject({ thickness: 200 });
+    const s = run('m05', [
+      (st) => updateElementProperty(st, 'w3', 'typeId', 'wt200'),
+      (st) => updateElementProperty(st, 'w3', 'height', 3000),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m26: bağlama göre EI30; güney kapısına EI30 vermek yanlış', () => {
+    const over = run('m26', [
+      (st) => updateElementProperty(st, 'd1', 'fireRating', 'EI30'),
+      (st) => updateElementProperty(st, 'd2', 'fireRating', 'EI30'),
+      (st) => updateElementProperty(st, 'd3', 'fireRating', 'EI30'),
+    ]);
+    expect(evaluate(over.task, over.model, 0).pass).toBe(false);
+    const s = run('m26', [
+      (st) => updateElementProperty(st, 'd2', 'fireRating', 'EI30'),
+      (st) => updateElementProperty(st, 'd3', 'fireRating', 'EI30'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m27: kapı ve pencere pozları düzelince geçer', () => {
+    const s = run('m27', [
+      (st) => updateElementProperty(st, 'd1', 'mark', 'D-01'),
+      (st) => updateElementProperty(st, 'win1', 'mark', 'W-01'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+});
