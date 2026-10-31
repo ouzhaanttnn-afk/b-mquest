@@ -691,9 +691,11 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
         <Canvas
           key={sceneMountKey}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
           shadows
-          frameloop={isVisible ? 'always' : 'never'}
+          // Nothing in the scene animates on its own: render only when the
+          // camera or the model changes. Keeps tablets cool and responsive.
+          frameloop={isVisible ? 'demand' : 'never'}
           camera={{
             position: (() => {
               const f = frame();
