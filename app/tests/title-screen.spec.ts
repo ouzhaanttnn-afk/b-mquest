@@ -473,3 +473,28 @@ test.describe('Telefonda 3B alanı', () => {
     expect(m.checkOverDock).toBe(false);
   });
 });
+
+test.describe('Bonus Bölüm 11 — arayüz', () => {
+  test('m63: oda adını özelliklerden değiştir, ilişki satırı alanı gösterir', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission','ten-missions','half-way','all-missions','perfect','five-gold','level-5','chapter-1','chapter-2','chapter-3','chapter-4','chapter-5','chapter-6','chapter-7','chapter-8','chapter-9','chapter-10'] }));
+      const completed: Record<string, unknown> = {};
+      for (let i = 1; i <= 62; i++) completed[`m${String(i).padStart(2, '0')}`] = { bestScore: 100 };
+      window.localStorage.setItem('bimquest.save.v1', JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed, drafts: {}, settings: { reducedMotion: true, sound: false } }));
+    });
+    await page.goto('/');
+    await page.getByTestId('stage-tab-ch11').click();
+    await page.getByTestId('start-mission-m63').click();
+    await page.getByTestId('object-row-r1').click();
+    await expect(page.getByTestId('relations-row')).toContainText('16.0 m²');
+    await page.getByTestId('prop-input-name').fill('Yatak Odası');
+    await page.getByTestId('prop-input-name').press('Enter');
+    await page.getByTestId('object-row-r2').click();
+    await page.getByTestId('prop-input-name').fill('Çalışma Odası');
+    await page.getByTestId('prop-input-name').press('Enter');
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+});

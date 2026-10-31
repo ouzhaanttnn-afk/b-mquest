@@ -30,10 +30,11 @@ NELER ÖĞRENİRSİN
 • Kesit, cephe, ölçü, etiket ve A3 pafta
 • Çizelgeler (Schedules) ve Modify araçları: Copy, Mirror, Offset, Align
 • Tip çoğaltma (Edit Type → Duplicate) ve çok katlı model: kata kopyala, üst kat döşemesi, merdiven
+• Kural tabanlı model denetimi, normalleştirme ve sahadan modele ölçü işleme
 • Model kontrolü: gizli hataları bulma
 
 OYUN ÖZELLİKLERİ
-• 61 görev, 10 bölüm ve final proje
+• 65 görev, 11 bölüm ve final proje
 • Plan ve 3B görünüm aynı anda, parmakla çizim
 • Hata yaptığında nedenini açıklayan geri bildirim
 • Serbest Atölye: görevsiz, tüm araçlar açık

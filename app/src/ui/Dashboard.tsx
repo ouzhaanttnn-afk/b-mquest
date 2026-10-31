@@ -611,10 +611,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         })}
       </section>
 
-      {/* Compact 10-Chapter / 61-Mission Roadmap Accordion */}
+      {/* Compact 11-Chapter / 65-Mission Roadmap Accordion */}
       <section
         className="bq-curriculum-section"
-        aria-label="10 Bölüm ve 61 Görevlik Revit Eğitim Mimarisi"
+        aria-label="11 Bölüm ve 65 Görevlik Revit Eğitim Mimarisi"
         data-testid="curriculum-chapters"
       >
         <div className="bq-curriculum-header">
@@ -991,7 +991,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <strong>3. Kontrol Et & Düzelt:</strong> Turuncu <strong>Kontrol et</strong> butonuna bas. Hata varsa sistem neden yanlış olduğunu ve nasıl düzelteceğini söyler.
               </li>
               <li>
-                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 61 görevlik haritada ilerle!
+                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 65 görevlik haritada ilerle!
               </li>
             </ul>
             <div className="bq-modal-actions">

@@ -4,7 +4,7 @@ import { FINAL_STAGES, buildFinalMissionTask, finalLessonOverrides } from './fin
 
 export interface RevitLessonMeta {
   id: string;
-  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -222,7 +222,7 @@ export const REVIT_LESSONS_BY_ID: Record<string, RevitLessonMeta> = {
 
 const EXTRA_LESSONS: Array<{
   id: string;
-  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -1012,6 +1012,62 @@ const EXTRA_LESSONS: Array<{
     learningText: 'Üst katın bir döşemesi ve iki katı bağlayan bir merdiveni olmalı. Merdivenin basamak sayısı × basamak yüksekliği iki kat arasındaki yükseklik farkına eşit olmalı.',
     whyItMatters: 'Merdiven kat farkını tam karşılamazsa son basamak ya eksik ya fazla kalır; şantiyede düzeltmesi pahalıdır.',
     objective: '1. Kat’a (+3150 mm) döşeme ekle ve Zemin Kat ile 1. Kat arasına, yüksekliği tam 3150 mm tutan bir merdiven yerleştir.',
+    nextConcept: 'Mezuniyet: gerçek Revit',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm62',
+    chapter: 11,
+    stepNumber: 62,
+    title: 'Merdiven Kuralı',
+    learningConcept: 'Kural tabanlı denetim: EĞER merdiven İSE 2r + t aralıkta',
+    revitPath: 'Model Checker (ör. Solibri) → Kural: Stair Comfort',
+    learningText: 'Denetim yazılımları yönetmelik maddelerini EĞER … İSE … kurallarına çevirir. Rahat merdiven için yaygın kural: 2 × basamak yüksekliği + basamak derinliği 600–640 mm arasında olmalı.',
+    whyItMatters: 'Kural modeldeki sayılarla çalışır; çizim ne kadar güzel olursa olsun sayılar kuralı tutmuyorsa denetimden geçmez.',
+    objective: 'Merdiven denetimden kaldı: 2 × basamak yüksekliği + basamak derinliği 600–640 mm olmalı. Toplam yükseklik 3150 mm kalacak şekilde merdiveni düzelt.',
+    nextConcept: 'Normalleştirme',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm63',
+    chapter: 11,
+    stepNumber: 63,
+    title: 'Normalleştirme',
+    learningConcept: 'Model normalleştirme: kural nesneyi tanımalı',
+    revitPath: 'Room → Properties → Name · Model Checker → Ruleset',
+    learningText: 'Denetim aracı odaları adlarından tanır. Tüm odalar “Oda” adındaysa “yatak odası en az 9 m²” kuralı hiçbir odaya uygulanmaz ve sorun gizli kalır. Denetimden önce modeli kuralın beklediği hale getirmeye normalleştirme denir.',
+    whyItMatters: 'Adlandırılmamış model, kural tabanlı denetimde “temiz” görünür ama aslında denetlenmemiştir.',
+    objective: 'Denetim yatak odasını bulamıyor: iki oda da “Oda” adında. Yatak odası en az 9 m² olmalı (oyun kuralı). Uygun odaya “Yatak Odası”, diğerine “Çalışma Odası” adını ver.',
+    nextConcept: 'Gün ışığı kuralı',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm64',
+    chapter: 11,
+    stepNumber: 64,
+    title: 'Gün Işığı',
+    learningConcept: 'Kural tabanlı denetim: pencere / döşeme oranı',
+    revitPath: 'Schedule (Windows + Rooms) → Calculated Value → Model Checker',
+    learningText: 'Bir başka yaygın kural, pencere alanının oda alanına oranıdır. Kural oda alanını ve pencere ölçülerini modelden okur; ikisi de doğru olmalıdır.',
+    whyItMatters: 'Oran tutmazsa oda yeterli gün ışığı almaz; denetimde bu hesap elle değil modelden yapılır.',
+    objective: 'Salonun pencere alanı, oda alanının en az %10’u olmalı (oyun kuralı). Pencereleri büyüterek ya da yeni pencere ekleyerek oranı tuttur.',
+    nextConcept: 'Sahadan BIM’e',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm65',
+    chapter: 11,
+    stepNumber: 65,
+    title: 'Yapılan ile Tasarlanan',
+    learningConcept: 'Sahadan BIM’e: as-built ile modeli eşitlemek',
+    revitPath: 'Select Door → Properties → Offset / Width',
+    learningText: 'Sahada yapılan her zaman çizilenle aynı değildir. Ölçüm ekibi gerçek ölçüleri getirir; model güncellenmezse dijital ikiz gerçeği yansıtmaz.',
+    whyItMatters: 'Güncellenmemiş modelden alınan metraj ve ölçüler sonraki işleri yanlış yönlendirir.',
+    objective: 'Saha ölçümü: kapı merkezi güney duvarının başından 3150 mm’de, kapı genişliği 1000 mm. Modeli sahada yapılana göre güncelle.',
     nextConcept: 'Mezuniyet: gerçek Revit',
     primaryFields: [],
     FixType: 'multi_qa',

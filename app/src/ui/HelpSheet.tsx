@@ -97,13 +97,13 @@ export const HelpSheet: React.FC<{
                 </p>
                 <ul className="bq-help-list">
                   {hits.map((h) => (
-                    <li key={h.missionId} data-testid={`help-entry-${h.missionId}`}>
+                    <li key={h.id} data-testid={`help-entry-${h.id}`}>
                       <strong>{h.concept}</strong>
                       <span className="bq-help-mission">
-                        {h.missionId.toUpperCase()} · {h.title}
+                        {h.missionId ? `${h.missionId.toUpperCase()} · ${h.title}` : `Kavram · Kaynak: ${h.source ?? ''}`}
                       </span>
                       <p>{h.explanation}</p>
-                      <code>{h.revitPath}</code>
+                      {h.revitPath && <code>{h.revitPath}</code>}
                     </li>
                   ))}
                 </ul>

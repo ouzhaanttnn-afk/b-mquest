@@ -100,8 +100,8 @@ describe('Faz 1 — gerçek BIM nesnelerine bağlı görevler', () => {
     expect(res.criteria.find((c) => c.id === 'c_cl')?.actual).toContain('r1');
   });
 
-  it('61 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
-    expect(Object.keys(missions)).toHaveLength(61);
+  it('65 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
+    expect(Object.keys(missions)).toHaveLength(65);
   });
 });
 
@@ -372,6 +372,56 @@ describe('Bonus Bölüm 10 — aile tipleri ve çok katlı model', () => {
     const s = run('m61', [
       (st) => createFloorCommand(st, { levelId: 'l1' }),
       (st) => createStairCommand(st, { baseLevelId: 'l0', topLevelId: 'l1', start: [1000, 1000], direction: 'x+', risers: 18, riserHeight: 175 }),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+});
+
+describe('Bonus Bölüm 11 — denetim ve saha', () => {
+  it('hepsi başlangıçta kalır', () => {
+    for (const id of ['m62', 'm63', 'm64', 'm65']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+  it('m62: 18 × 175, derinlik 270 geçer; toplamı bozan çözüm geçmez', () => {
+    const s = run('m62', [
+      (st) => updateElementProperty(st, 's1', 'riserHeight', 175),
+      (st) => updateElementProperty(st, 's1', 'risers', 18),
+      (st) => updateElementProperty(st, 's1', 'treadDepth', 270),
+    ]);
+    expect(passes(s).pass).toBe(true);
+    const short = run('m62', [
+      (st) => updateElementProperty(st, 's1', 'riserHeight', 175),
+      (st) => updateElementProperty(st, 's1', 'treadDepth', 270),
+    ]);
+    expect(evaluate(short.task, short.model, 0).pass).toBe(false);
+  });
+  it('m63: küçük odaya "Yatak Odası" demek kuralı bozar; doğru adlandırma geçer', () => {
+    const wrong = run('m63', [
+      (st) => updateElementProperty(st, 'r2', 'name', 'Yatak Odası'),
+      (st) => updateElementProperty(st, 'r1', 'name', 'Çalışma Odası'),
+    ]);
+    expect(evaluate(wrong.task, wrong.model, 0).pass).toBe(false);
+    const s = run('m63', [
+      (st) => updateElementProperty(st, 'r1', 'name', 'Yatak Odası'),
+      (st) => updateElementProperty(st, 'r2', 'name', 'Çalışma Odası'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m64: pencereyi büyütmek oranı tutturur', () => {
+    const s = run('m64', [
+      (st) => updateElementProperty(st, 'win1', 'offset', 2000),
+      (st) => updateElementProperty(st, 'win1', 'width', 2000),
+      (st) => updateElementProperty(st, 'win1', 'height', 1300),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m65: as-built ofset ve genişlik', () => {
+    const centreOnly = run('m65', [(st) => updateElementProperty(st, 'd1', 'offset', 2700)]);
+    expect(evaluate(centreOnly.task, centreOnly.model, 0).pass).toBe(false);
+    const s = run('m65', [
+      (st) => updateElementProperty(st, 'd1', 'width', 1000),
+      (st) => updateElementProperty(st, 'd1', 'offset', 2650),
     ]);
     expect(passes(s).pass).toBe(true);
   });

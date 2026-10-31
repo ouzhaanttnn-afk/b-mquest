@@ -3,9 +3,15 @@ import { buildGlossary, fold, searchGlossary, shortcutList } from '../src/conten
 
 describe('glossary', () => {
   const entries = buildGlossary();
-  it('has one entry per mission', () => {
-    expect(entries.length).toBeGreaterThanOrEqual(58);
-    expect(new Set(entries.map((e) => e.missionId)).size).toBe(entries.length);
+  it('has one entry per mission plus the BIM concepts, all with unique keys', () => {
+    expect(entries.filter((e) => e.missionId).length).toBeGreaterThanOrEqual(61);
+    expect(new Set(entries.map((e) => e.id)).size).toBe(entries.length);
+  });
+  it('finds the research concepts and credits the source', () => {
+    const hit = searchGlossary(entries, 'dijital ikiz');
+    expect(hit.some((e) => e.id === 'k-field2bim')).toBe(true);
+    expect(hit.find((e) => e.id === 'k-field2bim')!.source).toContain('Sacks');
+    expect(searchGlossary(entries, 'IFC').some((e) => e.id === 'k-ifc')).toBe(true);
   });
   it('folds Turkish letters', () => {
     expect(fold('IŞIK İNCE')).toBe(fold('ışık ince'));

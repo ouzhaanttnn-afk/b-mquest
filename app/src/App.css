@@ -3449,3 +3449,16 @@ body:has(.bq-modal-backdrop) {
     display: none;
   }
 }
+
+.bq-relations {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.bq-relations-label {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
