@@ -23,6 +23,8 @@ export const CHAPTER_STORIES: Record<string, string> = {
     'Proje teslim edildi ama şantiye şefi bir kapı listesi ve mahal listesi istiyor. Çizelgeler tam bunun için.',
   ch09:
     'Selin Mimar: “Bir şey daha: usta modelleyici çizmez, çoğaltır. Copy, Mirror, Offset ve Align ile hız kazan.”',
+  ch10:
+    'Müşteri ikinci kat istiyor! Ana girişe geniş bir kapı, üst kata duvarlar, bir döşeme ve merdiven.',
   ch07:
     'Final: boş projeden başlayıp eksiksiz bir proje teslim ediyorsun. Bu kez yol tarifi yok.',
 };

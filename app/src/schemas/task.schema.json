@@ -731,6 +731,8 @@
               "metric": {
                 "enum": [
                   "levelCount",
+                  "maxLevelElevation",
+                  "upperWallCount",
                   "gridVertical",
                   "gridHorizontal",
                   "wallCount",

@@ -4,7 +4,7 @@ import { FINAL_STAGES, buildFinalMissionTask, finalLessonOverrides } from './fin
 
 export interface RevitLessonMeta {
   id: string;
-  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  chapter: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -222,7 +222,7 @@ export const REVIT_LESSONS_BY_ID: Record<string, RevitLessonMeta> = {
 
 const EXTRA_LESSONS: Array<{
   id: string;
-  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  chapter: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   stepNumber: number;
   title: string;
   learningConcept: string;
@@ -970,6 +970,48 @@ const EXTRA_LESSONS: Array<{
     learningText: 'Gerçek projede Modify araçlarını birlikte kullanırsın: yarıyı çiz, aynala, kontrol et.',
     whyItMatters: 'Hız ve tutarlılık, BIM modellemesinde ustalığın ölçüsüdür.',
     objective: 'Yarım planı ve kapısını x = 3000 mm ekseninde aynala. 24 m² kapalı bir hacim ve iki kapı elde et.',
+    nextConcept: 'Mezuniyet: gerçek Revit',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm59',
+    chapter: 10,
+    stepNumber: 59,
+    title: 'Tipi Çoğalt',
+    learningConcept: 'Edit Type → Duplicate (yeni tip)',
+    revitPath: 'Select Door → Edit Type → Duplicate… → Name → Width',
+    learningText: 'Revit’te bir tipin parametresini değiştirirsen o tipi kullanan her nesne değişir. Yalnızca bir nesneye farklı ölçü istiyorsan tipi çoğaltırsın (Duplicate) ve yeni tipi o nesneye verirsin.',
+    whyItMatters: 'Ana giriş kapısı geniş, iç kapılar standart olmalı. Tipi çoğaltmazsan ya hepsi değişir ya hiçbiri.',
+    objective: 'Ana giriş kapısı (d1) 1000 × 2100 mm olmalı; diğer iki kapı 900 mm kalmalı. Tipi çoğaltarak çöz.',
+    nextConcept: 'Üst katı kurmak',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm60',
+    chapter: 10,
+    stepNumber: 60,
+    title: 'Üst Kat Duvarları',
+    learningConcept: 'Paste Aligned to Selected Levels',
+    revitPath: 'Select Walls → Copy to Clipboard → Paste → Aligned to Selected Levels → 1. Kat',
+    learningText: 'Çok katlı binada üst kat duvarları çoğu zaman alt katla aynı hizadadır. Revit’te duvarları seçip Paste Aligned to Selected Levels ile başka bir kata aynı konumda yapıştırırsın.',
+    whyItMatters: 'Kat kat elle çizmek hem yavaş hem hata riski yüksek; hizalı yapıştırma taşıyıcı duvarların üst üste gelmesini garanti eder.',
+    objective: 'Zemin Kat’taki dört dış duvarı 1. Kat’a aynı konumda kopyala.',
+    nextConcept: 'Kat döşemesi ve merdiven',
+    primaryFields: [],
+    FixType: 'multi_qa',
+  },
+  {
+    id: 'm61',
+    chapter: 10,
+    stepNumber: 61,
+    title: 'Kat Bağlantısı',
+    learningConcept: 'Floor on Level + Stair between Levels',
+    revitPath: 'Architecture → Floor (Level 1) · Architecture → Stair (Base: Zemin, Top: 1. Kat)',
+    learningText: 'Üst katın bir döşemesi ve iki katı bağlayan bir merdiveni olmalı. Merdivenin basamak sayısı × basamak yüksekliği iki kat arasındaki yükseklik farkına eşit olmalı.',
+    whyItMatters: 'Merdiven kat farkını tam karşılamazsa son basamak ya eksik ya fazla kalır; şantiyede düzeltmesi pahalıdır.',
+    objective: '1. Kat’a (+3150 mm) döşeme ekle ve Zemin Kat ile 1. Kat arasına, yüksekliği tam 3150 mm tutan bir merdiven yerleştir.',
     nextConcept: 'Mezuniyet: gerçek Revit',
     primaryFields: [],
     FixType: 'multi_qa',

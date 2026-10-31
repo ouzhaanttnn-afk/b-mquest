@@ -1,3 +1,4 @@
+import { describeModel } from '../domain/summary';
 import React, { useMemo, useRef, useState } from 'react';
 import type {
   BimModel,
@@ -487,7 +488,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         viewBox={viewBoxStr}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`${task.title} 2B Ortografik Plan Görünümü`}
+        aria-label={`${task.title} 2B Ortografik Plan Görünümü. ${describeModel(model, selectedId)}`}
         onPointerDown={handleSvgPointerDown}
         onPointerMove={handleSvgPointerMove}
         onPointerUp={handleSvgPointerUp}
@@ -573,10 +574,10 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
           <text x={-110} y={1020} fill="#38BDF8" fontSize={140} fontWeight="700">
             +Z
           </text>
-          {/* Architectural North Compass */}
+          {/* North compass: in this model north is +Z, which is drawn downwards */}
           <g transform="translate(6420, -240)">
             <circle cx={0} cy={0} r={190} fill={labelBgDefault} stroke="#38BDF8" strokeWidth={18} />
-            <polygon points="0,-135 -48,60 0,25 48,60" fill="#38BDF8" />
+            <polygon points="0,135 -48,-60 0,-25 48,-60" fill="#38BDF8" />
             <text x={0} y={310} textAnchor="middle" fill="#38BDF8" fontSize={110} fontWeight="800">
               K
             </text>
@@ -1048,6 +1049,20 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
               stroke="#FFFFFF"
               strokeWidth={24}
             />
+            <text
+              x={(wallPreview.startX + wallPreview.endX) / 2}
+              y={(wallPreview.startZ + wallPreview.endZ) / 2 - 160}
+              textAnchor="middle"
+              fontSize={150}
+              fontWeight={800}
+              fill="#F97316"
+              stroke="#0B1120"
+              strokeWidth={30}
+              paintOrder="stroke"
+              data-testid="plan-wall-length"
+            >
+              {Math.round(Math.hypot(wallPreview.endX - wallPreview.startX, wallPreview.endZ - wallPreview.startZ))} mm
+            </text>
             <circle
               cx={wallPreview.endX}
               cy={wallPreview.endZ}
@@ -1101,7 +1116,8 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
                 x2={w.end[0]}
                 y2={w.end[1]}
                 stroke="#FACC15"
-                strokeWidth={w.thickness + 260}
+                strokeWidth={w.thickness + 140}
+                opacity={0.6}
                 strokeLinecap="round"
                 pointerEvents="none"
               />

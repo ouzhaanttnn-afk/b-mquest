@@ -128,6 +128,34 @@ export function wallChainTap(
   };
 }
 
+/** Screen directions in the plan: Left, Right, Up, Down. */
+export type WallDir = 'L' | 'R' | 'U' | 'D';
+
+/**
+ * Adds a wall of exact length in a screen direction, continuing the running
+ * chain (or starting at the origin). Plan "up" is −Z, "down" is +Z.
+ */
+export function wallByLength(
+  session: MissionSessionState,
+  chain: ChainState,
+  dir: WallDir,
+  length: number,
+  d: WallDefaults
+): TapOutcome<ChainState> {
+  if (!Number.isInteger(length) || length < 100) {
+    return {
+      result: null,
+      next: chain,
+      toast: 'Uzunluk en az 100 mm olan bir tam sayı olmalı.',
+    };
+  }
+  const start: Point = chain.start ?? [0, 0];
+  const delta: Record<WallDir, Point> = { R: [length, 0], L: [-length, 0], D: [0, length], U: [0, -length] };
+  const end: Point = [start[0] + delta[dir][0], start[1] + delta[dir][1]];
+  const seeded: ChainState = chain.start ? chain : { start, origin: start };
+  return wallChainTap(session, seeded, end, d);
+}
+
 export interface OpeningDefaults {
   width: number;
   height: number;

@@ -139,6 +139,236 @@ const WN900: ElementType = {
 };
 
 export const BIM_MISSION_SPECS: Record<string, Spec> = {
+  // ---- Faz 1 düzeltmesi: konusuyla uyuşmayan görevler yeniden yazıldı -----
+  m07: {
+    lesson: {
+      objective:
+        'Projede yalnızca Zemin Kat var. 3300 mm kot yüksekliğinde ikinci bir kat (Level) ekle.',
+      hintLevels: hints(
+        'Çok katlı bir bina için yatay referans düzlemlerine ihtiyaç var.',
+        'Eklemen gereken şey bir duvar değil, bir Level nesnesi.',
+        'Katlar bölümünde yeni kat ekleyebilir ve kotunu değiştirebilirsin.',
+        '1) Katlar’ı aç. 2) Kat ekle. 3) Yeni katın kotunu 3300 mm yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['elevation'],
+    },
+    levels: [L0],
+    elements: [...box()],
+    editable: ['elevation'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_n', type: 'metric', metric: 'levelCount', min: 2, max: 2, message: 'Projede iki kat (Level) olmalı.' },
+      { id: 'c_e', type: 'metric', metric: 'maxLevelElevation', min: 3300, max: 3300, message: 'Üst katın kotu 3300 mm olmalı.' },
+    ],
+  },
+  m11: {
+    lesson: {
+      objective:
+        'Düşey duvar A aksından 150 mm kaymış. Duvarı A aksının üzerine oturt.',
+      hintLevels: hints(
+        'Plana bak: duvar ile aks aynı çizgide değil.',
+        'Kayan şey aks değil, duvar (w1). Aks referanstır.',
+        'Duvarın başlangıç ve bitiş X değerleri aksın X değeriyle aynı olmalı.',
+        '1) w1’i seç. 2) Başlangıç ve bitiş X koordinatını aksın konumuna getir (ya da duvarı taşı). 3) Kontrol Et.'
+      ),
+      primaryFields: ['start', 'end'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [150, 0], [150, 4000]),
+      { id: 'ga', type: 'grid', name: 'A', start: [0, -1000], end: [0, 5000] },
+    ],
+    editable: ['start', 'end'],
+    seeds: ['w1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_al', type: 'compare', elementId: 'w1', field: 'axisPos', otherElementId: 'ga', otherField: 'axisPos', tolerance: 0, message: 'Duvar A aksının üzerinde olmalı.' },
+      { id: 'c_len', type: 'exists', category: 'wall', where: { id: 'w1', length: 4000 }, message: 'Duvar boyu 4000 mm kalmalı.' },
+    ],
+  },
+  m23: {
+    lesson: {
+      objective:
+        'd1 kapısı yanlış tipte (800 × 2100). Kapıyı standart 900 × 2100 mm tipine geçir.',
+      hintLevels: hints(
+        'Kapının ölçüsü tek başına değil, tipine bağlı olarak değişir.',
+        'Değişecek olan kapının genişliği değil, tipi.',
+        'Properties panelindeki Tip seçicisinden 900 × 2100 tipini seç.',
+        '1) d1’i seç. 2) Tip seçicisinden 900 x 2100mm’yi seç. 3) Genişliğin 900 olduğunu gör. 4) Kontrol Et.'
+      ),
+      primaryFields: ['typeId'],
+    },
+    levels: [L0],
+    elements: [...box(), door1('d1', 'w1', 2550, { width: 800, typeId: 'dt800', mark: 'D-01' })],
+    types: [DT800, DT900],
+    editable: ['typeId'],
+    seeds: ['d1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_t', type: 'property', elementId: 'd1', field: 'typeId', expected: 'dt900', tolerance: 0, message: 'd1 kapısı 900 x 2100mm tipini kullanmalı.' },
+      { id: 'c_w', type: 'exists', category: 'door', where: { id: 'd1', width: 900 }, message: 'd1 genişliği 900 mm olmalı.' },
+    ],
+  },
+
+  // ---- Çeşitlendirme: şablon görevler kendi senaryolarına kavuştu ---------
+  m13: {
+    lesson: {
+      objective:
+        'Zemin Kat’ta 5000 × 4000 mm kapalı bir hacim oluştur: 4 duvar, 20 m² iç alan.',
+      hintLevels: hints(
+        'Dört duvarın uçları birbirine değmeli; açık köşe hacmi kapatmaz.',
+        'Plana başlangıçtan (0, 0) başlayıp saat yönünde dört duvar çizmen yeterli.',
+        'Ölçüler: 5000 mm yatay, 4000 mm düşey. Zincirleme çizim köşeleri kendiliğinden birleştirir.',
+        '1) Duvar aracını seç. 2) (0,0) → (5000,0) → (5000,4000) → (0,4000) → (0,0). 3) Kontrol Et. İstersen Ölçüyle çiz bölümünü kullan.'
+      ),
+      primaryFields: ['start', 'end'],
+    },
+    levels: [L0],
+    elements: [],
+    editable: ['start', 'end', 'height', 'thickness', 'name'],
+    creatable: ['wall'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_n', type: 'metric', metric: 'wallCount', min: 4, max: 4, message: 'Tam olarak 4 duvar olmalı.' },
+      { id: 'c_a', type: 'metric', metric: 'enclosedAreaM2', min: 20, max: 20, message: 'Duvarlar 20 m² kapalı alan oluşturmalı.' },
+    ],
+  },
+  m14: {
+    lesson: {
+      objective:
+        'Zincir çizimle L biçimli bir plan kur: (0,0) → (6000,0) → (6000,2000) → (3000,2000) → (3000,4000) → (0,4000) → (0,0). Toplam 18 m².',
+      hintLevels: hints(
+        'Plan dikdörtgen değil; bir köşesi çıkıntılı, yani 6 duvar gerekir.',
+        'Her duvar bir öncekinin bittiği yerden başlar; son duvar başlangıç noktasına döner.',
+        'Zincir başlangıca dönünce kendiliğinden kapanır; ölçüleri sırayla gir.',
+        '1) Duvar aracı. 2) Köşeleri sırayla işaretle ya da Ölçüyle çiz: →6000, ↓2000, ←3000, ↓2000, ←3000, ↑4000. 3) Kontrol Et.'
+      ),
+      primaryFields: ['start', 'end'],
+    },
+    levels: [L0],
+    elements: [],
+    editable: ['start', 'end', 'height', 'thickness', 'name'],
+    creatable: ['wall'],
+    minutes: 8,
+    criteria: [
+      { id: 'c_n', type: 'metric', metric: 'wallCount', min: 6, max: 6, message: 'L biçimli plan 6 duvardan oluşmalı.' },
+      { id: 'c_a', type: 'metric', metric: 'enclosedAreaM2', min: 18, max: 18, message: 'Kapalı alan 18 m² olmalı.' },
+    ],
+  },
+  m28: {
+    lesson: {
+      objective:
+        'Kapı listesinde üç ayrı veri hatası var. Tüm kapıların genişliği 900 mm, pozları D-01…D-04 benzersiz olmalı ve koridora açılan d4 kapısı EI30 olmalı.',
+      hintLevels: hints(
+        'Dört kapıyı karşılaştır: ölçü, poz ve yangın sınıfı sütunlarına bak.',
+        'Hatalar üç farklı kapıda; her biri farklı bir alanda.',
+        'Biri tekrar eden poz, biri dar genişlik, biri eksik yangın sınıfı.',
+        '1) Çizelgeler’i aç. 2) d2 pozunu D-02 yap. 3) d3 genişliğini 900 yap. 4) d4 yangın sınıfını EI30 yap. 5) Kontrol Et.'
+      ),
+      primaryFields: ['mark', 'width', 'fireRating'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 1000, { mark: 'D-01' }),
+      door1('d2', 'w1', 3200, { mark: 'D-01' }),
+      door1('d3', 'w3', 1500, { mark: 'D-03', width: 800 }),
+      door1('d4', 'w3', 4000, { mark: 'D-04' }),
+    ],
+    editable: ['mark', 'width', 'fireRating'],
+    seeds: ['d2', 'd3', 'd4'],
+    minutes: 8,
+    criteria: [
+      { id: 'c_m', type: 'property', elementId: 'd2', field: 'mark', expected: 'D-02', tolerance: 0, message: 'd2 pozu benzersiz olmalı (D-02).' },
+      { id: 'c_w', type: 'property', elementId: 'd3', field: 'width', expected: 900, tolerance: 0, message: 'd3 genişliği 900 mm olmalı.' },
+      { id: 'c_f', type: 'property', elementId: 'd4', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'd4 kapısı EI30 olmalı.' },
+    ],
+  },
+
+  m05: {
+    lesson: {
+      objective:
+        'Kuzey duvarı (w3) iki ayrı yerden bozulmuş: yanlış tipte (Generic - 100mm) ve yüksekliği 2600 mm. Tipini Generic - 200mm yap, yüksekliğini 3000 mm yap.',
+      hintLevels: hints(
+        'Kalınlık ile yükseklik aynı yerden değişmez: biri tipte, biri nesnede tutulur.',
+        'Bozuk olan tek duvar w3; diğer üçü doğru.',
+        'Kalınlık Tip (Type) seçiciden, yükseklik Properties’teki nesne (Instance) alanından değişir.',
+        '1) w3’ü seç. 2) Tip seçicide Generic - 200mm’i seç. 3) Yüksekliği 3000 yap. 4) Kontrol Et.'
+      ),
+      primaryFields: ['typeId', 'height'],
+    },
+    levels: [L0],
+    elements: [
+      wall('w1', [0, 0], [6000, 0], { typeId: 'wt200' }),
+      wall('w2', [6000, 0], [6000, 4000], { typeId: 'wt200' }),
+      wall('w3', [6000, 4000], [0, 4000], { typeId: 'wt100', thickness: 100, height: 2600 }),
+      wall('w4', [0, 4000], [0, 0], { typeId: 'wt200' }),
+    ],
+    types: [WT200, WT100],
+    editable: ['typeId', 'height'],
+    seeds: ['w3'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_t', type: 'property', elementId: 'w3', field: 'typeId', expected: 'wt200', tolerance: 0, message: 'w3, Generic - 200mm tipini kullanmalı (Type).' },
+      { id: 'c_h', type: 'property', elementId: 'w3', field: 'height', expected: 3000, tolerance: 0, message: 'w3 yüksekliği 3000 mm olmalı (Instance).' },
+      { id: 'c_k', type: 'allEqual', category: 'wall', field: 'thickness', message: 'Tüm duvarların kalınlığı eşit olmalı.' },
+    ],
+  },
+  m26: {
+    lesson: {
+      objective:
+        'Kuzey duvarı (w3) kaçış koridoruna bakıyor. Bu duvardaki kapılar EI30 olmalı; diğer kapılar yangın sınıfsız (none) kalmalı.',
+      hintLevels: hints(
+        'Hangi kapının hangi duvarda olduğuna bak; kural duvara göre.',
+        'Kuzey duvarında iki kapı var; güneydeki kapıya dokunma.',
+        'Yangın sınıfı (Fire Rating) kapının nesne özelliğidir.',
+        '1) Kuzey duvarındaki iki kapıyı bul (Host: w3). 2) Her birinde Yangın Sınıfı: EI30. 3) Güney kapısını none bırak. 4) Kontrol Et.'
+      ),
+      primaryFields: ['fireRating'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 2550, { mark: 'D-01' }),
+      door1('d2', 'w3', 1200, { mark: 'D-02' }),
+      door1('d3', 'w3', 3800, { mark: 'D-03', fireRating: 'EI60' }),
+    ],
+    editable: ['fireRating'],
+    seeds: ['d1', 'd2', 'd3'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_2', type: 'property', elementId: 'd2', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'Kuzey duvarındaki d2 EI30 olmalı.' },
+      { id: 'c_3', type: 'property', elementId: 'd3', field: 'fireRating', expected: 'EI30', tolerance: 0, message: 'Kuzey duvarındaki d3 EI30 olmalı (EI60 gereğinden fazla).' },
+      { id: 'c_1', type: 'property', elementId: 'd1', field: 'fireRating', expected: 'none', tolerance: 0, message: 'Güney duvarındaki d1 yangın sınıfsız kalmalı.' },
+    ],
+  },
+  m27: {
+    lesson: {
+      objective:
+        'Pozlar karışmış: kapının pozu W-01, pencerenin pozu D-01 yazılmış. Kapı pozları D-, pencere pozları W- ile başlar; ikisini düzelt.',
+      hintLevels: hints(
+        'Poz (Mark), nesnenin kategorisini de anlatır: D kapı, W pencere.',
+        'Bir kapı ve bir pencere birbirinin pozunu almış.',
+        'Mark alanı her nesnenin Identity Data bölümünde.',
+        '1) Kapıyı seç, Mark: D-01. 2) Pencereyi seç, Mark: W-01. 3) Kontrol Et.'
+      ),
+      primaryFields: ['mark'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 2550, { mark: 'W-01' }),
+      window1('win1', 'w3', 2400, { mark: 'D-01' }),
+    ],
+    editable: ['mark'],
+    seeds: ['d1', 'win1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_d', type: 'property', elementId: 'd1', field: 'mark', expected: 'D-01', tolerance: 0, message: 'Kapının pozu D-01 olmalı.' },
+      { id: 'c_w', type: 'property', elementId: 'win1', field: 'mark', expected: 'W-01', tolerance: 0, message: 'Pencerenin pozu W-01 olmalı.' },
+    ],
+  },
+
   // ---- Bölüm 2: Level, Grid ---------------------------------------------
   m09: {
     lesson: {
@@ -947,6 +1177,88 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
       { id: 'c_area', type: 'metric', metric: 'enclosedAreaM2', min: 24, max: 24, message: 'Duvarlar 24 m² kapalı alan oluşturmalı.' },
       { id: 'c_doors', type: 'metric', metric: 'doorCount', min: 2, max: 2, message: 'Modelde iki kapı olmalı.' },
       { id: 'c_h', type: 'hosted', category: 'door', hostCategory: 'wall', min: 2, message: 'İki kapı da duvara bağlı olmalı.' },
+    ],
+  },
+  // ---- Bonus Bölüm 10: Aile ve katlar -----------------------------------
+  m59: {
+    lesson: {
+      objective:
+        'Ana giriş kapısı (d1) 1000 × 2100 mm olmalı; diğer iki kapı 900 mm kalmalı. Tipi çoğaltarak çöz.',
+      hintLevels: hints(
+        'Üç kapı aynı tipi kullanıyor; tipi değiştirmek üçünü birden değiştirir.',
+        'Değişecek yalnızca d1; ona ait yeni bir tip gerekiyor.',
+        'Edit Type içinde Çoğalt (Duplicate) yeni bir tip oluşturur ve seçili kapıya verir.',
+        '1) d1’i seç. 2) Edit Type → Çoğalt, ad: Ana Giriş 1000 x 2100. 3) Yeni tipte width: 1000. 4) Kontrol Et.'
+      ),
+      primaryFields: ['typeParams', 'typeId'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      door1('d1', 'w1', 2550, { typeId: 'dt900', mark: 'D-01' }),
+      door1('d2', 'w3', 1000, { typeId: 'dt900', mark: 'D-02' }),
+      door1('d3', 'w3', 4000, { typeId: 'dt900', mark: 'D-03' }),
+    ],
+    types: [DT900],
+    editable: ['typeParams', 'typeId'],
+    seeds: ['d1'],
+    minutes: 7,
+    criteria: [
+      { id: 'c_d1', type: 'exists', category: 'door', where: { id: 'd1', width: 1000 }, message: 'd1 kapısı 1000 mm genişlikte olmalı.' },
+      { id: 'c_d2', type: 'exists', category: 'door', where: { id: 'd2', width: 900 }, message: 'd2 kapısı 900 mm kalmalı.' },
+      { id: 'c_d3', type: 'exists', category: 'door', where: { id: 'd3', width: 900 }, message: 'd3 kapısı 900 mm kalmalı.' },
+      { id: 'c_t', type: 'typeUsage', category: 'door', typeId: 'dt900', count: 2, message: 'Standart tip yalnızca iki iç kapıda kalmalı.' },
+    ],
+  },
+  m60: {
+    lesson: {
+      objective: 'Zemin Kat’taki dört dış duvarı 1. Kat’a aynı konumda kopyala.',
+      hintLevels: hints(
+        'Üst kat duvarları alt kattakilerle aynı hizada olacak.',
+        'Dört duvarın hepsi kopyalanacak; hedef 1. Kat.',
+        'Değiştir panelinde “Kata kopyala” sekmesi seçili duvarları başka bir kata yapıştırır.',
+        '1) Değiştir → Kata kopyala. 2) Dört duvarı işaretle. 3) Hedef kat: 1. Kat. 4) Uygula ve Kontrol Et.'
+      ),
+      primaryFields: [],
+    },
+    levels: [L0, l1(3000)],
+    elements: [...box()],
+    editable: [],
+    creatable: ['wall'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_up', type: 'metric', metric: 'upperWallCount', min: 4, max: 4, message: '1. Kat’ta 4 duvar olmalı.' },
+      { id: 'c_all', type: 'metric', metric: 'wallCount', min: 8, max: 8, message: 'Toplam 8 duvar olmalı (4 zemin + 4 üst).' },
+      { id: 'c_n', type: 'exists', category: 'wall', where: { baseLevelId: 'l1', axisDir: 'h', axisPos: 4000 }, message: 'Üst kat duvarları alt katla aynı hizada olmalı.' },
+    ],
+  },
+  m61: {
+    lesson: {
+      objective:
+        '1. Kat’a (+3150 mm) döşeme ekle ve Zemin Kat ile 1. Kat arasına, yüksekliği tam 3150 mm tutan bir merdiven yerleştir.',
+      hintLevels: hints(
+        'Üst katın zemini yok; ayrıca katlar arasında bağlantı yok.',
+        'Bir döşeme (1. Kat) ve bir merdiven (Zemin → 1. Kat) gerekiyor.',
+        'Basamak sayısı × basamak yüksekliği = 3150 olmalı; 175 mm’lik basamakla kaç basamak gerekir?',
+        '1) Aktif kat: 1. Kat, Döşeme aracıyla duvarları seçip döşeme oluştur. 2) Merdiven: alt Zemin, üst 1. Kat, 18 × 175. 3) Kontrol Et.'
+      ),
+      primaryFields: ['risers', 'riserHeight'],
+    },
+    levels: [L0, l1(3150)],
+    elements: [
+      ...box({ height: 3150 }),
+      wall('u1', [0, 0], [6000, 0], { baseLevelId: 'l1' }),
+      wall('u2', [6000, 0], [6000, 4000], { baseLevelId: 'l1' }),
+      wall('u3', [6000, 4000], [0, 4000], { baseLevelId: 'l1' }),
+      wall('u4', [0, 4000], [0, 0], { baseLevelId: 'l1' }),
+    ],
+    editable: ['risers', 'riserHeight', 'treadDepth', 'topLevelId', 'direction', 'thickness'],
+    creatable: ['floor', 'stair'],
+    minutes: 9,
+    criteria: [
+      { id: 'c_f', type: 'exists', category: 'floor', where: { levelId: 'l1' }, message: '1. Kat’ta bir döşeme olmalı.' },
+      { id: 'c_s', type: 'exists', category: 'stair', where: { baseLevelId: 'l0', topLevelId: 'l1' }, message: 'Merdiven Zemin Kat’tan 1. Kat’a çıkmalı.' },
+      { id: 'c_r', type: 'exists', category: 'stair', where: { rise: 3150 }, message: 'Merdivenin toplam yüksekliği 3150 mm olmalı.' },
     ],
   },
 };

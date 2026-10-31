@@ -16,6 +16,11 @@ import type {
   SaveEnvelopeV1,
 } from '../domain/types';
 import { playSound } from './sound';
+import { HelpSheet } from './HelpSheet';
+import { CertificateSheet } from './CertificateSheet';
+import { AboutSheet } from './AboutSheet';
+import { workshopUnlocked } from '../content/workshop';
+import { certificateUnlocked } from '../domain/certificate';
 
 export interface DashboardProps {
   missions: MissionTask[];
@@ -23,6 +28,10 @@ export interface DashboardProps {
   theme: 'light' | 'dark';
   streak: number;
   meta: GameMeta;
+  onSetPlayerName: (name: string) => void;
+  onStartWorkshop: () => void;
+  onSetHaptics: (on: boolean) => void;
+  onSetReminder: (on: boolean) => Promise<{ ok: boolean; reason?: string }>;
   initialInfoOpen?: boolean;
   onBackToTitle?: () => void;
   storageWarning: string | null;
@@ -65,6 +74,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   theme,
   streak,
   meta,
+  onSetPlayerName,
+  onStartWorkshop,
+  onSetHaptics,
+  onSetReminder,
   initialInfoOpen = false,
   onBackToTitle,
   storageWarning,
@@ -87,6 +100,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [expandedChapterId, setExpandedChapterId] = useState<string>('');
   const [infoModalOpen, setInfoModalOpen] = useState(initialInfoOpen);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [certificateOpen, setCertificateOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [reminderNote, setReminderNote] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,6 +233,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <span className="bq-i-badge">i</span>
           </button>
+
+          {certificateUnlocked(save.completed) && (
+            <button
+              type="button"
+              className="bq-icon-pill-btn"
+              data-testid="certificate-btn"
+              aria-label="Mezuniyet sertifikası"
+              title="Mezuniyet sertifikası"
+              onClick={() => {
+                playSound('click');
+                setCertificateOpen(true);
+              }}
+            >
+              <span>🎓</span>
+            </button>
+          )}
+
+          <HelpSheet />
 
           <button
             type="button"
@@ -369,6 +403,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
         )}
       </section>
+
+      {workshopUnlocked(save.completed) && (
+        <button
+          type="button"
+          className="bq-workshop-card"
+          data-testid="workshop-btn"
+          onClick={() => {
+            playSound('click');
+            onStartWorkshop();
+          }}
+        >
+          <span className="bq-workshop-icon" aria-hidden="true">🛠️</span>
+          <span>
+            <strong>Serbest Atölye</strong>
+            <small>Görevsiz, tüm araçlar açık. Kendi evini kur; modelin cihazında kalır.</small>
+          </span>
+        </button>
+      )}
 
       {/* Compact Stage Header + 7-Chapter Tabs + Connected Blueprint Route Track */}
       <div className="bq-stage-banner">
@@ -571,10 +623,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         })}
       </section>
 
-      {/* Compact 9-Chapter / 58-Mission Roadmap Accordion */}
+      {/* Compact 10-Chapter / 61-Mission Roadmap Accordion */}
       <section
         className="bq-curriculum-section"
-        aria-label="9 Bölüm ve 58 Görevlik Revit Eğitim Mimarisi"
+        aria-label="10 Bölüm ve 61 Görevlik Revit Eğitim Mimarisi"
         data-testid="curriculum-chapters"
       >
         <div className="bq-curriculum-header">
@@ -689,6 +741,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       >
         <div className="bq-settings-group">
           <h3>Tercihler & Kayıt Yönetimi</h3>
+          {reminderNote && (
+            <p className="bq-sched-note" role="status" data-testid="reminder-note">{reminderNote}</p>
+          )}
           <div className="bq-settings-row">
             <label className="bq-toggle-label">
               <input
@@ -709,6 +764,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 data-testid="toggle-sound"
               />
               <span>Ses Efektleri</span>
+            </label>
+            <label className="bq-toggle-label">
+              <input
+                type="checkbox"
+                checked={!meta.hapticsOff}
+                onChange={(e) => onSetHaptics(e.target.checked)}
+                data-testid="toggle-haptics"
+              />
+              <span>Titreşim</span>
+            </label>
+            <label className="bq-toggle-label">
+              <input
+                type="checkbox"
+                checked={meta.reminderHour !== null}
+                onChange={async (e) => {
+                  const res = await onSetReminder(e.target.checked);
+                  setReminderNote(
+                    res.ok
+                      ? null
+                      : res.reason === 'web'
+                      ? 'Hatırlatma yalnızca iPhone/iPad uygulamasında çalışır.'
+                      : 'Bildirim izni verilmedi. Ayarlar → Bildirimler’den açabilirsin.'
+                  );
+                }}
+                data-testid="toggle-reminder"
+              />
+              <span>Günlük hatırlatma (19:00)</span>
             </label>
           </div>
         </div>
@@ -734,6 +816,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <div className="bq-settings-group bq-settings-actions-col">
+          <button
+            type="button"
+            className="bq-btn bq-btn-secondary bq-btn-compact"
+            data-testid="about-btn"
+            onClick={() => setAboutOpen(true)}
+          >
+            Hakkında & Gizlilik
+          </button>
           <button
             type="button"
             className="bq-btn bq-btn-secondary bq-btn-compact"
@@ -789,6 +879,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
       </section>
+
+      {aboutOpen && <AboutSheet onClose={() => setAboutOpen(false)} />}
+
+      {certificateOpen && (
+        <CertificateSheet
+          completed={save.completed}
+          name={meta.playerName}
+          onNameChange={onSetPlayerName}
+          onClose={() => setCertificateOpen(false)}
+        />
+      )}
 
       {achievementsOpen && (
         <div
@@ -856,7 +957,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <strong>3. Kontrol Et & Düzelt:</strong> Turuncu <strong>Kontrol et</strong> butonuna bas. Hata varsa sistem neden yanlış olduğunu ve nasıl düzelteceğini söyler.
               </li>
               <li>
-                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 58 görevlik haritada ilerle!
+                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 61 görevlik haritada ilerle!
               </li>
             </ul>
             <div className="bq-modal-actions">

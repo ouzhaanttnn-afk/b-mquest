@@ -110,6 +110,16 @@ export const SheetSvg: React.FC<SheetSvgProps> = ({
 
 /** Renders an SVG element to a PNG download (the player's first sheet). */
 export async function downloadSvgAsPng(svg: SVGSVGElement, fileName: string): Promise<void> {
+  return svgToPngDownload(svg, SHEET_W * 4, SHEET_H * 4, fileName);
+}
+
+/** Renders any SVG element to a PNG of the given pixel size and downloads it. */
+export async function svgToPngDownload(
+  svg: SVGSVGElement,
+  width: number,
+  height: number,
+  fileName: string
+): Promise<void> {
   const xml = new XMLSerializer().serializeToString(svg);
   const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -121,8 +131,8 @@ export async function downloadSvgAsPng(svg: SVGSVGElement, fileName: string): Pr
       img.src = url;
     });
     const canvas = document.createElement('canvas');
-    canvas.width = SHEET_W * 4;
-    canvas.height = SHEET_H * 4;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.fillStyle = '#FFFFFF';

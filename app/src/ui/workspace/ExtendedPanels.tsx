@@ -8,6 +8,7 @@ import {
   createWindowCommand,
   setLevelElevationCommand,
   updateTypeParamCommand,
+  duplicateTypeCommand,
   type CommandResult,
   type MissionSessionState,
 } from '../../domain/commands';
@@ -330,6 +331,7 @@ export const TypePanel: React.FC<{
   applyResult: (res: CommandResult) => void;
 }> = ({ model, selectedElement, session, canEditType, applyResult }) => {
   const [open, setOpen] = useState(false);
+  const [dupName, setDupName] = useState('');
   const typeId = (selectedElement as { typeId?: string }).typeId;
   const type = typeId ? model.types?.find((t) => t.id === typeId) : undefined;
   if (!type) return null;
@@ -369,6 +371,34 @@ export const TypePanel: React.FC<{
                 {param}: {value}
               </p>
             )
+          )}
+          {canEditType && (
+            <div className="bq-type-duplicate" data-testid="type-duplicate">
+              <label className="bq-field">
+                <span>Çoğalt (Duplicate): yeni tip adı</span>
+                <input
+                  data-testid="type-duplicate-name"
+                  value={dupName}
+                  maxLength={80}
+                  placeholder={`${type.name} (2)`}
+                  onChange={(e) => setDupName(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="bq-btn bq-btn-secondary bq-btn-compact"
+                data-testid="type-duplicate-btn"
+                onClick={() => {
+                  const assign = session.task.permissions.editableFields.includes('typeId')
+                    ? selectedElement.id
+                    : undefined;
+                  applyResult(duplicateTypeCommand(session, type.id, dupName || `${type.name} (2)`, assign));
+                  setDupName('');
+                }}
+              >
+                Çoğalt ve bu nesneye ver
+              </button>
+            </div>
           )}
         </div>
       )}

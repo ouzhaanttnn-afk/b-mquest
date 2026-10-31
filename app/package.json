@@ -1,7 +1,7 @@
 {
   "name": "app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,10 @@
   "dependencies": {
     "@capacitor/cli": "8.5.3",
     "@capacitor/core": "8.5.3",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "8.5.3",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/share": "^8.0.3",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "ajv": "^8.20.0",

@@ -16,6 +16,14 @@ export interface GameMeta {
   announced: string[];
   /** Per-mission practice stats, kept on this device only. */
   stats: Record<string, MissionStats>;
+  /** The three-card first-run tour has been seen or skipped. */
+  introDone: boolean;
+  /** Name printed on the graduation certificate. */
+  playerName: string;
+  /** Haptic feedback switched off by the player. */
+  hapticsOff: boolean;
+  /** Hour (0-23) of the daily reminder, or null when it is off. */
+  reminderHour: number | null;
 }
 
 export interface MissionStats {
@@ -30,6 +38,10 @@ export const EMPTY_META: GameMeta = {
   bestStreak: 0,
   announced: [],
   stats: {},
+  introDone: false,
+  playerName: '',
+  hapticsOff: false,
+  reminderHour: null,
 };
 
 type Completed = Record<string, { bestScore: number }>;
@@ -49,7 +61,7 @@ const goldCount = (c: Completed) =>
 const chapterAchievements: Achievement[] = SEVEN_CHAPTER_CURRICULUM.map(
   (ch) => ({
     id: `chapter-${ch.chapterNumber}`,
-    icon: ['🧱', '📏', '🏠', '🗂️', '📐', '🔎', '🏆', '📊', '🛠️'][ch.chapterNumber - 1],
+    icon: ['🧱', '📏', '🏠', '🗂️', '📐', '🔎', '🏆', '📊', '🛠️', '🏢'][ch.chapterNumber - 1],
     title: `Bölüm ${ch.chapterNumber} Tamam`,
     description: ch.title.replace(/^Bölüm \d+: /, ''),
     earned: (c) => ch.missions.every((m) => m.id in c),
@@ -233,6 +245,13 @@ export function loadMeta(): GameMeta {
         ? p.announced.filter((x): x is string => typeof x === 'string')
         : [],
       stats: sanitizeStats(p.stats),
+      introDone: p.introDone === true,
+      playerName: typeof p.playerName === 'string' ? p.playerName.slice(0, 40) : '',
+      hapticsOff: p.hapticsOff === true,
+      reminderHour:
+        typeof p.reminderHour === 'number' && p.reminderHour >= 0 && p.reminderHour <= 23
+          ? Math.round(p.reminderHour)
+          : null,
     };
   } catch {
     return EMPTY_META;

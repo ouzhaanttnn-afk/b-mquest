@@ -100,8 +100,8 @@ describe('Faz 1 — gerçek BIM nesnelerine bağlı görevler', () => {
     expect(res.criteria.find((c) => c.id === 'c_cl')?.actual).toContain('r1');
   });
 
-  it('58 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
-    expect(Object.keys(missions)).toHaveLength(58);
+  it('61 görevin hepsi hâlâ yüklenir ve şemadan geçer', () => {
+    expect(Object.keys(missions)).toHaveLength(61);
   });
 });
 
@@ -180,5 +180,199 @@ describe('Bonus Bölüm 9 — Modify araçları', () => {
       s = r.state;
       expect(s.model.elements.length).toBe(4);
     }
+  });
+});
+
+import { addLevelCommand, setLevelElevationCommand as setElev, moveWallCommand } from '../src/domain/commands';
+
+describe('Faz 1 — yeniden yazılan görevler', () => {
+  it('m07: kat eklenir ve kotu 3300 yapılınca geçer', () => {
+    expect(evaluate(missions.m07, missions.m07.initialModel, 0).pass).toBe(false);
+    const s = run('m07', [(st) => addLevelCommand(st), (st) => setElev(st, 'l1', 3300)]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m07: varsayılan 3000 mm kot yetmez', () => {
+    const s = run('m07', [(st) => addLevelCommand(st)]);
+    expect(evaluate(s.task, s.model, 0).pass).toBe(false);
+  });
+  it('m11: duvarı aksa oturtunca geçer, aksı kaydırarak çözülemez', () => {
+    expect(evaluate(missions.m11, missions.m11.initialModel, 0).pass).toBe(false);
+    const s = run('m11', [(st) => moveWallCommand(st, 'w1', -150, 0)]);
+    expect(passes(s).pass).toBe(true);
+    const s0 = createInitialSession(missions.m11);
+    expect(moveWallCommand(s0, 'ga', 150, 0).ok).toBe(false);
+  });
+  it('m23: tip değişince genişlik de değişir; genişlik tek başına düzenlenemez', () => {
+    const s0 = createInitialSession(missions.m23);
+    expect(updateElementProperty(s0, 'd1', 'width', 900).ok).toBe(false);
+    const s = run('m23', [(st) => updateElementProperty(st, 'd1', 'typeId', 'dt900')]);
+    expect(passes(s).pass).toBe(true);
+  });
+});
+
+import { createRectangleWallsCommand } from '../src/domain/commands';
+import { wallByLength, EMPTY_CHAIN, type WallDir } from '../src/ui/workspace/toolActions';
+
+describe('Duvar çizmeyi kolaylaştıranlar', () => {
+  const d = { baseLevelId: 'l0', height: 3000, thickness: 200 };
+  it('4 duvarlı oda tek adımda gelir ve m02 çözümünü sağlar', () => {
+    const s = run('m02', [
+      (st) => createRectangleWallsCommand(st, { x: 0, z: 0, width: 6000, depth: 4000, ...d }),
+    ]);
+    expect(s.model.elements.filter((e) => e.type === 'wall')).toHaveLength(4);
+    expect(s.past).toHaveLength(1);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('ölçüyle duvar zinciri: 4 yön, zincir kapanır', () => {
+    let s = createInitialSession(missions.m02);
+    let chain = EMPTY_CHAIN;
+    for (const [dir, len] of [['R', 6000], ['D', 4000], ['L', 6000], ['U', 4000]] as const) {
+      const o = wallByLength(s, chain, dir, len, d);
+      expect(o.result?.ok, `${dir}`).toBe(true);
+      if (o.result?.ok) s = o.result.state;
+      chain = o.next;
+    }
+    expect(chain).toEqual(EMPTY_CHAIN);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('geçersiz uzunluk reddedilir', () => {
+    const s = createInitialSession(missions.m02);
+    expect(wallByLength(s, EMPTY_CHAIN, 'R', 50, d).result).toBeNull();
+    expect(wallByLength(s, EMPTY_CHAIN, 'R', 1.5, d).result).toBeNull();
+  });
+});
+
+describe('Çeşitlendirilen görevler: m13, m14, m28', () => {
+  const d = { baseLevelId: 'l0', height: 3000, thickness: 200 };
+  const chain = (id: string, steps: Array<[WallDir, number]>) => {
+    let s = createInitialSession(missions[id]);
+    let c = EMPTY_CHAIN;
+    for (const [dir, len] of steps) {
+      const o = wallByLength(s, c, dir, len, d);
+      expect(o.result?.ok, `${id} ${dir}`).toBe(true);
+      if (o.result?.ok) s = o.result.state;
+      c = o.next;
+    }
+    return s;
+  };
+
+  it('hepsi başlangıçta kalır', () => {
+    for (const id of ['m13', 'm14', 'm28']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+  it('m13: 5000 × 4000 oda geçer; m02’nin 6000 × 4000 odası geçmez', () => {
+    const ok = chain('m13', [['R', 5000], ['D', 4000], ['L', 5000], ['U', 4000]]);
+    expect(passes(ok).pass).toBe(true);
+    const wrong = chain('m13', [['R', 6000], ['D', 4000], ['L', 6000], ['U', 4000]]);
+    expect(evaluate(wrong.task, wrong.model, 0).pass).toBe(false);
+  });
+  it('m14: L biçimli plan 6 duvar ve 18 m²; dikdörtgen geçmez', () => {
+    const ok = chain('m14', [['R', 6000], ['D', 2000], ['L', 3000], ['D', 2000], ['L', 3000], ['U', 4000]]);
+    expect(passes(ok).pass).toBe(true);
+    const box4 = chain('m14', [['R', 6000], ['D', 3000], ['L', 6000], ['U', 3000]]);
+    expect(evaluate(box4.task, box4.model, 0).pass).toBe(false);
+  });
+  it('m28: üç hata üç düzeltmeyle çözülür; d1 kilitli', () => {
+    const s0 = createInitialSession(missions.m28);
+    expect(updateElementProperty(s0, 'd1', 'mark', 'D-09').ok).toBe(false);
+    const s = run('m28', [
+      (st) => updateElementProperty(st, 'd2', 'mark', 'D-02'),
+      (st) => updateElementProperty(st, 'd3', 'width', 900),
+      (st) => updateElementProperty(st, 'd4', 'fireRating', 'EI30'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+});
+
+describe('Yeniden yazılan m05, m26, m27', () => {
+  it('başlangıçta kalırlar', () => {
+    for (const id of ['m05', 'm26', 'm27']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+  it('m05: yalnız tip ya da yalnız yükseklik yetmez; ikisi birlikte geçer', () => {
+    const onlyType = run('m05', [(st) => updateElementProperty(st, 'w3', 'typeId', 'wt200')]);
+    expect(evaluate(onlyType.task, onlyType.model, 0).pass).toBe(false);
+    expect(onlyType.model.elements.find((e) => e.id === 'w3')).toMatchObject({ thickness: 200 });
+    const s = run('m05', [
+      (st) => updateElementProperty(st, 'w3', 'typeId', 'wt200'),
+      (st) => updateElementProperty(st, 'w3', 'height', 3000),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m26: bağlama göre EI30; güney kapısına EI30 vermek yanlış', () => {
+    const over = run('m26', [
+      (st) => updateElementProperty(st, 'd1', 'fireRating', 'EI30'),
+      (st) => updateElementProperty(st, 'd2', 'fireRating', 'EI30'),
+      (st) => updateElementProperty(st, 'd3', 'fireRating', 'EI30'),
+    ]);
+    expect(evaluate(over.task, over.model, 0).pass).toBe(false);
+    const s = run('m26', [
+      (st) => updateElementProperty(st, 'd2', 'fireRating', 'EI30'),
+      (st) => updateElementProperty(st, 'd3', 'fireRating', 'EI30'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+  it('m27: kapı ve pencere pozları düzelince geçer', () => {
+    const s = run('m27', [
+      (st) => updateElementProperty(st, 'd1', 'mark', 'D-01'),
+      (st) => updateElementProperty(st, 'win1', 'mark', 'W-01'),
+    ]);
+    expect(passes(s).pass).toBe(true);
+  });
+});
+
+import { copyWallsToLevelCommand, duplicateTypeCommand } from '../src/domain/commands';
+
+describe('Bonus Bölüm 10 — aile tipleri ve çok katlı model', () => {
+  it('hepsi başlangıçta kalır', () => {
+    for (const id of ['m59', 'm60', 'm61']) {
+      expect(evaluate(missions[id], missions[id].initialModel, 0).pass, id).toBe(false);
+    }
+  });
+
+  it('m59: tipi değiştirmek tüm kapıları değiştirir; çoğaltıp atamak yalnız d1’i', () => {
+    const wrong = run('m59', [(st) => updateTypeParamCommand(st, 'dt900', 'width', 1000)]);
+    expect(evaluate(wrong.task, wrong.model, 0).pass).toBe(false);
+
+    const s = run('m59', [
+      (st) => duplicateTypeCommand(st, 'dt900', 'Ana Giriş 1000 x 2100', 'd1'),
+      (st) => {
+        const id = st.model.types!.find((t) => t.name === 'Ana Giriş 1000 x 2100')!.id;
+        return updateTypeParamCommand(st, id, 'width', 1000);
+      },
+    ]);
+    expect(passes(s).pass).toBe(true);
+    expect(s.model.types).toHaveLength(2);
+  });
+
+  it('m59: aynı adla ikinci tip ve boş ad reddedilir', () => {
+    const s0 = createInitialSession(missions.m59);
+    expect(duplicateTypeCommand(s0, 'dt900', '900 x 2100mm').ok).toBe(false);
+    expect(duplicateTypeCommand(s0, 'dt900', '   ').ok).toBe(false);
+    expect(duplicateTypeCommand(s0, 'dt900', 'Yeni', 'w1').ok).toBe(false);
+  });
+
+  it('m60: duvarlar üst kata aynı hizada kopyalanır; aynı kata kopya reddedilir', () => {
+    const s0 = createInitialSession(missions.m60);
+    expect(copyWallsToLevelCommand(s0, ['w1'], 'l0').ok).toBe(false);
+    const s = run('m60', [(st) => copyWallsToLevelCommand(st, ['w1', 'w2', 'w3', 'w4'], 'l1')]);
+    expect(passes(s).pass).toBe(true);
+    const up = s.model.elements.filter((e) => e.type === 'wall' && e.baseLevelId === 'l1');
+    expect(up).toHaveLength(4);
+  });
+
+  it('m61: döşeme + 18 × 175 merdiven geçer; 17 × 175 geçmez', () => {
+    const short = run('m61', [
+      (st) => createFloorCommand(st, { levelId: 'l1' }),
+      (st) => createStairCommand(st, { baseLevelId: 'l0', topLevelId: 'l1', start: [1000, 1000], direction: 'x+', risers: 17, riserHeight: 175 }),
+    ]);
+    expect(evaluate(short.task, short.model, 0).pass).toBe(false);
+    const s = run('m61', [
+      (st) => createFloorCommand(st, { levelId: 'l1' }),
+      (st) => createStairCommand(st, { baseLevelId: 'l0', topLevelId: 'l1', start: [1000, 1000], direction: 'x+', risers: 18, riserHeight: 175 }),
+    ]);
+    expect(passes(s).pass).toBe(true);
   });
 });

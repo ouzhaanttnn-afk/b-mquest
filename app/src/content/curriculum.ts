@@ -12,7 +12,7 @@ export interface PlannedMissionSummary {
 }
 
 export interface CurriculumChapter {
-  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   id: string;
   title: string;
   subtitle: string;
@@ -133,6 +133,16 @@ export const SEVEN_CHAPTER_CURRICULUM: CurriculumChapter[] = [
     missionRangeLabel: 'Görev 54 – 58',
     pedagogyNote: 'Bonus — Modify sekmesi: çizmek yerine çoğaltarak ve hizalayarak modelle',
     missions: buildChapterMissions(54, 58),
+  },
+  {
+    chapterNumber: 10,
+    id: 'ch10',
+    title: 'Bölüm 10: Bonus — Aile Tipleri ve Çok Katlı Model',
+    subtitle:
+      'Edit Type → Duplicate ile yeni tip üretme, duvarları başka bir kata hizalı yapıştırma, üst kat döşemesi ve katları bağlayan merdiven.',
+    missionRangeLabel: 'Görev 59 – 61',
+    pedagogyNote: 'Bonus — tek kattan çok katlı binaya geçiş',
+    missions: buildChapterMissions(59, 61),
   },
 ];
 
