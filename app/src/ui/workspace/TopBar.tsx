@@ -68,7 +68,15 @@ export const TopBar: React.FC<TopBarProps> = ({
   setSoundMutedState,
   onToggleTheme,
   theme,
-}) => (
+}) => {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [helpOpen, setHelpOpen] = React.useState(false);
+  const levelsPrimary = showLevels && task.permissions.editableFields.includes('elevation');
+  const pick = (fn: () => void) => {
+    setMenuOpen(false);
+    fn();
+  };
+  return (
   <>
       <header className="bq-ws-topbar">
         <div className="bq-ws-title-group">
@@ -172,23 +180,13 @@ export const TopBar: React.FC<TopBarProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            className="bq-tool-btn"
-            data-testid="visibility-btn"
-            onClick={onOpenVisibility}
-            title="Görünürlük: kategorileri aç/kapat"
-          >
-            <span>Görünürlük{hiddenCount > 0 ? ` (${hiddenCount})` : ''}</span>
-          </button>
-
           {showModify && (
             <button
               type="button"
               className="bq-tool-btn"
               data-testid="modify-btn"
               onClick={onOpenModify}
-              title="Modify: Kopyala, Aynala, Öteleme, Hizala"
+              title="Modify: Kopyala, Aynala, Öteleme, Hizala, Kata kopyala"
             >
               <span>Değiştir</span>
             </button>
@@ -206,7 +204,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             </button>
           )}
 
-          {showLevels && (
+          {levelsPrimary && (
             <button
               type="button"
               className="bq-tool-btn"
@@ -225,11 +223,12 @@ export const TopBar: React.FC<TopBarProps> = ({
             disabled={session.past.length === 0}
             onClick={() => onSessionChange(undoCommand(session))}
             title="Geri Al (Ctrl+Z)"
+            aria-label="Geri Al"
           >
             <svg width="18" height="18" aria-hidden="true">
               <use href="./assets/ui/icons.svg#undo" />
             </svg>
-            <span>Geri Al</span>
+            <span className="bq-tool-label">Geri Al</span>
           </button>
 
           <button
@@ -239,83 +238,108 @@ export const TopBar: React.FC<TopBarProps> = ({
             disabled={session.future.length === 0}
             onClick={() => onSessionChange(redoCommand(session))}
             title="İleri Al (Ctrl+Shift+Z)"
+            aria-label="İleri Al"
           >
             <svg width="18" height="18" aria-hidden="true">
               <use href="./assets/ui/icons.svg#redo" />
             </svg>
-            <span>İleri Al</span>
+            <span className="bq-tool-label">İleri Al</span>
           </button>
 
           <button
             type="button"
-            ref={resetTriggerBtnRef}
-            className="bq-tool-btn bq-tool-danger"
-            data-testid="reset-mission-btn"
-            onClick={() => setResetModalOpen(true)}
-            title="Görevi Başlangıç Durumuna Sıfırla"
-          >
-            <svg width="18" height="18" aria-hidden="true">
-              <use href="./assets/ui/icons.svg#reset" />
-            </svg>
-            <span>Sıfırla</span>
-          </button>
-
-          {task.id === 'm01' && (
-            <button
-              type="button"
-              className="bq-tool-btn"
-              data-testid="start-tour-btn"
-              onClick={startMission1Tutorial}
-              title="Adım Adım Rehber Turunu Başlat"
-            >
-              <span>Rehber Turu</span>
-            </button>
-          )}
-
-          <HelpSheet className="bq-tool-btn" />
-
-          <button
-            type="button"
-            className="bq-info-btn"
-            data-testid="ws-info-btn"
+            className="bq-tool-btn bq-more-btn"
+            data-testid="more-menu-btn"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-label="Diğer seçenekler"
+            title="Diğer seçenekler"
             onClick={() => {
               playSound('click');
-              setInfoModalOpen(true);
+              setMenuOpen(true);
             }}
-            title="Görev Rehberi ve BIM Kuralları (ⓘ)"
-            aria-label="Görev Rehberi ve BIM Kuralları"
           >
-            i
+            <span aria-hidden="true">⋯</span>
+            {hiddenCount > 0 && <span className="bq-more-dot" aria-hidden="true" />}
           </button>
-
-          <button
-            type="button"
-            className="bq-tool-btn"
-            data-testid="sound-toggle-btn"
-            onClick={() => {
-              const next = !soundMuted;
-              setSoundMuted(next);
-              setSoundMutedState(next);
-              if (!next) playSound('click');
-            }}
-            title={soundMuted ? 'Oyun Seslerini Aç' : 'Oyun Seslerini Kapat'}
-            aria-label={soundMuted ? 'Oyun Seslerini Aç' : 'Oyun Seslerini Kapat'}
-          >
-            <span>{soundMuted ? '🔇' : '🔊'}</span>
-          </button>
-
-          {onToggleTheme && (
-            <button
-              type="button"
-              className="bq-tool-btn"
-              data-testid="ws-theme-toggle-btn"
-              onClick={onToggleTheme}
-              title={theme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'}
-            >
-              <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
-            </button>
-          )}
         </div>
       </header>
+
+      {menuOpen && (
+        <div
+          className="bq-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Diğer seçenekler"
+          data-testid="more-menu"
+          onClick={() => setMenuOpen(false)}
+        >
+          <div className="bq-modal-card bq-menu-card" onClick={(e) => e.stopPropagation()}>
+            <div className="bq-form-title-row">
+              <h2>Seçenekler</h2>
+              <button type="button" className="bq-chip-btn" onClick={() => setMenuOpen(false)}>
+                ✕ Kapat
+              </button>
+            </div>
+            <div className="bq-menu-group">
+              <span className="bq-menu-group-title">Görev</span>
+              <button type="button" className="bq-menu-item" data-testid="ws-info-btn" onClick={() => pick(() => setInfoModalOpen(true))}>
+                <span aria-hidden="true">ⓘ</span> Görev rehberi ve kurallar
+              </button>
+              <button type="button" className="bq-menu-item" data-testid="help-btn" onClick={() => pick(() => setHelpOpen(true))}>
+                <span aria-hidden="true">📖</span> Revit sözlüğü ve kısayollar
+              </button>
+              {task.id === 'm01' && (
+                <button type="button" className="bq-menu-item" data-testid="start-tour-btn" onClick={() => pick(() => void startMission1Tutorial())}>
+                  <span aria-hidden="true">🧭</span> Rehber turu
+                </button>
+              )}
+              <button
+                type="button"
+                ref={resetTriggerBtnRef}
+                className="bq-menu-item bq-menu-danger"
+                data-testid="reset-mission-btn"
+                onClick={() => pick(() => setResetModalOpen(true))}
+              >
+                <span aria-hidden="true">↺</span> Görevi sıfırla
+              </button>
+            </div>
+            <div className="bq-menu-group">
+              <span className="bq-menu-group-title">Görünüm</span>
+              <button type="button" className="bq-menu-item" data-testid="visibility-btn" onClick={() => pick(onOpenVisibility)}>
+                <span aria-hidden="true">👁</span> Görünürlük{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
+              </button>
+              {showLevels && !levelsPrimary && (
+                <button type="button" className="bq-menu-item" data-testid="levels-btn" onClick={() => pick(onOpenLevels)}>
+                  <span aria-hidden="true">🏢</span> Katlar
+                </button>
+              )}
+            </div>
+            <div className="bq-menu-group">
+              <span className="bq-menu-group-title">Ayarlar</span>
+              <button
+                type="button"
+                className="bq-menu-item"
+                data-testid="sound-toggle-btn"
+                onClick={() => {
+                  const next = !soundMuted;
+                  setSoundMuted(next);
+                  setSoundMutedState(next);
+                  if (!next) playSound('click');
+                }}
+              >
+                <span aria-hidden="true">{soundMuted ? '🔇' : '🔊'}</span> Ses: {soundMuted ? 'kapalı' : 'açık'}
+              </button>
+              {onToggleTheme && (
+                <button type="button" className="bq-menu-item" data-testid="ws-theme-toggle-btn" onClick={onToggleTheme}>
+                  <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span> {theme === 'dark' ? 'Açık tema' : 'Koyu tema'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
   </>
 );
+};

@@ -3374,3 +3374,78 @@ body:has(.bq-modal-backdrop) {
     bottom: calc(118px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* "⋯" menu: everything a mission does not need lives here. */
+.bq-more-btn {
+  position: relative;
+  min-width: 44px;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
+.bq-more-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-action);
+}
+.bq-menu-card {
+  max-width: 420px;
+}
+.bq-menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.bq-menu-group-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.bq-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.bq-menu-item > span:first-child {
+  width: 22px;
+  text-align: center;
+}
+.bq-menu-item:hover {
+  border-color: var(--accent-bright);
+}
+.bq-menu-danger {
+  color: var(--status-fail);
+}
+
+@media (max-width: 640px) {
+  /* Undo/redo: icons only on phones. */
+  .bq-ws-tools .bq-tool-label {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Level and rank are on the level bar; the XP pill shows XP only. */
+  [data-testid='player-xp-summary'] > :not(.bq-hud-xp) {
+    display: none;
+  }
+}

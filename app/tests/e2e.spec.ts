@@ -36,17 +36,20 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
     await expect(page.getByTestId('chapter-card-ch06')).toBeVisible();
 
     // Test Dashboard ⓘ Info Modal
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('dashboard-info-btn').click();
     await expect(page.getByTestId('dashboard-info-modal')).toBeVisible();
     await page.getByTestId('close-info-modal-btn').click();
     await expect(page.getByTestId('dashboard-info-modal')).toBeHidden();
 
     // Test Light Mode & Dark Mode Toggle on Dashboard
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('theme-toggle-btn').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await page.screenshot({
       path: path.join(SCREENSHOT_DIR, '01b-dashboard-light-mode.png'),
     });
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('theme-toggle-btn').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
@@ -72,6 +75,7 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
     );
 
     // Test Workspace ⓘ Info Modal & Light Mode in Workspace
+    await page.getByTestId('more-menu-btn').click();
     await page.getByTestId('ws-info-btn').click();
     await expect(page.getByTestId('ws-info-modal')).toBeVisible();
     await page.getByTestId('close-ws-info-modal-btn').click();

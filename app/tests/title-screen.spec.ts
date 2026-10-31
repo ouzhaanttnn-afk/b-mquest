@@ -139,14 +139,17 @@ test.describe('Görünürlük', () => {
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await page.getByTestId('hero-continue-btn').click();
+    await page.getByTestId('more-menu-btn').click();
     await page.getByTestId('visibility-btn').click();
     await page.getByTestId('vg-wall').uncheck();
     await page.getByTestId('visibility-sheet').getByRole('button', { name: /Kapat/ }).click();
+    await expect(page.locator('.bq-more-dot')).toBeVisible();
+    await page.getByTestId('more-menu-btn').click();
     await expect(page.getByTestId('visibility-btn')).toContainText('(1)');
     await page.getByTestId('visibility-btn').click();
     await page.getByTestId('vg-show-all').click();
     await page.getByTestId('visibility-sheet').getByRole('button', { name: /Kapat/ }).click();
-    await expect(page.getByTestId('visibility-btn')).not.toContainText('(');
+    await expect(page.locator('.bq-more-dot')).toHaveCount(0);
   });
 });
 
@@ -157,6 +160,7 @@ test.describe('Yardım ve sözlük', () => {
       window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
     });
     await page.goto('/');
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('help-btn').click();
     await expect(page.getByTestId('help-sheet')).toBeVisible();
     await page.getByTestId('help-search').fill('KESIT');
@@ -291,6 +295,7 @@ test.describe('Hakkında, gizlilik ve ayarlar', () => {
       }
     });
     await page.goto('/');
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('settings-toggle-btn').click();
     await page.getByTestId('about-btn').click();
     await expect(page.getByTestId('about-sheet')).toBeVisible();
@@ -303,6 +308,7 @@ test.describe('Hakkında, gizlilik ve ayarlar', () => {
     await expect(page.getByTestId('reminder-note')).toContainText('yalnızca iPhone');
     await expect(page.getByTestId('toggle-reminder')).not.toBeChecked();
     await page.reload();
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('settings-toggle-btn').click();
     await expect(page.getByTestId('toggle-haptics')).not.toBeChecked();
   });
@@ -372,6 +378,7 @@ test.describe('Kaydırma ve yerleşim (telefon / tablet)', () => {
     await seed(page);
     await page.goto('/');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('help-btn').click();
     const r = await page.evaluate(() => {
       const card = document.querySelector('.bq-modal-card') as HTMLElement;
