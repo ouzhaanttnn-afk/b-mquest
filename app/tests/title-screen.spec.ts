@@ -428,3 +428,41 @@ test.describe('Bonus Bölüm 10 — arayüz', () => {
     await expect(page.getByTestId('results-recap-modal')).toBeVisible();
   });
 });
+
+test.describe('Telefonda 3B alanı', () => {
+  test('3B sahne paneli doldurur, araçlar sahnenin üstünde, seçimle Kontrol et çakışmaz', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission', 'perfect', 'chapter-1'] }));
+      window.localStorage.setItem(
+        'bimquest.save.v1',
+        JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed: { m01: { bestScore: 100 }, m02: { bestScore: 100 } }, drafts: {}, settings: { reducedMotion: true, sound: false } })
+      );
+    });
+    await page.goto('/');
+    await page.getByTestId('start-mission-m03').click();
+    await page.getByTestId('mobile-tab-inspector').click();
+    await page.getByTestId('object-row-w_east').click();
+    await page.getByTestId('close-mobile-sheet-btn').click();
+    await page.getByTestId('view-mode-3d').click();
+    await expect(page.getByTestId('scene-viewport')).toBeVisible();
+    const m = await page.evaluate(() => {
+      const r = (sel: string) => (document.querySelector(sel) as HTMLElement).getBoundingClientRect();
+      const canvas = r('.bq-canvas-wrapper');
+      const tools = r('.bq-toolbar-3d');
+      const check = r('[data-testid="check-btn"]');
+      const dock = r('.bq-quick-hud');
+      return {
+        docScroll: document.scrollingElement!.scrollHeight - window.innerHeight,
+        canvasH: canvas.height,
+        toolsInsideCanvas: tools.top >= canvas.top - 1 && tools.bottom <= canvas.bottom,
+        checkOverDock: !(check.bottom <= dock.top || check.top >= dock.bottom),
+      };
+    });
+    expect(m.docScroll).toBeLessThanOrEqual(0);
+    expect(m.canvasH).toBeGreaterThan(300);
+    expect(m.toolsInsideCanvas).toBe(true);
+    expect(m.checkOverDock).toBe(false);
+  });
+});

@@ -3245,3 +3245,132 @@ body:has(.bq-modal-backdrop) {
     padding-right: 28px;
   }
 }
+
+/* ==========================================================================
+   Phone workspace, round 2: more room for the plan and the 3D scene.
+   ========================================================================== */
+
+/* The workspace never scrolls the document: the app root is pinned to the
+   screen, so a swipe on iOS cannot push the toolbar under the status bar. */
+.bq-app-root:has(> .bq-workspace) {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.bq-app-root:has(> .bq-workspace) > .bq-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+}
+
+@media (max-width: 900px) and (min-height: 521px) {
+  /* The 3D card had a 360 px minimum that overflowed (and cut) small panes. */
+  .bq-scene-container {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 640px) and (min-height: 521px) {
+  /* 3D tools float over the scene instead of taking a header row. */
+  .bq-toolbar-3d {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    /* above drei <Html> labels, which use very high z-indexes */
+    z-index: 16777272;
+    padding: 4px;
+    gap: 4px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(11, 17, 32, 0.72);
+    backdrop-filter: blur(4px);
+  }
+  .bq-toolbar-3d .bq-viewport-badge {
+    display: none;
+  }
+  .bq-toolbar-3d .bq-viewport-controls {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .bq-toolbar-3d .bq-chip-btn {
+    min-height: 34px;
+    padding: 2px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .bq-canvas-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  /* Selected-object bar: one row. */
+  .bq-game-dock {
+    padding: 4px 8px;
+    margin: 0 8px 4px;
+  }
+  .bq-quick-hud {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .bq-quick-hud-info {
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .bq-quick-hud-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bq-quick-hud-actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+  .bq-quick-hud-actions .bq-btn,
+  .bq-quick-hud-actions .bq-chip-btn {
+    min-height: 36px;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+
+  /* Tool options: inputs and the "Ölçüyle çiz" toggle on one line. */
+  .bq-tool-options {
+    padding: 4px 8px;
+    margin: 0 8px;
+    gap: 4px;
+  }
+  .bq-tool-opt-row {
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    align-items: center;
+  }
+  .bq-tool-opt input,
+  .bq-tool-opt select {
+    width: 76px;
+    min-height: 36px;
+    font-size: 16px;
+    padding: 2px 6px;
+  }
+  .bq-tool-opt > span {
+    font-size: 10px;
+  }
+  .bq-wall-helpers:not([open]) {
+    width: auto;
+    flex: 1 1 auto;
+  }
+  .bq-tool-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) and (min-height: 521px) {
+  /* With an object selected the quick bar sits at the bottom: lift the
+     floating "Kontrol et" above it so neither covers the other. */
+  .bq-workspace:has(.bq-quick-hud) .bq-ws-bottombar:not(.sheet-open) {
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  }
+}
