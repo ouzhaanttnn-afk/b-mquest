@@ -1,4 +1,4 @@
-import { enclosedRegions, levelById, polygonArea, wallsOf, wallTopElevation } from './derived';
+import { enclosedRegions, levelById, polygonArea, roomArea, roomBoundary, wallsOf, wallTopElevation } from './derived';
 import { sectionCutsModel, sheetViewKinds } from './documentation';
 import type { BimModel, ViewElement } from './types';
 
@@ -6,6 +6,9 @@ export const METRIC_NAMES = [
   'levelCount',
   'maxLevelElevation',
   'upperWallCount',
+  'stairBlondel',
+  'minBedroomArea',
+  'windowFloorRatio',
   'gridVertical',
   'gridHorizontal',
   'wallCount',
@@ -37,11 +40,46 @@ export function enclosedAreaM2(m: BimModel): number {
   return Math.round(area / 100_000) / 10;
 }
 
+const isBedroom = (name: string) => /yatak/i.test(name.replace(/İ/g, 'i'));
+
+/**
+ * Rule-check helpers (Bölüm 11). The limits used by missions are teaching
+ * values, not a statement of any specific regulation.
+ */
+export function stairBlondel(m: BimModel): number {
+  const st = m.elements.find((e) => e.type === 'stair');
+  return st && st.type === 'stair' ? 2 * st.riserHeight + st.treadDepth : 0;
+}
+
+/** Smallest bedroom area (m², 1 decimal); 0 when no room is named as a bedroom. */
+export function minBedroomArea(m: BimModel): number {
+  const rooms = m.elements.filter((e) => e.type === 'room' && isBedroom(e.name));
+  if (rooms.length === 0) return 0;
+  const areas = rooms.map((r) => (r.type === 'room' && !roomBoundary(r, m).open ? roomArea(r, m) : 0));
+  return Math.round(Math.min(...areas) * 10) / 10;
+}
+
+/** Total window area as a percentage of total closed room area (1 decimal). */
+export function windowFloorRatio(m: BimModel): number {
+  const glass = m.elements.reduce((s, e) => (e.type === 'window' ? s + (e.width * e.height) / 1_000_000 : s), 0);
+  const floor = m.elements.reduce(
+    (s, e) => (e.type === 'room' && !roomBoundary(e, m).open ? s + roomArea(e, m) : s),
+    0
+  );
+  return floor > 0 ? Math.round((glass / floor) * 1000) / 10 : 0;
+}
+
 /** A model-level number that a mission criterion can bound. */
 export function modelMetric(m: BimModel, name: MetricName): number {
   switch (name) {
     case 'levelCount':
       return m.levels.length;
+    case 'stairBlondel':
+      return stairBlondel(m);
+    case 'minBedroomArea':
+      return minBedroomArea(m);
+    case 'windowFloorRatio':
+      return windowFloorRatio(m);
     case 'upperWallCount': {
       const lowest = [...m.levels].sort((a, b) => a.elevation - b.elevation)[0]?.id;
       return m.elements.filter((e) => e.type === 'wall' && e.baseLevelId !== lowest).length;

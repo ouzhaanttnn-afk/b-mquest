@@ -1261,6 +1261,108 @@ export const BIM_MISSION_SPECS: Record<string, Spec> = {
       { id: 'c_r', type: 'exists', category: 'stair', where: { rise: 3150 }, message: 'Merdivenin toplam yüksekliği 3150 mm olmalı.' },
     ],
   },
+  // ---- Bonus Bölüm 11: Denetim ve saha (Sacks, Girolami, Brilakis 2020) -
+  m62: {
+    lesson: {
+      objective:
+        'Merdiven denetimden kaldı: 2 × basamak yüksekliği + basamak derinliği 600–640 mm olmalı. Toplam yükseklik 3150 mm kalacak şekilde merdiveni düzelt.',
+      hintLevels: hints(
+        'Kural iki sayıya bakıyor: basamak yüksekliği ve basamak derinliği.',
+        'Şu an 2 × 210 + 250 = 670 mm; kural 600–640 istiyor.',
+        'Basamak yüksekliğini düşürürsen basamak sayısı artmalı ki toplam 3150 kalsın.',
+        '1) Merdiveni seç. 2) Basamak yüksekliği 175, basamak sayısı 18 (18 × 175 = 3150). 3) Derinlik 270 (2 × 175 + 270 = 620). 4) Kontrol Et.'
+      ),
+      primaryFields: ['riserHeight', 'risers', 'treadDepth'],
+    },
+    levels: [L0, l1(3150)],
+    elements: [
+      ...box({ height: 3150 }),
+      { id: 's1', type: 'stair', name: 'Merdiven', baseLevelId: 'l0', topLevelId: 'l1', start: [800, 800], direction: 'x+', width: 1000, riserHeight: 210, treadDepth: 250, risers: 15 },
+    ],
+    editable: ['riserHeight', 'risers', 'treadDepth'],
+    seeds: ['s1'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_b', type: 'metric', metric: 'stairBlondel', min: 600, max: 640, message: '2 × basamak yüksekliği + basamak derinliği 600–640 mm olmalı.' },
+      { id: 'c_r', type: 'exists', category: 'stair', where: { id: 's1', rise: 3150 }, message: 'Merdivenin toplam yüksekliği 3150 mm kalmalı.' },
+    ],
+  },
+  m63: {
+    lesson: {
+      objective:
+        'Denetim yatak odasını bulamıyor: iki oda da “Oda” adında. Yatak odası en az 9 m² olmalı (oyun kuralı). Uygun odaya “Yatak Odası”, diğerine “Çalışma Odası” adını ver.',
+      hintLevels: hints(
+        'Kural odayı adından tanır; şu an hiçbir oda yatak odası değil.',
+        'İki odanın alanları farklı; hangisi 9 m²’yi karşılıyor?',
+        'Oda adı, odanın Name alanıdır; alanı seçince ilişki satırında görünür.',
+        '1) Odaları seç ve alanlarına bak (16 m² ve 8 m²). 2) Büyük odaya Yatak Odası, küçüğüne Çalışma Odası adını ver. 3) Kontrol Et.'
+      ),
+      primaryFields: ['name'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      wall('w5', [4000, 0], [4000, 4000]),
+      { id: 'r1', type: 'room', name: 'Oda', number: '101', levelId: 'l0', seedPoint: [2000, 2000] },
+      { id: 'r2', type: 'room', name: 'Oda', number: '102', levelId: 'l0', seedPoint: [5000, 2000] },
+    ],
+    editable: ['name'],
+    seeds: ['r1', 'r2'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_bed', type: 'metric', metric: 'minBedroomArea', min: 9, max: 999, message: 'Yatak odası olarak adlandırılan oda en az 9 m² olmalı.' },
+      { id: 'c_n1', type: 'property', elementId: 'r1', field: 'name', expected: 'Yatak Odası', tolerance: 0, message: 'Kurala uyan oda “Yatak Odası” adını almalı.' },
+      { id: 'c_n2', type: 'property', elementId: 'r2', field: 'name', expected: 'Çalışma Odası', tolerance: 0, message: 'Diğer oda “Çalışma Odası” adını almalı.' },
+    ],
+  },
+  m64: {
+    lesson: {
+      objective:
+        'Salonun pencere alanı, oda alanının en az %10’u olmalı (oyun kuralı). Pencereleri büyüterek ya da yeni pencere ekleyerek oranı tuttur.',
+      hintLevels: hints(
+        'Oda 24 m²; %10’u 2,4 m² pencere demek.',
+        'Şu an tek pencere 0,9 × 1,2 = 1,08 m².',
+        'Pencere genişliğini ve yüksekliğini artırabilir ya da başka duvara pencere ekleyebilirsin; parapet + yükseklik duvarı aşmamalı.',
+        '1) Pencereyi seç. 2) Genişlik 2000, yükseklik 1300 (2,6 m²). 3) Kontrol Et. Ya da ikinci bir 1200 × 1200 pencere ekle.'
+      ),
+      primaryFields: ['width', 'height'],
+    },
+    levels: [L0],
+    elements: [
+      ...box(),
+      window1('win1', 'w1', 2550, { width: 900, height: 1200 }),
+      { id: 'r1', type: 'room', name: 'Salon', number: '101', levelId: 'l0', seedPoint: [3000, 2000] },
+    ],
+    editable: ['width', 'height', 'offset', 'sill'],
+    creatable: ['window'],
+    seeds: ['win1'],
+    minutes: 6,
+    criteria: [
+      { id: 'c_wf', type: 'metric', metric: 'windowFloorRatio', min: 10, max: 100, message: 'Pencere alanı oda alanının en az %10’u olmalı.' },
+    ],
+  },
+  m65: {
+    lesson: {
+      objective:
+        'Saha ölçümü: kapı merkezi güney duvarının başından 3150 mm’de, kapı genişliği 1000 mm. Modeli sahada yapılana göre güncelle.',
+      hintLevels: hints(
+        'Model kapıyı tasarlandığı yerde gösteriyor; saha başka bir şey ölçmüş.',
+        'Değişecek olan d1 kapısının konumu ve genişliği.',
+        'Ofset kapının merkezi değil, başlangıç kenarıdır: merkez − genişlik / 2.',
+        '1) d1’i seç. 2) Genişlik 1000. 3) Ofset 3150 − 500 = 2650. 4) Kontrol Et.'
+      ),
+      primaryFields: ['offset', 'width'],
+    },
+    levels: [L0],
+    elements: [...box(), door1('d1', 'w1', 2550, { mark: 'D-01' })],
+    editable: ['offset', 'width'],
+    seeds: ['d1'],
+    minutes: 5,
+    criteria: [
+      { id: 'c_w', type: 'property', elementId: 'd1', field: 'width', expected: 1000, tolerance: 0, message: 'Kapı genişliği sahadaki gibi 1000 mm olmalı.' },
+      { id: 'c_o', type: 'property', elementId: 'd1', field: 'offset', expected: 2650, tolerance: 0, message: 'Kapı ofseti sahadaki merkeze göre 2650 mm olmalı.' },
+    ],
+  },
 };
 
 export function buildBimMissionTask(

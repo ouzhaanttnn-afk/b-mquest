@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SceneExtras } from './SceneExtras';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { Edges, Grid, Html, Line, OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type {
@@ -58,6 +58,18 @@ interface BuildingSceneContentProps {
   onSelect: (id: string | null) => void;
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
 }
+
+/** Re-frames the camera whenever the canvas changes size (mode switch, rotation). */
+const FitOnResize: React.FC<{ onFit: () => void }> = ({ onFit }) => {
+  const width = useThree((st) => st.size.width);
+  const height = useThree((st) => st.size.height);
+  useEffect(() => {
+    if (width === 0 || height === 0) return;
+    const id = requestAnimationFrame(onFit);
+    return () => cancelAnimationFrame(id);
+  }, [width, height, onFit]);
+  return null;
+};
 
 const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
   task,
@@ -486,9 +498,24 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
     const ctrl = controlsRef.current;
     if (!ctrl) return;
     const f = frame();
-    const span = Math.max(f.w, f.d);
-    ctrl.object.position.set(f.cx + span * 0.95, span * 0.75 + 1.7, f.cz + span * 1.1);
-    ctrl.target.set(f.cx, 1.2, f.cz);
+    const cam = ctrl.object as { position: { set: (x: number, y: number, z: number) => void }; fov?: number; aspect?: number };
+    const target = { x: f.cx, y: 1.2, z: f.cz };
+    // Same three-quarter view as before, but the distance comes from the
+    // narrower of the two fields of view, so tall phone panes and wide
+    // desktop panes both show the whole building.
+    const dir = { x: 0.95, y: 0.6, z: 1.1 };
+    const len = Math.hypot(dir.x, dir.y, dir.z);
+    const radius = Math.hypot(f.w / 2, f.d / 2, 1.6);
+    const vfov = ((cam.fov ?? 42) * Math.PI) / 180;
+    const aspect = cam.aspect && Number.isFinite(cam.aspect) ? cam.aspect : 1;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+    const dist = (radius / Math.sin(Math.min(vfov, hfov) / 2)) * 1.08;
+    cam.position.set(
+      target.x + (dir.x / len) * dist,
+      target.y + (dir.y / len) * dist,
+      target.z + (dir.z / len) * dist
+    );
+    ctrl.target.set(target.x, target.y, target.z);
     ctrl.update();
   }, [frame]);
 
@@ -544,27 +571,9 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   }, []);
 
   const handleCreated = useCallback(
-    ({
-      gl,
-      camera,
-      size,
-    }: {
-      gl: { domElement: HTMLCanvasElement };
-      camera: { position: { x: number; y: number; z: number } };
-      size: { width: number; height: number };
-    }) => {
+    ({ gl }: { gl: { domElement: HTMLCanvasElement } }) => {
       const canvas = gl.domElement;
       glCanvasRef.current = canvas;
-      // A square or tall pane sees less sideways: back the camera off so the whole
-      // building stays in view (the vertical field of view is fixed).
-      const aspect = size.width / Math.max(1, size.height);
-      if (aspect > 0 && aspect < 1.4) {
-        const f = frame();
-        const k = Math.min(2.8, Math.max(1, 1.25 / Math.max(0.4, aspect)));
-        camera.position.x = f.cx + (camera.position.x - f.cx) * k;
-        camera.position.z = f.cz + (camera.position.z - f.cz) * k;
-        camera.position.y *= k;
-      }
       const onLost = (e: Event) => {
         e.preventDefault();
         if (isMountedRef.current) {
@@ -579,7 +588,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
       canvas.addEventListener('webglcontextlost', onLost, false);
       canvas.addEventListener('webglcontextrestored', onRestored, false);
     },
-    [frame]
+    []
   );
 
   if (!webglSupported) {
@@ -682,7 +691,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
         <Canvas
           key={sceneMountKey}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          dpr={1}
+          dpr={[1, 2]}
           shadows
           frameloop={isVisible ? 'always' : 'never'}
           camera={{
@@ -698,6 +707,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
           onPointerMissed={() => onSelect(null)}
           onCreated={handleCreated}
         >
+          <FitOnResize onFit={resetCamera} />
           <BuildingSceneContent
             task={task}
             model={model}

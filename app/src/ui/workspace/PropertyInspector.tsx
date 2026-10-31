@@ -1,4 +1,5 @@
 import React from 'react';
+import { elementRelations } from '../../domain/relations';
 import { CreateWallForm } from './CreateWallForm';
 import { CreateDoorForm } from './CreateDoorForm';
 import type { ToolId } from './toolActions';
@@ -245,6 +246,17 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                     </button>
                   )}
                 </div>
+
+                {selectedElement && elementRelations(selectedElement, model).length > 0 && (
+                  <p className="bq-relations" data-testid="relations-row">
+                    {elementRelations(selectedElement, model).map((r, i) => (
+                      <span key={r.label}>
+                        {i > 0 && ' · '}
+                        <span className="bq-relations-label">{r.label}:</span> {r.value}
+                      </span>
+                    ))}
+                  </p>
+                )}
 
                 {!selectedElement ? (
                   <p className="bq-muted-note" data-testid="no-selection-note">

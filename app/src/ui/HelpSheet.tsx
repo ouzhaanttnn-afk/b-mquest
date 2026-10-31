@@ -3,8 +3,22 @@ import { buildGlossary, searchGlossary, shortcutList } from '../content/glossary
 import { playSound } from './sound';
 
 /** Help button plus sheet: Revit glossary search and the keyboard shortcut card. */
-export const HelpSheet: React.FC<{ className?: string }> = ({ className = 'bq-icon-pill-btn' }) => {
-  const [open, setOpen] = useState(false);
+export const HelpSheet: React.FC<{
+  className?: string;
+  /** Controlled use (e.g. opened from a menu): no trigger button is rendered. */
+  open?: boolean;
+  onClose?: () => void;
+}> = ({ className = 'bq-icon-pill-btn', open: controlledOpen, onClose }) => {
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : ownOpen;
+  const setOpen = (v: boolean) => {
+    if (controlled) {
+      if (!v) onClose?.();
+    } else {
+      setOwnOpen(v);
+    }
+  };
   const [tab, setTab] = useState<'glossary' | 'keys'>('glossary');
   const [query, setQuery] = useState('');
   const entries = useMemo(() => buildGlossary(), []);
@@ -13,6 +27,7 @@ export const HelpSheet: React.FC<{ className?: string }> = ({ className = 'bq-ic
 
   return (
     <>
+      {!controlled && (
       <button
         type="button"
         className={className}
@@ -26,6 +41,7 @@ export const HelpSheet: React.FC<{ className?: string }> = ({ className = 'bq-ic
       >
         <span>📖</span>
       </button>
+      )}
       {open && (
         <div
           className="bq-modal-backdrop"
@@ -81,13 +97,13 @@ export const HelpSheet: React.FC<{ className?: string }> = ({ className = 'bq-ic
                 </p>
                 <ul className="bq-help-list">
                   {hits.map((h) => (
-                    <li key={h.missionId} data-testid={`help-entry-${h.missionId}`}>
+                    <li key={h.id} data-testid={`help-entry-${h.id}`}>
                       <strong>{h.concept}</strong>
                       <span className="bq-help-mission">
-                        {h.missionId.toUpperCase()} · {h.title}
+                        {h.missionId ? `${h.missionId.toUpperCase()} · ${h.title}` : `Kavram · Kaynak: ${h.source ?? ''}`}
                       </span>
                       <p>{h.explanation}</p>
-                      <code>{h.revitPath}</code>
+                      {h.revitPath && <code>{h.revitPath}</code>}
                     </li>
                   ))}
                 </ul>

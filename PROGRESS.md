@@ -9,7 +9,7 @@ Uygulama klasörü: `app/`.
 2. **Görevler ekranı** (`Dashboard`): sıradaki göreve götüren hero kartı ("Selin Mimar" notuyla), seviye çubuğu, gün serisi, başarım listesi, bölüm sekmeleri ve görev kartları.
 3. **Uygulama ekranı** (`Workspace`): 2B plan + 3B sahne, Properties, araç çubuğu, Rehber Turu, koç çubuğu, Kontrol Et, değerlendirme.
 
-## Müfredat: 10 bölüm, 61 görev
+## Müfredat: 11 bölüm, 65 görev
 
 | Bölüm | Görevler | Konu |
 |---|---|---|
@@ -23,6 +23,7 @@ Uygulama klasörü: `app/`.
 | 8 (bonus) | 51–53 | Çizelgeler (Schedules): kapı, yangın sınıfı, oda |
 | 9 (bonus) | 54–58 | Modify araçları: Copy, Mirror, Offset, Align |
 | 10 (bonus) | 59–61 | Tip çoğaltma (Duplicate), kata kopyala, üst kat döşemesi ve merdiven |
+| 11 (bonus) | 62–65 | Kural tabanlı denetim (merdiven, yatak odası, gün ışığı), normalleştirme, sahadan modele (as-built) |
 
 ## Oyun hissi katmanı
 
@@ -42,6 +43,11 @@ Uygulama klasörü: `app/`.
 - iPad dikey modunda plan ve 3B alt alta; dar panelde 3B kamera geri çekilir.
 
 - Telefon ve tablet: çalışma ekranı tek ekran (sayfa kaymaz), paneller alt sayfa, "Kontrol et" yüzen düğme; pencereler telefonda alttan açılır ve arkadaki sayfa kilitlenir.
+
+- Sade arayüz ilkesi: ekranda yalnızca o görevin gerektirdiği araçlar; gerisi “⋯” menüsünde (çalışma ekranı ve Görevler ekranı).
+- Seçili nesnenin ilişkileri tek satırda (Kat · Host · Taşıdığı · Sınır · Alan).
+- Sözlükte BIM kavramları (IFC, LOD, ISO 19650, açık/örtük bilgi, normalleştirme, anlamsal zenginleştirme, dijital ikiz…). Arka plan: Sacks, Girolami ve Brilakis (2020); metin bizim, alıntı yok.
+- Bölüm 11’deki sınır değerler öğretim amaçlıdır; gerçek projede yürürlükteki yönetmelik kullanılmalıdır.
 
 ## Teknik
 

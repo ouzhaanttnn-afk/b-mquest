@@ -91,6 +91,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onDismissRecoveryIssue,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const settingsRef = useRef<HTMLElement | null>(null);
   const [importFeedback, setImportFeedback] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -102,6 +103,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [certificateOpen, setCertificateOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const pick = (fn: () => void) => {
+    setMenuOpen(false);
+    fn();
+  };
   const [reminderNote, setReminderNote] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -223,17 +230,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span>🏅 {earnedIds.length}/{ACHIEVEMENTS.length}</span>
           </button>
 
-          <button
-            type="button"
-            className="bq-icon-pill-btn"
-            data-testid="dashboard-info-btn"
-            onClick={() => setInfoModalOpen(true)}
-            aria-label="Nasıl Oynanır?"
-            title="Oyun Rehberi & Nasıl Oynanır (ⓘ)"
-          >
-            <span className="bq-i-badge">i</span>
-          </button>
-
           {certificateUnlocked(save.completed) && (
             <button
               type="button"
@@ -250,28 +246,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
           )}
 
-          <HelpSheet />
-
           <button
             type="button"
-            className="bq-icon-pill-btn"
-            data-testid="theme-toggle-btn"
-            onClick={onToggleTheme}
-            aria-label="Tema değiştir"
-            title="Koyu / Açık Tema Değiştir"
+            className="bq-icon-pill-btn bq-more-btn"
+            data-testid="dash-menu-btn"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-label="Diğer seçenekler"
+            title="Diğer seçenekler"
+            onClick={() => {
+              playSound('click');
+              setMenuOpen(true);
+            }}
           >
-            <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
-          </button>
-
-          <button
-            type="button"
-            className="bq-icon-pill-btn"
-            data-testid="settings-toggle-btn"
-            onClick={() => setSettingsOpen((v) => !v)}
-            aria-label="Kayıt ve Ayarlar"
-            title="Kayıt & Ayarlar"
-          >
-            <span>⚙️</span>
+            <span aria-hidden="true">⋯</span>
           </button>
 
           <input
@@ -623,10 +611,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         })}
       </section>
 
-      {/* Compact 10-Chapter / 61-Mission Roadmap Accordion */}
+      {/* Compact 11-Chapter / 65-Mission Roadmap Accordion */}
       <section
         className="bq-curriculum-section"
-        aria-label="10 Bölüm ve 61 Görevlik Revit Eğitim Mimarisi"
+        aria-label="11 Bölüm ve 65 Görevlik Revit Eğitim Mimarisi"
         data-testid="curriculum-chapters"
       >
         <div className="bq-curriculum-header">
@@ -736,6 +724,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Collapsible Data & Settings Bar (Always in DOM for tests, compact layout) */}
       <section
+        ref={settingsRef}
         className={`bq-dash-settings ${settingsOpen ? 'open' : ''}`}
         aria-label="Ayarlar ve Veri Yönetimi"
       >
@@ -880,6 +869,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </section>
 
+      {menuOpen && (
+        <div
+          className="bq-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Diğer seçenekler"
+          data-testid="dash-menu"
+          onClick={() => setMenuOpen(false)}
+        >
+          <div className="bq-modal-card bq-menu-card" onClick={(e) => e.stopPropagation()}>
+            <div className="bq-form-title-row">
+              <h2>Seçenekler</h2>
+              <button type="button" className="bq-chip-btn" onClick={() => setMenuOpen(false)}>
+                ✕ Kapat
+              </button>
+            </div>
+            <div className="bq-menu-group">
+              <button type="button" className="bq-menu-item" data-testid="dashboard-info-btn" onClick={() => pick(() => setInfoModalOpen(true))}>
+                <span aria-hidden="true">ⓘ</span> Nasıl oynanır?
+              </button>
+              <button type="button" className="bq-menu-item" data-testid="help-btn" onClick={() => pick(() => setHelpOpen(true))}>
+                <span aria-hidden="true">📖</span> Revit sözlüğü ve kısayollar
+              </button>
+              <button type="button" className="bq-menu-item" data-testid="theme-toggle-btn" onClick={() => pick(onToggleTheme)}>
+                <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span> {theme === 'dark' ? 'Açık tema' : 'Koyu tema'}
+              </button>
+              <button
+                type="button"
+                className="bq-menu-item"
+                data-testid="settings-toggle-btn"
+                onClick={() =>
+                  pick(() => {
+                    setSettingsOpen(true);
+                    window.setTimeout(() => settingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  })
+                }
+              >
+                <span aria-hidden="true">⚙️</span> Ayarlar, kayıt ve gizlilik
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+
       {aboutOpen && <AboutSheet onClose={() => setAboutOpen(false)} />}
 
       {certificateOpen && (
@@ -957,7 +991,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <strong>3. Kontrol Et & Düzelt:</strong> Turuncu <strong>Kontrol et</strong> butonuna bas. Hata varsa sistem neden yanlış olduğunu ve nasıl düzelteceğini söyler.
               </li>
               <li>
-                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 61 görevlik haritada ilerle!
+                <strong>4. XP & Rozet Kazan:</strong> Doğru modelle <strong>+200 XP</strong> ve Altın Rozet kazanarak 65 görevlik haritada ilerle!
               </li>
             </ul>
             <div className="bq-modal-actions">

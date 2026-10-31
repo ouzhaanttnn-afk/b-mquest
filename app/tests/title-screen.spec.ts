@@ -139,14 +139,17 @@ test.describe('Görünürlük', () => {
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
     await page.getByTestId('hero-continue-btn').click();
+    await page.getByTestId('more-menu-btn').click();
     await page.getByTestId('visibility-btn').click();
     await page.getByTestId('vg-wall').uncheck();
     await page.getByTestId('visibility-sheet').getByRole('button', { name: /Kapat/ }).click();
+    await expect(page.locator('.bq-more-dot')).toBeVisible();
+    await page.getByTestId('more-menu-btn').click();
     await expect(page.getByTestId('visibility-btn')).toContainText('(1)');
     await page.getByTestId('visibility-btn').click();
     await page.getByTestId('vg-show-all').click();
     await page.getByTestId('visibility-sheet').getByRole('button', { name: /Kapat/ }).click();
-    await expect(page.getByTestId('visibility-btn')).not.toContainText('(');
+    await expect(page.locator('.bq-more-dot')).toHaveCount(0);
   });
 });
 
@@ -157,6 +160,7 @@ test.describe('Yardım ve sözlük', () => {
       window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
     });
     await page.goto('/');
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('help-btn').click();
     await expect(page.getByTestId('help-sheet')).toBeVisible();
     await page.getByTestId('help-search').fill('KESIT');
@@ -291,6 +295,7 @@ test.describe('Hakkında, gizlilik ve ayarlar', () => {
       }
     });
     await page.goto('/');
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('settings-toggle-btn').click();
     await page.getByTestId('about-btn').click();
     await expect(page.getByTestId('about-sheet')).toBeVisible();
@@ -303,6 +308,7 @@ test.describe('Hakkında, gizlilik ve ayarlar', () => {
     await expect(page.getByTestId('reminder-note')).toContainText('yalnızca iPhone');
     await expect(page.getByTestId('toggle-reminder')).not.toBeChecked();
     await page.reload();
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('settings-toggle-btn').click();
     await expect(page.getByTestId('toggle-haptics')).not.toBeChecked();
   });
@@ -372,6 +378,7 @@ test.describe('Kaydırma ve yerleşim (telefon / tablet)', () => {
     await seed(page);
     await page.goto('/');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await page.getByTestId('dash-menu-btn').click();
     await page.getByTestId('help-btn').click();
     const r = await page.evaluate(() => {
       const card = document.querySelector('.bq-modal-card') as HTMLElement;
@@ -424,6 +431,69 @@ test.describe('Bonus Bölüm 10 — arayüz', () => {
     await page.getByTestId('modify-apply-btn').click();
     await expect(page.getByTestId('modify-message')).toHaveText('Uygulandı.');
     await page.getByTestId('modify-sheet').getByRole('button', { name: /Kapat/ }).click();
+    await page.getByTestId('check-btn').click();
+    await expect(page.getByTestId('results-recap-modal')).toBeVisible();
+  });
+});
+
+test.describe('Telefonda 3B alanı', () => {
+  test('3B sahne paneli doldurur, araçlar sahnenin üstünde, seçimle Kontrol et çakışmaz', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission', 'perfect', 'chapter-1'] }));
+      window.localStorage.setItem(
+        'bimquest.save.v1',
+        JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed: { m01: { bestScore: 100 }, m02: { bestScore: 100 } }, drafts: {}, settings: { reducedMotion: true, sound: false } })
+      );
+    });
+    await page.goto('/');
+    await page.getByTestId('start-mission-m03').click();
+    await page.getByTestId('mobile-tab-inspector').click();
+    await page.getByTestId('object-row-w_east').click();
+    await page.getByTestId('close-mobile-sheet-btn').click();
+    await page.getByTestId('view-mode-3d').click();
+    await expect(page.getByTestId('scene-viewport')).toBeVisible();
+    const m = await page.evaluate(() => {
+      const r = (sel: string) => (document.querySelector(sel) as HTMLElement).getBoundingClientRect();
+      const canvas = r('.bq-canvas-wrapper');
+      const tools = r('.bq-toolbar-3d');
+      const check = r('[data-testid="check-btn"]');
+      const dock = r('.bq-quick-hud');
+      return {
+        docScroll: document.scrollingElement!.scrollHeight - window.innerHeight,
+        canvasH: canvas.height,
+        toolsInsideCanvas: tools.top >= canvas.top - 1 && tools.bottom <= canvas.bottom,
+        checkOverDock: !(check.bottom <= dock.top || check.top >= dock.bottom),
+      };
+    });
+    expect(m.docScroll).toBeLessThanOrEqual(0);
+    expect(m.canvasH).toBeGreaterThan(300);
+    expect(m.toolsInsideCanvas).toBe(true);
+    expect(m.checkOverDock).toBe(false);
+  });
+});
+
+test.describe('Bonus Bölüm 11 — arayüz', () => {
+  test('m63: oda adını özelliklerden değiştir, ilişki satırı alanı gösterir', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+      window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: ['first-mission','ten-missions','half-way','all-missions','perfect','five-gold','level-5','chapter-1','chapter-2','chapter-3','chapter-4','chapter-5','chapter-6','chapter-7','chapter-8','chapter-9','chapter-10'] }));
+      const completed: Record<string, unknown> = {};
+      for (let i = 1; i <= 62; i++) completed[`m${String(i).padStart(2, '0')}`] = { bestScore: 100 };
+      window.localStorage.setItem('bimquest.save.v1', JSON.stringify({ saveVersion: 1, contentVersion: '1.0.0', completed, drafts: {}, settings: { reducedMotion: true, sound: false } }));
+    });
+    await page.goto('/');
+    await page.getByTestId('stage-tab-ch11').click();
+    await page.getByTestId('start-mission-m63').click();
+    await page.getByTestId('object-row-r1').click();
+    await expect(page.getByTestId('relations-row')).toContainText('16.0 m²');
+    await page.getByTestId('prop-input-name').fill('Yatak Odası');
+    await page.getByTestId('prop-input-name').press('Enter');
+    await page.getByTestId('object-row-r2').click();
+    await page.getByTestId('prop-input-name').fill('Çalışma Odası');
+    await page.getByTestId('prop-input-name').press('Enter');
     await page.getByTestId('check-btn').click();
     await expect(page.getByTestId('results-recap-modal')).toBeVisible();
   });

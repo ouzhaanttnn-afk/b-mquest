@@ -12,7 +12,7 @@ export interface PlannedMissionSummary {
 }
 
 export interface CurriculumChapter {
-  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  chapterNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
   id: string;
   title: string;
   subtitle: string;
@@ -143,6 +143,16 @@ export const SEVEN_CHAPTER_CURRICULUM: CurriculumChapter[] = [
     missionRangeLabel: 'Görev 59 – 61',
     pedagogyNote: 'Bonus — tek kattan çok katlı binaya geçiş',
     missions: buildChapterMissions(59, 61),
+  },
+  {
+    chapterNumber: 11,
+    id: 'ch11',
+    title: 'Bölüm 11: Bonus — Denetim ve Saha',
+    subtitle:
+      'Kural tabanlı model denetimi, normalleştirme, gün ışığı oranı ve sahada ölçüleni modele işlemek (as-built). Arka plan: Sacks, Girolami ve Brilakis (2020).',
+    missionRangeLabel: 'Görev 62 – 65',
+    pedagogyNote: 'Bonus — BIM verisini kurallarla denetlemek ve sahayla eşitlemek',
+    missions: buildChapterMissions(62, 65),
   },
 ];
 

@@ -25,6 +25,8 @@ export const CHAPTER_STORIES: Record<string, string> = {
     'Selin Mimar: “Bir şey daha: usta modelleyici çizmez, çoğaltır. Copy, Mirror, Offset ve Align ile hız kazan.”',
   ch10:
     'Müşteri ikinci kat istiyor! Ana girişe geniş bir kapı, üst kata duvarlar, bir döşeme ve merdiven.',
+  ch11:
+    'Belediye ruhsat için modeli kurallarla denetleyecek. Sonra şantiyeden ölçümler gelecek: model sahayla aynı olmalı.',
   ch07:
     'Final: boş projeden başlayıp eksiksiz bir proje teslim ediyorsun. Bu kez yol tarifi yok.',
 };
