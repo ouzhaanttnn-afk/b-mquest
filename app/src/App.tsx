@@ -42,6 +42,11 @@ import {
   saveWorkshopModel,
 } from './content/workshop';
 import { FirstRunTour } from './ui/FirstRunTour';
+import { HOUSE1 } from './campaign/house1';
+import { loadProgress, totalStars } from './campaign/progress';
+const CampaignScreen = lazy(() =>
+  import('./campaign/CampaignScreen').then((m) => ({ default: m.CampaignScreen }))
+);
 const Workspace = lazy(() =>
   import('./ui/Workspace').then((m) => ({ default: m.Workspace }))
 );
@@ -87,6 +92,7 @@ export function App() {
     useState<MissionSessionState | null>(null);
 
   const [showTitle, setShowTitle] = useState(() => !titleAlreadySeen());
+  const [campaignOpen, setCampaignOpen] = useState(false);
   const [openInfoOnDashboard, setOpenInfoOnDashboard] = useState(false);
   const [meta, setMeta] = useState<GameMeta>(() => loadMeta());
   const [toast, setToast] = useState<Achievement | null>(null);
@@ -387,9 +393,22 @@ export function App() {
           onPlay={() => leaveTitle(false)}
           onHowToPlay={() => leaveTitle(true)}
         />
+      ) : campaignOpen && !activeSession ? (
+        <Suspense fallback={<div className="bq-scene-loading" role="status">Yükleniyor…</div>}>
+          <CampaignScreen
+            theme={theme}
+            reducedMotion={save.settings.reducedMotion}
+            onExit={() => setCampaignOpen(false)}
+          />
+        </Suspense>
       ) : !activeSession ? (
         <>
         <Dashboard
+          onStartCampaign={() => {
+            setCampaignOpen(true);
+            touchPlayDay();
+          }}
+          campaignStars={{ have: totalStars(loadProgress()), of: HOUSE1.length * 3 }}
           streak={visibleStreak(meta, today)}
           meta={meta}
           onStartWorkshop={handleStartWorkshop}

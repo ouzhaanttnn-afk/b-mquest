@@ -30,6 +30,9 @@ export interface DashboardProps {
   meta: GameMeta;
   onSetPlayerName: (name: string) => void;
   onStartWorkshop: () => void;
+  /** The house-by-house campaign (Bahçe Evi). */
+  onStartCampaign?: () => void;
+  campaignStars?: { have: number; of: number };
   onSetHaptics: (on: boolean) => void;
   onSetReminder: (on: boolean) => Promise<{ ok: boolean; reason?: string }>;
   initialInfoOpen?: boolean;
@@ -76,6 +79,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   meta,
   onSetPlayerName,
   onStartWorkshop,
+  onStartCampaign,
+  campaignStars,
   onSetHaptics,
   onSetReminder,
   initialInfoOpen = false,
@@ -350,6 +355,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
             Kapat
           </button>
         </div>
+      )}
+
+      {onStartCampaign && (
+        <button
+          type="button"
+          className="bq-campaign-card"
+          data-testid="campaign-card"
+          onClick={() => {
+            playSound('click');
+            onStartCampaign();
+          }}
+        >
+          <svg viewBox="0 0 64 48" width="72" height="54" aria-hidden="true" className="bq-campaign-house">
+            <path d="M6 24 32 6l26 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+            <rect x="12" y="22" width="40" height="22" fill="none" stroke="currentColor" strokeWidth="3" />
+            <rect x="18" y="30" width="8" height="14" fill="currentColor" />
+            <rect x="34" y="28" width="12" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" />
+          </svg>
+          <span className="bq-campaign-body">
+            <small>İlk evin</small>
+            <strong>Bahçe Evi</strong>
+            <span>6 kısa bölüm · Revit komutlarıyla adım adım kur</span>
+          </span>
+          <span className="bq-campaign-side">
+            {campaignStars && campaignStars.have > 0 && (
+              <span className="bq-campaign-stars">★ {campaignStars.have}/{campaignStars.of}</span>
+            )}
+            <span className="bq-campaign-go">{campaignStars && campaignStars.have > 0 ? 'Devam' : 'Başla'} ▶</span>
+          </span>
+        </button>
       )}
 
       {/* Hero: what to do next */}
