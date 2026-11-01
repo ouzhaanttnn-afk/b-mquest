@@ -92,7 +92,7 @@ function settle(level: LevelDef, st: PlayState, effect: Effect): TapResult {
   let i = st.stepIndex;
   while (i < level.steps.length && level.steps[i].done(st.session.model)) i++;
   if (i >= level.steps.length) {
-    return { state: { ...st, stepIndex: level.steps.length - 1, done: true, command: null }, effect: 'success' };
+    return { state: { ...st, stepIndex: level.steps.length - 1, done: true, command: null, chain: EMPTY_CHAIN, gridStart: null }, effect: 'success' };
   }
   if (i !== st.stepIndex) {
     return { state: { ...st, stepIndex: i, command: null, chain: EMPTY_CHAIN, gridStart: null }, effect: 'build' };

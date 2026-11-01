@@ -112,6 +112,7 @@
   height: calc(100vh - env(safe-area-inset-top, 0px));
   height: calc(100dvh - env(safe-area-inset-top, 0px));
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   grid-template-areas: 'top' 'ribbon' 'goal' 'stage' 'bottom';
   overflow: hidden;
@@ -151,6 +152,7 @@
 /* Ribbon */
 .bq-cmp-ribbon {
   grid-area: ribbon;
+  min-width: 0;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
 }
@@ -270,13 +272,19 @@
 .bq-cmp-level line { stroke: var(--cmp-ink); stroke-width: 40; stroke-dasharray: 600 150 100 150; }
 .bq-cmp-level circle { fill: var(--cmp-paper); stroke: var(--cmp-ink); stroke-width: 40; }
 
-/* Live 3D corner preview */
+/* Live 3D preview: beside the drawing (landscape) or under it (portrait),
+   never on top of it, so every target stays tappable. */
+.bq-cmp-stage.with-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.bq-cmp-canvas { position: relative; min-width: 0; min-height: 0; height: 100%; }
 .bq-cmp-preview {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: min(32%, 300px);
+  position: relative;
+  align-self: end;
+  width: clamp(190px, 24vw, 300px);
   aspect-ratio: 4 / 3;
+  margin: 10px;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
@@ -284,7 +292,11 @@
   box-shadow: var(--card-shadow);
   z-index: 2;
 }
-.bq-cmp-preview.big { inset: 8px; width: auto; aspect-ratio: auto; }
+.bq-cmp-preview.big { position: absolute; inset: 8px; width: auto; margin: 0; aspect-ratio: auto; }
+@media (orientation: portrait) {
+  .bq-cmp-stage.with-preview { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .bq-cmp-preview { justify-self: end; width: min(46%, 280px); margin: 6px 10px 10px; }
+}
 .bq-cmp-preview .bq-scene-container,
 .bq-cmp-house-3d .bq-scene-container {
   position: absolute;
@@ -427,7 +439,6 @@
   .bq-cmp-cmd { width: 60px; min-height: 54px; font-size: 11px; }
   .bq-cmp-panel-name { display: none; }
   .bq-cmp-title { font-size: 15px; }
-  .bq-cmp-preview { width: 38%; right: 8px; bottom: 8px; }
   .bq-cmp-sheet { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
   .bq-cmp-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .bq-cmp-level-tile { min-height: 116px; padding: 12px; }

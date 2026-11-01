@@ -210,9 +210,12 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
     if (!play.done || finishedOnce.current) return;
     finishedOnce.current = true;
     onFinish(stars);
+  }, [play.done, stars, onFinish]);
+  useEffect(() => {
+    if (!play.done) return;
     const id = window.setTimeout(() => setShowCard(true), reducedMotion ? 0 : 700);
     return () => window.clearTimeout(id);
-  }, [play.done, stars, onFinish, reducedMotion]);
+  }, [play.done, reducedMotion]);
 
   const apply = (r: TapResult) => {
     setPlay(r.state);
@@ -322,7 +325,8 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
         </div>
       </nav>
 
-      <main className="bq-cmp-stage">
+      <main className={`bq-cmp-stage ${hasModel ? 'with-preview' : ''}`}>
+        <div className="bq-cmp-canvas">
         {level.view === 'elevation' ? (
           <ElevationView model={play.session.model} ghosts={ghosts} demo={demoPoint} onTap={onTapPlan} />
         ) : (
@@ -335,6 +339,7 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
             onTap={onTapPlan}
           />
         )}
+        </div>
 
         {hasModel && (
           <div className={`bq-cmp-preview ${bigPreview ? 'big' : ''}`} data-testid="campaign-preview">

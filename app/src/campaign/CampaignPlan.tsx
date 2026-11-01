@@ -111,7 +111,7 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
             {g.label && (
               <text
                 x={g.points.reduce((s, p) => s + p[0], 0) / g.points.length}
-                y={g.points.reduce((s, p) => s + p[1], 0) / g.points.length + 900}
+                y={g.points.reduce((s, p) => s + p[1], 0) / g.points.length - 1500}
                 textAnchor="middle"
               >
                 {g.label}
