@@ -626,3 +626,12 @@
 .bq-home-bar { display: block; height: 6px; border-radius: 3px; background: var(--border-subtle); overflow: hidden; margin-top: 2px; }
 .bq-home-bar span { display: block; height: 100%; background: var(--accent-bright); }
 .bq-home-missions .bq-campaign-go { background: var(--accent-blueprint); }
+/* Teslim / İkiz Ev additions */
+.bq-cmp-dim line { stroke: var(--accent-bright); stroke-width: 28; }
+.bq-cmp-dim text { fill: var(--accent-bright); font-size: 380px; font-weight: 700; font-family: var(--font-sans); }
+.bq-cmp-otag rect { fill: var(--cmp-paper); stroke: var(--accent-action); stroke-width: 35; }
+.bq-cmp-otag text { fill: var(--text-primary); font-size: 300px; font-weight: 700; font-family: var(--font-sans); }
+.bq-cmp-elev-mark circle { fill: var(--cmp-paper); stroke: var(--accent-action); stroke-width: 40; }
+.bq-cmp-elev-mark path { fill: var(--accent-action); }
+.bq-cmp-reveal-sheet { background: #fff; }
+.bq-cmp-reveal-sheet svg { height: 260px; }

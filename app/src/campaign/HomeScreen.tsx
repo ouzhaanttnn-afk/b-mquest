@@ -27,26 +27,47 @@ interface Props {
   onBackToTitle: () => void;
 }
 
-const HouseIcon: React.FC<{ storeys: number }> = ({ storeys }) => (
+const HouseIcon: React.FC<{ icon: HouseDef['icon'] }> = ({ icon }) => (
   <svg viewBox="0 0 64 56" width="64" height="56" aria-hidden="true" className="bq-home-house-icon">
-    {storeys === 1 ? (
-      <>
-        <path d="M6 28 32 8l26 20" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-        <rect x="12" y="26" width="40" height="24" fill="none" stroke="currentColor" strokeWidth="3" />
-        <rect x="18" y="35" width="8" height="15" fill="currentColor" />
-        <rect x="34" y="33" width="12" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" />
-      </>
-    ) : (
-      <>
-        <path d="M8 18 32 4l24 14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-        <rect x="13" y="16" width="38" height="36" fill="none" stroke="currentColor" strokeWidth="3" />
-        <path d="M13 34h38" stroke="currentColor" strokeWidth="2" />
-        <rect x="18" y="38" width="8" height="14" fill="currentColor" />
-        <rect x="19" y="21" width="9" height="7" fill="none" stroke="currentColor" strokeWidth="2.5" />
-        <rect x="36" y="21" width="9" height="7" fill="none" stroke="currentColor" strokeWidth="2.5" />
-        <rect x="36" y="39" width="9" height="7" fill="none" stroke="currentColor" strokeWidth="2.5" />
-      </>
-    )}
+    <g fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round">
+      {icon === 'single' && (
+        <>
+          <path d="M6 28 32 8l26 20" />
+          <rect x="12" y="26" width="40" height="24" />
+          <rect x="18" y="35" width="8" height="15" fill="currentColor" />
+          <rect x="34" y="33" width="12" height="8" strokeWidth="2.5" />
+        </>
+      )}
+      {icon === 'double' && (
+        <>
+          <path d="M8 18 32 4l24 14" />
+          <rect x="13" y="16" width="38" height="36" />
+          <path d="M13 34h38" strokeWidth="2" />
+          <rect x="18" y="38" width="8" height="14" fill="currentColor" />
+          <rect x="19" y="21" width="9" height="7" strokeWidth="2.5" />
+          <rect x="36" y="21" width="9" height="7" strokeWidth="2.5" />
+          <rect x="36" y="39" width="9" height="7" strokeWidth="2.5" />
+        </>
+      )}
+      {icon === 'sheet' && (
+        <>
+          <rect x="6" y="8" width="52" height="40" />
+          <path d="M42 8v40M42 36h16" strokeWidth="2" />
+          <path d="M12 30 22 22l10 8" strokeWidth="2" />
+          <rect x="14" y="29" width="16" height="11" strokeWidth="2" />
+          <path d="M12 44h26" strokeWidth="2" strokeDasharray="3 2" />
+        </>
+      )}
+      {icon === 'twin' && (
+        <>
+          <path d="M2 26 17 12l15 14 15-14 15 14" />
+          <rect x="6" y="24" width="52" height="26" />
+          <path d="M32 24v26" strokeWidth="2" />
+          <rect x="12" y="36" width="7" height="14" fill="currentColor" />
+          <rect x="45" y="36" width="7" height="14" fill="currentColor" />
+        </>
+      )}
+    </g>
   </svg>
 );
 
@@ -117,7 +138,7 @@ export const HomeScreen: React.FC<Props> = ({
           onOpenHouse(nextIndex);
         }}
       >
-        <HouseIcon storeys={nextIndex === 0 ? 1 : 2} />
+        <HouseIcon icon={next.icon} />
         <span className="bq-home-next-body">
           <small>{allDone ? 'Tüm evler bitti' : started ? 'Kaldığın yer' : nextIndex === 0 ? 'İlk evin' : 'Sıradaki ev'}</small>
           <strong>{tx(next.title, 'tr')}</strong>
@@ -143,7 +164,7 @@ export const HomeScreen: React.FC<Props> = ({
                 }}
                 data-testid={`home-house-${h.id}`}
               >
-                <HouseIcon storeys={i === 0 ? 1 : 2} />
+                <HouseIcon icon={h.icon} />
                 <span className="bq-home-house-body">
                   <strong>
                     {i + 1}. {tx(h.title, 'tr')}

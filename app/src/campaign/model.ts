@@ -22,7 +22,12 @@ export type CommandId =
   | 'room'
   | 'tag'
   | 'section'
-  | 'paste';
+  | 'paste'
+  | 'dimension'
+  | 'elevation'
+  | 'sheet'
+  | 'place'
+  | 'mirror';
 
 export type RibbonTab = 'architecture' | 'annotate' | 'view' | 'modify';
 
@@ -49,7 +54,12 @@ export const RIBBON: RibbonCommand[] = [
   { id: 'level', label: 'Level', tab: 'architecture', panel: 'Datum', path: 'Architecture › Datum › Level', shortcut: 'LL' },
   { id: 'grid', label: 'Grid', tab: 'architecture', panel: 'Datum', path: 'Architecture › Datum › Grid', shortcut: 'GR' },
   { id: 'tag', label: 'Tag by Category', tab: 'annotate', panel: 'Tag', path: 'Annotate › Tag › Tag by Category', shortcut: 'TG' },
+  { id: 'dimension', label: 'Aligned', tab: 'annotate', panel: 'Dimension', path: 'Annotate › Dimension › Aligned', shortcut: 'DI' },
   { id: 'section', label: 'Section', tab: 'view', panel: 'Create', path: 'View › Create › Section' },
+  { id: 'elevation', label: 'Elevation', tab: 'view', panel: 'Create', path: 'View › Create › Elevation' },
+  { id: 'sheet', label: 'Sheet', tab: 'view', panel: 'Sheet Composition', path: 'View › Sheet Composition › Sheet' },
+  { id: 'place', label: 'Place View', tab: 'view', panel: 'Sheet Composition', path: 'View › Sheet Composition › View' },
+  { id: 'mirror', label: 'Mirror', tab: 'modify', panel: 'Modify', path: 'Modify › Modify › Mirror - Pick Axis', shortcut: 'MM' },
   {
     id: 'paste',
     label: 'Paste Aligned',
@@ -107,7 +117,7 @@ export interface LevelDef {
   par: number;
   geom: HouseGeom;
   /** Shown on the level-complete card as the reward picture. */
-  reveal?: 'section';
+  reveal?: 'section' | 'elevation' | 'sheet';
 }
 
 export interface HouseDef {
@@ -117,6 +127,10 @@ export interface HouseDef {
   levels: LevelDef[];
   /** Names offered when a room is tagged. */
   nameChoices: string[];
+  /** Picture on the home screen. */
+  icon: 'single' | 'double' | 'sheet' | 'twin';
+  /** Where the first level starts; default: an empty project. */
+  base?: () => MissionSessionState;
 }
 
 /** Every permission the campaign needs; the model is carried level to level. */
@@ -130,8 +144,8 @@ export const CAMPAIGN_TASK: MissionTask = {
   estimatedMinutes: 30,
   initialModel: { levels: [{ id: 'l0', name: 'Zemin Kat', elevation: 0 }], elements: [] },
   permissions: {
-    editableFields: ['elevation', 'name', 'number', 'typeParams'],
-    creatableTypes: ['wall', 'door', 'window', 'floor', 'roof', 'room', 'grid', 'tag', 'stair', 'view'],
+    editableFields: ['elevation', 'name', 'number', 'typeParams', 'placements'],
+    creatableTypes: ['wall', 'door', 'window', 'floor', 'roof', 'room', 'grid', 'tag', 'stair', 'view', 'dimension', 'sheet'],
     deletableCreated: true,
     editableSeedIds: [],
   },
@@ -150,7 +164,7 @@ export function sessionFor(model: BimModel): MissionSessionState {
 
 /** Model at the start of a level: the reference solution of every earlier step. */
 export function startModelFor(house: HouseDef, levelIndex: number): BimModel {
-  let s = createInitialSession(CAMPAIGN_TASK);
+  let s = house.base ? house.base() : createInitialSession(CAMPAIGN_TASK);
   for (let i = 0; i < levelIndex; i++) for (const st of house.levels[i].steps) s = st.solve(s);
   return s.model;
 }

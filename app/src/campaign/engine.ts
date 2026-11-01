@@ -7,15 +7,16 @@ import {
   type CommandResult,
   type MissionSessionState,
 } from '../domain/commands';
-import { createViewCommand } from '../domain/commandsDocs';
+import { createDimensionCommand, createSheetCommand, createViewCommand, placeOnSheetCommand } from '../domain/commandsDocs';
 import {
   copyWallsToLevelCommand,
   createGridCommand,
   createRectangleWallsCommand,
+  mirrorWallsCommand,
   createStairCommand,
 } from '../domain/commandsExtended';
 import { roomBoundary } from '../domain/derived';
-import type { BimModel, Point, RoomElement, StairDirection, StairElement, WallElement } from '../domain/types';
+import type { BimModel, CompassDir, Point, RoomElement, StairDirection, StairElement, WallElement } from '../domain/types';
 import { lockAxis, projectOnWall } from '../plan/snap';
 import { EMPTY_CHAIN, placeOpening, placeRoomAt, wallChainTap, type ChainState } from '../ui/workspace/toolActions';
 import { levelTap, roofLevelId, type CommandId, type HouseGeom, type LevelDef, type StepDef } from './model';
@@ -102,6 +103,40 @@ function nearestWall(m: BimModel, levelId: string, p: Point, maxDist = 900): Wal
     if (d <= maxDist && (!best || d < best.d)) best = { w, d };
   }
   return best?.w ?? null;
+}
+
+/** Centre of a door or window in plan. */
+export function openingCentre(m: BimModel, id: string): Point | null {
+  const o = m.elements.find((e) => e.id === id);
+  if (!o || (o.type !== 'door' && o.type !== 'window')) return null;
+  const host = m.elements.find((e): e is WallElement => e.type === 'wall' && e.id === o.hostWallId);
+  if (!host) return null;
+  const len = Math.abs(host.end[0] - host.start[0]) + Math.abs(host.end[1] - host.start[1]);
+  const k = (o.offset + o.width / 2) / len;
+  return [host.start[0] + (host.end[0] - host.start[0]) * k, host.start[1] + (host.end[1] - host.start[1]) * k];
+}
+
+function openingNear(m: BimModel, levelId: string, p: Point, maxDist = 800): string | null {
+  let best: { id: string; d: number } | null = null;
+  for (const e of m.elements) {
+    if (e.type !== 'door' && e.type !== 'window') continue;
+    const host = m.elements.find((w) => w.id === e.hostWallId);
+    if (!host || host.type !== 'wall' || host.baseLevelId !== levelId) continue;
+    const c = openingCentre(m, e.id);
+    if (!c) continue;
+    const d = Math.hypot(p[0] - c[0], p[1] - c[1]);
+    if (d <= maxDist && (!best || d < best.d)) best = { id: e.id, d };
+  }
+  return best?.id ?? null;
+}
+
+/** Which facade a tap outside the house asks for (north is up in the plan). */
+export function facadeAt(g: HouseGeom, p: Point): CompassDir | null {
+  if (p[1] > g.d) return 'S';
+  if (p[1] < 0) return 'N';
+  if (p[0] > g.w) return 'E';
+  if (p[0] < 0) return 'W';
+  return null;
 }
 
 export function roomAt(s: MissionSessionState, p: Point, levelId = 'l0'): RoomElement | null {
@@ -300,7 +335,40 @@ export function tap(level: LevelDef, st0: PlayState, raw: Point): TapResult {
       if (!o.result) return { state: st, effect: 'error', message: 'Burası kapalı bir oda değil.' };
       return applied(level, st, o.result);
     }
+    case 'dimension': {
+      const w = nearestWall(s.model, on, raw);
+      if (!w) return { state: st, effect: 'error', message: 'Bir duvarın üstüne dokun.' };
+      if (!st.firstTap) return { state: { ...st, firstTap: raw }, effect: 'snap' };
+      const a = nearestWall(s.model, on, st.firstTap);
+      if (!a || a.id === w.id) return { state: { ...st, firstTap: raw }, effect: 'snap' };
+      return applied(level, { ...st, firstTap: null }, createDimensionCommand(s, a.id, w.id));
+    }
+    case 'elevation': {
+      const dir = facadeAt(g, raw);
+      if (!dir) return { state: st, effect: 'error', message: 'Evin dışına, cephenin önüne dokun.' };
+      return applied(level, st, createViewCommand(s, { kind: 'elevation', direction: dir }));
+    }
+    case 'mirror': {
+      const axisWall = nearestWall(s.model, on, raw);
+      if (!axisWall) return { state: st, effect: 'error', message: 'Ayna ekseni olacak duvara dokun.' };
+      const vertical = axisWall.start[0] === axisWall.end[0];
+      const at = vertical ? axisWall.start[0] : axisWall.start[1];
+      const onAxis = (w: WallElement) =>
+        vertical ? w.start[0] === at && w.end[0] === at : w.start[1] === at && w.end[1] === at;
+      const ids = wallsOn(s.model, on).filter((w) => !onAxis(w)).map((w) => w.id);
+      return applied(level, st, mirrorWallsCommand(s, ids, vertical ? 'x' : 'z', at));
+    }
+    case 'sheet':
+    case 'place':
+      return { state: st0, effect: 'error', message: 'Listeden seç.' };
     case 'tag': {
+      const opening = openingNear(s.model, on, raw);
+      if (opening) {
+        if (s.model.elements.some((e) => e.type === 'tag' && e.targetId === opening)) {
+          return { state: st, effect: 'error', message: 'Bu zaten etiketli.' };
+        }
+        return applied(level, st, createTagCommand(s, opening));
+      }
       const room = roomAt(s, raw, on);
       if (!room) return { state: st, effect: 'error', message: 'Bir odanın içine dokun.' };
       const already = s.model.elements.some((e) => e.type === 'tag' && e.targetId === room.id);
@@ -313,13 +381,61 @@ export function tap(level: LevelDef, st0: PlayState, raw: Point): TapResult {
   return { state: st };
 }
 
-/** Paste Aligned to Selected Levels: the walls of the step's source level go onto `levelId`. */
-export function pasteTo(level: LevelDef, st: PlayState, levelId: string): TapResult {
-  if (st.done || st.command !== 'paste') return { state: st };
-  const from = currentStep(level, st).from ?? 'l0';
-  const ids = wallsOn(st.session.model, from).map((w) => w.id);
-  return applied(level, { ...st, taps: st.taps + 1 }, copyWallsToLevelCommand(st.session, ids, levelId));
+/** Commands that open a list instead of waiting for a tap on the drawing. */
+export const LIST_COMMANDS: CommandId[] = ['paste', 'sheet', 'place'];
+
+export interface Choice {
+  id: string;
+  label: string;
 }
+
+/** What the list shows for the current command. */
+export function choicesFor(level: LevelDef, st: PlayState): Choice[] {
+  const m = st.session.model;
+  switch (st.command) {
+    case 'paste': {
+      const from = currentStep(level, st).from ?? 'l0';
+      return m.levels.filter((l) => l.id !== from).map((l) => ({ id: l.id, label: l.name }));
+    }
+    case 'sheet':
+      return [{ id: 'A3', label: 'A3 · Title block' }];
+    case 'place': {
+      const sheet = [...m.elements].reverse().find((e) => e.type === 'sheet');
+      const placed = new Set(sheet && sheet.type === 'sheet' ? sheet.placements.map((p) => p.viewId) : []);
+      return m.elements
+        .filter((e) => e.type === 'view' && !placed.has(e.id))
+        .map((e) => ({ id: e.id, label: e.name }));
+    }
+    default:
+      return [];
+  }
+}
+
+/** Picking from that list. */
+export function choose(level: LevelDef, st: PlayState, id: string): TapResult {
+  if (st.done || !st.command || !LIST_COMMANDS.includes(st.command)) return { state: st };
+  const s = st.session;
+  const next = { ...st, taps: st.taps + 1 };
+  switch (st.command) {
+    case 'paste': {
+      const from = currentStep(level, st).from ?? 'l0';
+      const ids = wallsOn(s.model, from).map((w) => w.id);
+      return applied(level, next, copyWallsToLevelCommand(s, ids, id));
+    }
+    case 'sheet':
+      return applied(level, next, createSheetCommand(s, { number: 'A-101', name: 'Planlar ve Cepheler' }));
+    case 'place': {
+      const sheet = [...s.model.elements].reverse().find((e) => e.type === 'sheet');
+      if (!sheet) return { state: st, effect: 'error', message: 'Önce bir pafta oluştur.' };
+      return applied(level, next, placeOnSheetCommand(s, sheet.id, id));
+    }
+  }
+  return { state: st };
+}
+
+/** Paste Aligned to Selected Levels: the walls of the step's source level go onto `levelId`. */
+export const pasteTo = (level: LevelDef, st: PlayState, levelId: string): TapResult =>
+  st.command === 'paste' ? choose(level, st, levelId) : { state: st };
 
 /** Choosing a name for the room that was just tagged. */
 export function nameRoom(level: LevelDef, st: PlayState, name: string): TapResult {

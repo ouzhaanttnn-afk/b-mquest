@@ -302,5 +302,6 @@ export const HOUSE1_DEF: HouseDef = {
   title: { tr: 'Bahçe Evi' },
   brief: { tr: '10 × 7 m, tek katlı, iki oda. Revit’in temel komutlarıyla kur.' },
   levels: HOUSE1,
+  icon: 'single',
   nameChoices: ['Salon', 'Yatak Odası', 'Mutfak', 'Banyo'],
 };
