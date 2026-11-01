@@ -37,6 +37,8 @@ export const UI = {
   floorPlan: { tr: 'Kat planı' },
   elevationView: { tr: 'Görünüş: Güney' },
   pasteTitle: { tr: 'Hangi kata yapıştırılsın? (Select Levels)' },
+  sheetTitle: { tr: 'Pafta boyutu (Title block)' },
+  placeTitle: { tr: 'Hangi görünüm paftaya? (Views)' },
   houseDoneSub: { tr: "Bu komutlarla Revit'te aynı evi kurabilirsin:" },
   backToHub: { tr: 'Ana ekrana dön' },
   skipDemo: { tr: 'Atla' },

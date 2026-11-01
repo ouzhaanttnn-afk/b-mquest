@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import type { BimModel, Point, WallElement } from '../domain/types';
 import { roomArea, roomBoundary } from '../domain/derived';
-import { stairRect } from './engine';
+import { openingCentre, stairRect } from './engine';
 import type { Ghost, HouseGeom } from './model';
 
 /**
@@ -209,6 +209,74 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
           </g>
         ) : null
       )}
+
+      {model.elements.map((e) => {
+        if (e.type !== 'dimension') return null;
+        const a = walls.find((w) => w.id === e.wallA);
+        const b = walls.find((w) => w.id === e.wallB);
+        if (!a || !b) return null;
+        const horizontal = a.start[1] === a.end[1];
+        if (!horizontal) {
+          const x0 = Math.min(a.start[0], b.start[0]);
+          const x1 = Math.max(a.start[0], b.start[0]);
+          const z = Math.min(a.start[1], a.end[1], b.start[1], b.end[1]) - 1100;
+          return (
+            <g key={e.id} className="bq-cmp-dim" data-testid="cmp-dimension">
+              <line x1={x0} y1={z} x2={x1} y2={z} />
+              <line x1={x0} y1={z - 200} x2={x0} y2={z + 200} />
+              <line x1={x1} y1={z - 200} x2={x1} y2={z + 200} />
+              <text x={(x0 + x1) / 2} y={z - 150} textAnchor="middle">{(x1 - x0).toLocaleString('tr-TR')}</text>
+            </g>
+          );
+        }
+        const z0 = Math.min(a.start[1], b.start[1]);
+        const z1 = Math.max(a.start[1], b.start[1]);
+        const x = Math.max(a.start[0], a.end[0], b.start[0], b.end[0]) + 1100;
+        return (
+          <g key={e.id} className="bq-cmp-dim" data-testid="cmp-dimension">
+            <line x1={x} y1={z0} x2={x} y2={z1} />
+            <line x1={x - 200} y1={z0} x2={x + 200} y2={z0} />
+            <line x1={x - 200} y1={z1} x2={x + 200} y2={z1} />
+            <text x={x + 250} y={(z0 + z1) / 2 + 120}>{(z1 - z0).toLocaleString('tr-TR')}</text>
+          </g>
+        );
+      })}
+
+      {model.elements.map((e) => {
+        if (e.type !== 'tag') return null;
+        const target = model.elements.find((o) => o.id === e.targetId);
+        if (!target || (target.type !== 'door' && target.type !== 'window')) return null;
+        if (!walls.some((w) => w.id === target.hostWallId)) return null;
+        const c = openingCentre(model, target.id);
+        if (!c) return null;
+        const out = c[1] <= 0 ? -650 : c[1] >= geom.d ? 650 : 0;
+        return (
+          <g key={e.id} className="bq-cmp-otag">
+            <rect x={c[0] - 520} y={c[1] + out - 260} width={1040} height={520} rx={120} />
+            <text x={c[0]} y={c[1] + out + 120} textAnchor="middle">
+              {target.mark || (target.type === 'door' ? 'D' : 'W')}
+            </text>
+          </g>
+        );
+      })}
+
+      {model.elements.map((e) => {
+        if (e.type !== 'view' || e.kind !== 'elevation' || !e.direction) return null;
+        const { w, d } = geom;
+        const at: Record<string, [number, number, number]> = {
+          S: [w * 0.75, d + 1300, 0],
+          N: [w * 0.75, -1300, 180],
+          E: [w + 1300, d / 2, 270],
+          W: [-1300, d / 2, 90],
+        };
+        const [x, z, rot] = at[e.direction];
+        return (
+          <g key={e.id} className="bq-cmp-elev-mark" transform={`translate(${x} ${z}) rotate(${rot})`} data-testid="cmp-elevation-mark">
+            <circle r={380} />
+            <path d="M -380 0 L 0 -620 L 380 0 Z" />
+          </g>
+        );
+      })}
 
       {chainStart && <circle className="bq-cmp-chain" cx={chainStart[0]} cy={chainStart[1]} r={260} />}
 

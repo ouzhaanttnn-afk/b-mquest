@@ -66,6 +66,39 @@ export const RibbonIcon: React.FC<{ id: CommandId }> = ({ id }) => {
           <path d="M9 12h6M9 16h6" />
         </>
       )}
+      {id === 'dimension' && (
+        <>
+          <path d="M3 9v8M21 9v8" />
+          <path d="M3 13h18" />
+          <path d="M5 11l-2 2 2 2M19 11l2 2-2 2" />
+        </>
+      )}
+      {id === 'elevation' && (
+        <>
+          <circle cx="12" cy="13" r="5" />
+          <path d="M12 3l4 5H8z" fill="currentColor" />
+        </>
+      )}
+      {id === 'sheet' && (
+        <>
+          <rect x="3" y="5" width="18" height="14" />
+          <path d="M15 5v14M15 15h6" />
+        </>
+      )}
+      {id === 'place' && (
+        <>
+          <rect x="3" y="5" width="18" height="14" />
+          <rect x="6" y="8" width="7" height="6" />
+          <path d="M16 11h3M17.5 9.5v3" />
+        </>
+      )}
+      {id === 'mirror' && (
+        <>
+          <path d="M12 3v18" strokeDasharray="3 2" />
+          <path d="M9 7 4 12l5 5z" />
+          <path d="M15 7l5 5-5 5z" fill="currentColor" />
+        </>
+      )}
       {id === 'tag' && (
         <>
           <path d="M3 7h12l5 5-5 5H3z" />

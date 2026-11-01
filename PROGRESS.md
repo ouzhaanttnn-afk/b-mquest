@@ -22,7 +22,10 @@ XP çubuğu, hikâye metinleri, rota şeridi ve tekrar eden müfredat listesi ka
 - **2. İki Katlı Ev** (`house2.ts`): iki Level, Wall › Draw: Rectangle/Line, Stair (kat yüksekliğine göre basamak),
   Modify › Clipboard › Paste › Aligned to Selected Levels, merdiven boşluklu üst kat döşemesi, View › Create › Section (sonuç kartında kesit çizimi),
   kat planı geçişi (Zemin Kat / 1. Kat), çatı.
-- Yakında: Teslim (tipler, ölçü, çizelge, pafta), Hata Avı (model kontrolü).
+- **3. Teslim** (`house3.ts`, Bahçe Evi'nin bitmiş modeliyle başlar): Annotate › Dimension › Aligned (DI), Tag by Category ile kapı/pencere etiketi,
+  View › Create › Elevation (kuzey/güney, sonuç kartında cephe çizimi), Section, View › Sheet Composition › Sheet ve View (A3 pafta, sonuç kartında pafta).
+- **4. İkiz Ev** (`house4.ts`): yarım ev (dikdörtgen duvar + kapı), Modify › Mirror - Pick Axis (MM) ile ortak duvardan aynalama, döşeme ve çatı, iki daire (Room + Tag + ad).
+- Yakında: Hata Avı (model kontrolü).
 - Ortak yapı `model.ts` (komut şeridi, LevelDef/HouseDef), kurallar `engine.ts`, liste `houses.ts`. Bir ev, öncekinin her bölümü bitince açılır.
 
 ## Yeni çekirdek: ev ev kampanya (prototip)

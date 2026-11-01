@@ -8,7 +8,9 @@ import {
   currentStep,
   nameRoom,
   newPlay,
-  pasteTo,
+  LIST_COMMANDS,
+  choicesFor,
+  choose,
   pickCommand,
   setDrawMode,
   starsFor,
@@ -34,8 +36,9 @@ import {
 } from './model';
 import { UI, tx, type Locale } from './i18n';
 import { houseStars, isUnlocked, recordStars, type CampaignProgress } from './progress';
-import { buildSection } from '../domain/viewDrawing';
+import { buildElevation, buildSection } from '../domain/viewDrawing';
 import { DrawingSvg } from '../plan/DrawingSvg';
+import { SheetSvg } from '../plan/SheetSvg';
 import './campaign.css';
 
 const SceneViewport = lazy(() => import('../scene/SceneViewport').then((m) => ({ default: m.SceneViewport })));
@@ -278,7 +281,13 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
   const chainStart = play.chain.start ?? play.firstTap;
   const activeLevel = stepLevel(step);
   const model = play.session.model;
-  const section = level.reveal === 'section' ? [...model.elements].reverse().find((e) => e.type === 'view' && e.kind === 'section') : undefined;
+  const revealView =
+    level.reveal === 'section' || level.reveal === 'elevation'
+      ? [...model.elements].reverse().find((e) => e.type === 'view' && e.kind === level.reveal && (e.kind !== 'elevation' || e.direction === 'S'))
+      : undefined;
+  const revealSheet = level.reveal === 'sheet' ? [...model.elements].reverse().find((e) => e.type === 'sheet') : undefined;
+  const listOpen = !!play.command && LIST_COMMANDS.includes(play.command) && !play.done;
+  const listTitle = play.command === 'paste' ? t('pasteTitle') : play.command === 'sheet' ? t('sheetTitle') : t('placeTitle');
   const ghosts = play.done ? [] : step.ghost;
   const usedCommands = useMemo(() => [...new Set(level.steps.map((s) => s.command))].map(commandById), [level]);
   const hasModel = play.session.model.elements.length > 0;
@@ -468,23 +477,21 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
         </div>
       )}
 
-      {play.command === 'paste' && !play.done && (
-        <div className="bq-cmp-sheet" role="dialog" aria-label={t('pasteTitle')} data-testid="campaign-paste-sheet">
-          <strong>{t('pasteTitle')}</strong>
+      {listOpen && (
+        <div className="bq-cmp-sheet" role="dialog" aria-label={listTitle} data-testid="campaign-list-sheet">
+          <strong>{listTitle}</strong>
           <div className="bq-cmp-name-chips">
-            {model.levels
-              .filter((l) => l.id !== (step.from ?? 'l0'))
-              .map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  className="bq-cmp-chip big"
-                  onClick={() => apply(pasteTo(level, play, l.id))}
-                  data-testid={`campaign-paste-${l.id}`}
-                >
-                  {l.name}
-                </button>
-              ))}
+            {choicesFor(level, play).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="bq-cmp-chip big"
+                onClick={() => apply(choose(level, play, c.id))}
+                data-testid={`campaign-choice-${c.id}`}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -509,10 +516,22 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
           <div className="bq-cmp-modal bq-cmp-done" role="dialog" aria-label={t('levelDone')} data-testid="campaign-level-done">
             <h2>{t('levelDone')}</h2>
             <AnimatedStars n={stars} reducedMotion={reducedMotion} />
-            {section && section.type === 'view' && (
+            {revealView && revealView.type === 'view' && (
               <div className="bq-cmp-reveal" data-testid="campaign-reveal">
-                <DrawingSvg drawing={buildSection(model, section)} isDark={theme === 'dark'} title={section.name} />
-                <small>{section.name}</small>
+                <DrawingSvg
+                  drawing={revealView.kind === 'section' ? buildSection(model, revealView) : buildElevation(model, revealView.direction ?? 'S')}
+                  isDark={theme === 'dark'}
+                  title={revealView.name}
+                />
+                <small>{revealView.name}</small>
+              </div>
+            )}
+            {revealSheet && revealSheet.type === 'sheet' && (
+              <div className="bq-cmp-reveal bq-cmp-reveal-sheet" data-testid="campaign-reveal">
+                <SheetSvg model={model} sheet={revealSheet} projectName="BIM QUEST · Bahçe Evi" />
+                <small>
+                  {revealSheet.number} · {revealSheet.name}
+                </small>
               </div>
             )}
             <section className="bq-cmp-inrevit">

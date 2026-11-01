@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { HOUSE, HOUSE1, HOUSE1_DEF, ROOM_NAMES } from '../src/campaign/house1';
 import { HOUSE2, HOUSE2_DEF } from '../src/campaign/house2';
 import { RIBBON, sessionFor, startModelFor as startModelOf, type HouseDef } from '../src/campaign/model';
+import { HOUSE3_DEF } from '../src/campaign/house3';
+import { HOUSE4, HOUSE4_DEF, UNIT_NAMES } from '../src/campaign/house4';
 import {
+  choicesFor,
+  choose,
   nameRoom,
   newPlay,
   pasteTo,
@@ -17,7 +21,7 @@ import type { Point } from '../src/domain/types';
 
 const startModelFor = (i: number) => startModelOf(HOUSE1_DEF, i);
 
-type Script = Array<{ cmd?: string; taps?: Point[]; name?: string; mode?: 'line' | 'rect'; paste?: string }>;
+type Script = Array<{ cmd?: string; taps?: Point[]; name?: string; mode?: 'line' | 'rect'; paste?: string; pick?: string[] }>;
 
 function playHouse(house: HouseDef, index: number, script: Script): PlayState {
   const level = house.levels[index];
@@ -26,6 +30,11 @@ function playHouse(house: HouseDef, index: number, script: Script): PlayState {
     if (s.cmd) st = pickCommand(level, st, s.cmd as never).state;
     if (s.mode) st = setDrawMode(st, s.mode).state;
     if (s.paste) st = pasteTo(level, st, s.paste).state;
+    for (const label of s.pick ?? []) {
+      const c = choicesFor(level, st).find((x) => x.label.startsWith(label));
+      if (!c) throw new Error(`no choice ${label} in ${JSON.stringify(choicesFor(level, st))}`);
+      st = choose(level, st, c.id).state;
+    }
     for (const p of s.taps ?? []) st = tap(level, st, p).state;
     if (s.name) st = nameRoom(level, st, s.name).state;
   }
@@ -184,5 +193,80 @@ describe('İki Katlı Ev — kampanya mantığı', () => {
   it('merdivenden geçmeyen kesit bölümü bitirmez', () => {
     const st = playHouse(HOUSE2_DEF, 4, [{ cmd: 'section', taps: [[5000, -1000], [5000, D2 + 1000]] }]);
     expect(st.done).toBe(false);
+  });
+});
+
+const H3 = HOUSE3_DEF.levels;
+const perfect3: Script[] = [
+  [{ cmd: 'dimension', taps: [[100, 3500], [9900, 3500]] }, { cmd: 'dimension', taps: [[5000, 100], [5000, 6900]] }],
+  [{ cmd: 'tag', taps: [[3000, 0], [3000, 7000], [8000, 7100]] }],
+  [{ cmd: 'elevation', taps: [[5000, 8200], [5000, -1200]] }],
+  [{ cmd: 'section', taps: [[-1000, 4000], [11000, 4000]] }],
+  [{ cmd: 'sheet', pick: ['A3'] }, { cmd: 'place', pick: ['Kat Planı', 'Cephe - Güney'] }],
+];
+
+describe('Teslim — kampanya mantığı', () => {
+  it('Bahçe Evi’nin bitmiş modeliyle ve kat planı görünümüyle başlar', () => {
+    const start = startModelOf(HOUSE3_DEF, 0);
+    expect(start.elements.filter((e) => e.type === 'wall')).toHaveLength(5);
+    expect(start.elements.some((e) => e.type === 'view' && e.kind === 'plan')).toBe(true);
+  });
+
+  it('referans çözüm paftayı kurar', () => {
+    const end = startModelOf(HOUSE3_DEF, H3.length);
+    const sheet = end.elements.find((e) => e.type === 'sheet');
+    expect(sheet && sheet.type === 'sheet' && sheet.placements.length).toBe(2);
+    for (const level of H3) for (const st of level.steps) expect(st.done(end), `${level.id}/${st.id}`).toBe(true);
+  });
+
+  H3.forEach((level, i) => {
+    it(`${level.id} ${level.title.tr}: dokunarak oynanınca biter ve 3 yıldız verir`, () => {
+      expect(level.steps[0].done(startModelOf(HOUSE3_DEF, i))).toBe(false);
+      const st = playHouse(HOUSE3_DEF, i, perfect3[i]);
+      expect(st.done, JSON.stringify(st.session.model.elements.filter((e) => e.type === 'view' || e.type === 'dimension'))).toBe(true);
+      expect(starsFor(level, st)).toBe(3);
+    });
+  });
+
+  it('iç duvara ölçü bölümü bitirmez', () => {
+    const st = playHouse(HOUSE3_DEF, 0, [{ cmd: 'dimension', taps: [[100, 3500], [6000, 3500]] }]);
+    expect(st.stepIndex).toBe(0);
+  });
+});
+
+const { w: W4, d: D4, half: HF } = HOUSE4;
+const H4 = HOUSE4_DEF.levels;
+const perfect4: Script[] = [
+  [{ cmd: 'wall', mode: 'rect', taps: [[0, 0], [HF, D4]] }, { cmd: 'door', taps: [[2000, 100]] }],
+  [{ cmd: 'mirror', taps: [[HF + 100, 4000]] }],
+  [{ cmd: 'floor', taps: [[6000, 4000]] }, { cmd: 'roof', taps: [[6000, 4000]] }],
+  [
+    { cmd: 'room', taps: [[3000, 4000], [9000, 4000]] },
+    { cmd: 'tag', taps: [[3000, 4000]], name: UNIT_NAMES.left },
+    { taps: [[9000, 4000]], name: UNIT_NAMES.right },
+  ],
+];
+
+describe('İkiz Ev — kampanya mantığı', () => {
+  it('referans çözüm iki daireli evi kurar', () => {
+    const end = startModelOf(HOUSE4_DEF, H4.length);
+    expect(end.elements.filter((e) => e.type === 'wall')).toHaveLength(7);
+    expect(end.elements.filter((e) => e.type === 'door')).toHaveLength(2);
+    for (const level of H4) for (const st of level.steps) expect(st.done(end), `${level.id}/${st.id}`).toBe(true);
+  });
+
+  H4.forEach((level, i) => {
+    it(`${level.id} ${level.title.tr}: dokunarak oynanınca biter ve 3 yıldız verir`, () => {
+      expect(level.steps[0].done(startModelOf(HOUSE4_DEF, i))).toBe(false);
+      const st = playHouse(HOUSE4_DEF, i, perfect4[i]);
+      expect(st.done).toBe(true);
+      expect(starsFor(level, st)).toBe(3);
+    });
+  });
+
+  it('yatay duvardan aynalamak ikiz evi kurmaz', () => {
+    const st = playHouse(HOUSE4_DEF, 1, [{ cmd: 'mirror', taps: [[3000, D4]] }]);
+    expect(st.done).toBe(false);
+    expect(W4).toBe(12000);
   });
 });

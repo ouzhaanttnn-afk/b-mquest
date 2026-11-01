@@ -278,5 +278,6 @@ export const HOUSE2_DEF: HouseDef = {
   title: { tr: 'İki Katlı Ev' },
   brief: { tr: '8 × 6 m, iki kat, merdivenli. Katları, merdiveni, kat kopyalamayı ve kesiti öğren.' },
   levels: HOUSE2_LEVELS,
+  icon: 'double',
   nameChoices: ['Salon', 'Mutfak', 'Yatak Odası', 'Banyo'],
 };
