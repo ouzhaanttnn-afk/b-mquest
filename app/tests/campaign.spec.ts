@@ -29,7 +29,7 @@ async function tapAt(page: Page, x: number, z: number, elevation = false) {
 }
 
 async function pick(page: Page, id: string) {
-  const tab = id === 'tag' ? 'annotate' : 'architecture';
+  const tab = id === 'tag' ? 'annotate' : id === 'section' ? 'view' : id === 'paste' ? 'modify' : 'architecture';
   const tabBtn = page.getByTestId(`campaign-tab-${tab}`);
   if ((await tabBtn.getAttribute('aria-selected')) !== 'true') await tabBtn.click();
   await page.getByTestId(`campaign-cmd-${id}`).click();
@@ -42,7 +42,7 @@ async function finish(page: Page, stars = 3) {
 }
 
 async function playWholeHouse(page: Page) {
-  await page.getByTestId('campaign-card').click();
+  await page.getByTestId('home-house-bahce-evi').click();
   await expect(page.getByTestId('campaign-hub')).toBeVisible();
   await expect(page.getByTestId('campaign-level-2')).toBeDisabled();
   await page.getByTestId('campaign-level-1').click();
@@ -98,35 +98,93 @@ async function playWholeHouse(page: Page) {
   await expect(page.getByTestId('campaign-house-done')).toBeVisible();
   await page.getByTestId('campaign-house-back').click();
   await expect(page.getByTestId('campaign-total-stars')).toContainText('18 / 18');
+  await page.getByTestId('campaign-exit-btn').click();
+}
+
+async function playSecondHouse(page: Page) {
+  await expect(page.getByTestId('home-house-iki-katli-ev')).toBeEnabled();
+  await page.getByTestId('home-house-iki-katli-ev').click();
+  await page.getByTestId('campaign-level-1').click();
+
+  await pick(page, 'level');
+  await tapAt(page, 0, 3000, true);
+  await tapAt(page, 0, 6000, true);
+  await finish(page);
+
+  await pick(page, 'wall');
+  await page.getByTestId('campaign-draw-rect').click();
+  await tapAt(page, 0, 0);
+  await tapAt(page, 8000, 6000);
+  await expect(page.getByTestId('campaign-goal')).toContainText('iç duvar');
+  await pick(page, 'wall');
+  await page.getByTestId('campaign-draw-line').click();
+  await tapAt(page, 4000, 0);
+  await tapAt(page, 4000, 6000);
+  await finish(page);
+
+  await pick(page, 'stair');
+  await tapAt(page, 700, 700);
+  await tapAt(page, 700, 5000);
+  await finish(page);
+
+  await pick(page, 'paste');
+  await page.getByTestId('campaign-paste-l1').click();
+  await expect(page.getByTestId('campaign-view-name')).toContainText('1. Kat');
+  await pick(page, 'floor');
+  await tapAt(page, 5000, 3000);
+  await finish(page);
+
+  await pick(page, 'section');
+  await tapAt(page, 1000, -1000);
+  await tapAt(page, 1000, 7000);
+  await expect(page.getByTestId('campaign-reveal')).toBeVisible();
+  await finish(page);
+
+  await pick(page, 'door');
+  await tapAt(page, 2500, 0);
+  await expect(page.getByTestId('campaign-view-name')).toContainText('1. Kat');
+  await pick(page, 'window');
+  await tapAt(page, 2000, 0);
+  await tapAt(page, 6000, 0);
+  await pick(page, 'roof');
+  await tapAt(page, 4000, 3000);
+  await finish(page);
+
+  await expect(page.getByTestId('campaign-house-done')).toBeVisible();
+  await page.getByTestId('campaign-house-back').click();
+  await expect(page.getByTestId('campaign-total-stars')).toContainText('18 / 18');
 }
 
 test.describe('Bahçe Evi', () => {
-  test('tablet: altı bölüm dokunarak oynanır, yıldızlar kaydedilir', async ({ page }) => {
+  test('tablet: iki ev dokunarak baştan sona oynanır, yıldızlar kaydedilir', async ({ page }) => {
     await page.setViewportSize({ width: 1180, height: 820 });
     await freshStart(page);
     await playWholeHouse(page);
+    await expect(page.getByTestId('home-next-house')).toContainText('İki Katlı Ev');
+    await playSecondHouse(page);
 
-    // Progress survives a reload and shows on the home card.
+    // Progress survives a reload and shows on the home screen.
     await page.reload();
-    await expect(page.getByTestId('campaign-card')).toContainText('18/18');
+    await expect(page.getByTestId('home-total-stars')).toContainText('36');
   });
 
   test('telefon: sayfa yana taşmaz, oyun baştan sona oynanır', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await freshStart(page);
-    await page.getByTestId('campaign-card').click();
+    await page.getByTestId('home-next-house').click();
     await page.getByTestId('campaign-level-1').click();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     await page.getByTestId('campaign-level-exit').click();
     await page.getByTestId('campaign-exit-btn').click();
     await playWholeHouse(page);
+    await playSecondHouse(page);
   });
 
   test('yanlış komut ikinci yıldızı götürür, iki yanlıştan sonra doğru komut parlar', async ({ page }) => {
     await page.setViewportSize({ width: 1180, height: 820 });
     await freshStart(page);
-    await page.getByTestId('campaign-card').click();
+    await page.getByTestId('home-next-house').click();
     await page.getByTestId('campaign-level-1').click();
 
     // Tapping the drawing before choosing a command asks for one.

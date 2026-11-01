@@ -1,20 +1,16 @@
 import {
-  addLevelCommand,
   createFloorCommand,
   createGridCommand,
-  createInitialSession,
   createRoofCommand,
   createTagCommand,
   createWallCommand,
-  setLevelElevationCommand,
   updateElementProperty,
-  type CommandResult,
   type MissionSessionState,
 } from '../domain/commands';
 import { enclosedRegions, roomBoundary } from '../domain/derived';
-import type { BimModel, MissionTask, Point, WallElement } from '../domain/types';
+import type { BimModel, Point, WallElement } from '../domain/types';
 import { placeOpening, placeRoomAt } from '../ui/workspace/toolActions';
-import type { Text } from './i18n';
+import { levelTap, roofLevelId, step, type HouseDef, type LevelDef } from './model';
 
 /**
  * İlk ev: "Bahçe Evi". Tek katlı, 10 × 7 m (70 m²), bir iç duvarla salon ve
@@ -22,67 +18,10 @@ import type { Text } from './i18n';
  * Revit menü yolları İngilizce arayüze göredir (Revit 2022 ve sonrası).
  */
 
-export type CommandId = 'level' | 'grid' | 'wall' | 'door' | 'window' | 'floor' | 'roof' | 'room' | 'tag';
-
-export interface RibbonCommand {
-  id: CommandId;
-  /** Name as on Revit's ribbon. */
-  label: string;
-  tab: 'architecture' | 'annotate';
-  panel: string;
-  path: string;
-  shortcut?: string;
-}
-
-export const RIBBON: RibbonCommand[] = [
-  { id: 'wall', label: 'Wall', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Wall', shortcut: 'WA' },
-  { id: 'door', label: 'Door', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Door', shortcut: 'DR' },
-  { id: 'window', label: 'Window', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Window', shortcut: 'WN' },
-  { id: 'floor', label: 'Floor', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Floor', shortcut: 'SB' },
-  { id: 'roof', label: 'Roof', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Roof › Roof by Footprint' },
-  { id: 'room', label: 'Room', tab: 'architecture', panel: 'Room & Area', path: 'Architecture › Room & Area › Room', shortcut: 'RM' },
-  { id: 'level', label: 'Level', tab: 'architecture', panel: 'Datum', path: 'Architecture › Datum › Level', shortcut: 'LL' },
-  { id: 'grid', label: 'Grid', tab: 'architecture', panel: 'Datum', path: 'Architecture › Datum › Grid', shortcut: 'GR' },
-  { id: 'tag', label: 'Tag by Category', tab: 'annotate', panel: 'Tag', path: 'Annotate › Tag › Tag by Category', shortcut: 'TG' },
-];
-
-export const commandById = (id: CommandId) => RIBBON.find((c) => c.id === id)!;
-
 // ---- House geometry (mm) --------------------------------------------------
 export const HOUSE = { w: 10000, d: 7000, split: 6000, wallH: 3000, roofLevel: 3000 };
+const GEOM = { w: HOUSE.w, d: HOUSE.d, wallH: HOUSE.wallH };
 export const ROOM_NAMES = { left: 'Salon', right: 'Yatak Odası' } as const;
-
-export type Ghost =
-  | { kind: 'line'; a: Point; b: Point; label?: string }
-  | { kind: 'opening'; a: Point; b: Point; label?: string }
-  | { kind: 'area'; points: Point[]; label?: string }
-  | { kind: 'elevation'; at: number; label?: string };
-
-export interface StepDef {
-  id: string;
-  command: CommandId;
-  goal: Text;
-  ghost: Ghost[];
-  /** Points the demo finger moves through (plan mm, or [0, elevation] on the elevation view). */
-  demo: Point[];
-  done: (m: BimModel) => boolean;
-  /** Reference solution; builds the start model of later levels and is used by tests. */
-  solve: (s: MissionSessionState) => MissionSessionState;
-  /** Fewest taps that finish the step. */
-  taps: number;
-}
-
-export interface LevelDef {
-  id: string;
-  number: number;
-  title: Text;
-  why: Text;
-  bridge: Text;
-  view: 'plan' | 'elevation';
-  steps: StepDef[];
-  /** Tap allowance for the third star. */
-  par: number;
-}
 
 // ---- Predicates ------------------------------------------------------------
 const walls = (m: BimModel) => m.elements.filter((e): e is WallElement => e.type === 'wall');
@@ -129,10 +68,6 @@ const roomAtSide = (m: BimModel, side: 'left' | 'right') =>
   );
 
 // ---- Reference solutions ---------------------------------------------------
-const step = (_s: MissionSessionState, r: CommandResult): MissionSessionState => {
-  if (!r.ok) throw new Error(`campaign solve: ${r.error.code} ${r.error.message}`);
-  return r.state;
-};
 const wallCmd = (s: MissionSessionState, a: Point, b: Point) =>
   step(s, createWallCommand(s, { name: 'Duvar', baseLevelId: 'l0', startX: a[0], startZ: a[1], endX: b[0], endZ: b[1], height: HOUSE.wallH, thickness: 200 }));
 const wallById = (s: MissionSessionState, a: Point, b: Point) =>
@@ -148,6 +83,7 @@ export const HOUSE1: LevelDef[] = [
     why: { tr: "Revit'te her duvar, döşeme ve çatı bir kata (Level) bağlıdır. Katı yükseltirsen ona bağlı her şey birlikte yükselir. Katlar bir görünüşte (elevation) çizilir." },
     bridge: { tr: "AutoCAD'de kat diye bir şey yoktur; Revit'te her şey bir kata bağlıdır." },
     view: 'elevation',
+    geom: GEOM,
     par: 2,
     steps: [
       {
@@ -156,8 +92,9 @@ export const HOUSE1: LevelDef[] = [
         goal: { tr: 'Çatı seviyesini +3,00 m’ye koy.' },
         ghost: [{ kind: 'elevation', at: HOUSE.roofLevel, label: '+3,00' }],
         demo: [[0, 0], [0, HOUSE.roofLevel]],
+        levels: [{ at: HOUSE.roofLevel, name: 'Çatı' }],
         done: (m) => m.levels.some((l) => l.id !== 'l0' && l.elevation === HOUSE.roofLevel),
-        solve: (s) => step(s, addLevelCommand(s)),
+        solve: (s) => step(s, levelTap(s, HOUSE.roofLevel, [{ at: HOUSE.roofLevel, name: 'Çatı' }])),
         taps: 1,
       },
     ],
@@ -169,6 +106,7 @@ export const HOUSE1: LevelDef[] = [
     why: { tr: 'Akslar (Grid) planın iskeletidir. Duvarlar akslara oturur; aksı taşırsan ona bağlı duvarlar da taşınabilir. Revit aks adlarını kendisi verir: A, B… ve 1, 2…' },
     bridge: { tr: 'Aks çizgisi gibi görünür, ama Revit’te duvarlar ona yapışır ve projede referans olarak kalır.' },
     view: 'plan',
+    geom: GEOM,
     par: 10,
     steps: [
       {
@@ -204,6 +142,7 @@ export const HOUSE1: LevelDef[] = [
     why: { tr: 'Revit’te duvar bir nesnedir: yüksekliği, kalınlığı ve tipi vardır. Uç uca çizdiğin duvarlar köşelerde kendiliğinden birleşir ve kapalı bir oda oluşturur.' },
     bridge: { tr: "AutoCAD'de duvar iki paralel çizgidir; Revit'te yüksekliği ve kalınlığı olan tek bir nesne." },
     view: 'plan',
+    geom: GEOM,
     par: 9,
     steps: [
       {
@@ -233,6 +172,7 @@ export const HOUSE1: LevelDef[] = [
     why: { tr: 'Kapı ve pencere bir duvara bağlıdır (host). Duvarı deler; duvar taşınırsa onunla gider, silinirse onunla silinir.' },
     bridge: { tr: "AutoCAD'deki blok gibi görünür, ama Revit'te duvarı gerçekten deler ve duvara bağlı kalır." },
     view: 'plan',
+    geom: GEOM,
     par: 5,
     steps: [
       {
@@ -275,6 +215,7 @@ export const HOUSE1: LevelDef[] = [
     why: { tr: 'Döşeme ve çatı duvarlardan oluşturulur: Revit duvarları seçince sınırı kendisi bulur. Çatı en üst kata (Level) oturur.' },
     bridge: { tr: "AutoCAD'deki tarama gibi değil: Revit'te döşemenin kalınlığı ve malzemesi olan gerçek bir nesne." },
     view: 'plan',
+    geom: GEOM,
     par: 4,
     steps: [
       {
@@ -306,6 +247,7 @@ export const HOUSE1: LevelDef[] = [
     why: { tr: 'Oda (Room) duvarların çevrelediği alanı tanır; alanını ve hacmini Revit hesaplar. Etiket (Tag) odanın adını ve alanını planda yazar; bilgi modelden gelir.' },
     bridge: { tr: "AutoCAD'de alanı sen ölçersin; Revit'te oda alanı modelden kendiliğinden hesaplanır." },
     view: 'plan',
+    geom: GEOM,
     par: 8,
     steps: [
       {
@@ -355,44 +297,10 @@ export const HOUSE1: LevelDef[] = [
   },
 ];
 
-export const roofLevelId = (m: BimModel) =>
-  [...m.levels].sort((a, b) => b.elevation - a.elevation)[0]?.id ?? 'l0';
-
-/** A task with every permission the campaign needs; the model is carried level to level. */
-export const CAMPAIGN_TASK: MissionTask = {
-  schemaVersion: '1.0',
-  contentVersion: '1.0.0',
+export const HOUSE1_DEF: HouseDef = {
   id: 'bahce-evi',
-  title: 'Bahçe Evi',
-  objective: 'Bahçe Evi',
-  prerequisites: [],
-  estimatedMinutes: 30,
-  initialModel: { levels: [{ id: 'l0', name: 'Zemin Kat', elevation: 0 }], elements: [] },
-  permissions: {
-    editableFields: ['elevation', 'name', 'number', 'typeParams'],
-    creatableTypes: ['wall', 'door', 'window', 'floor', 'roof', 'room', 'grid', 'tag'],
-    deletableCreated: true,
-    editableSeedIds: [],
-  },
-  hints: [
-    { id: 'h1', text: '-' },
-    { id: 'h2', text: '-' },
-    { id: 'h3', text: '-' },
-  ],
-  recap: 'Bahçe Evi',
-  criteria: [{ id: 'c_any', type: 'metric', metric: 'levelCount', min: 1, max: 99, message: '-' }],
+  title: { tr: 'Bahçe Evi' },
+  brief: { tr: '10 × 7 m, tek katlı, iki oda. Revit’in temel komutlarıyla kur.' },
+  levels: HOUSE1,
+  nameChoices: ['Salon', 'Yatak Odası', 'Mutfak', 'Banyo'],
 };
-
-/** Model at the start of a level: the reference solution of every earlier step. */
-export function startModelFor(levelIndex: number): BimModel {
-  let s = createInitialSession(CAMPAIGN_TASK);
-  for (let i = 0; i < levelIndex; i++) for (const st of HOUSE1[i].steps) s = st.solve(s);
-  return s.model;
-}
-
-export function sessionFor(model: BimModel): MissionSessionState {
-  return createInitialSession(CAMPAIGN_TASK, { model, revealedHints: [] });
-}
-
-export const setRoofLevel = (s: MissionSessionState, elevation: number) =>
-  setLevelElevationCommand(s, 'l1', elevation);

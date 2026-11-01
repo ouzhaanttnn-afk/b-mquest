@@ -9,6 +9,22 @@ Uygulama klasörü: `app/`.
 2. **Görevler ekranı** (`Dashboard`): sıradaki göreve götüren hero kartı ("Selin Mimar" notuyla), seviye çubuğu, gün serisi, başarım listesi, bölüm sekmeleri ve görev kartları.
 3. **Uygulama ekranı** (`Workspace`): 2B plan + 3B sahne, Properties, araç çubuğu, Rehber Turu, koç çubuğu, Kontrol Et, değerlendirme.
 
+## Akış (Kasım 2026)
+
+Giriş ekranı → **Ana ekran** (`campaign/HomeScreen.tsx`): sıradaki ev (büyük kart), Evler listesi, tek bir **Görevler** kartı, Yakında evler.
+Ayarlar (ses, titreşim, tema, hareketi azalt, hatırlatma, hakkında, ilerlemeyi sıfırla) ana ekranın ⋯ menüsünde.
+Görevler ekranı (`ui/Dashboard.tsx`) sadeleştirildi: ← Evler, başlık, bölüm sekmeleri, kısa görev kartları (numara, yıldız, başlık, tek düğme).
+XP çubuğu, hikâye metinleri, rota şeridi ve tekrar eden müfredat listesi kaldırıldı; görevlerin kendisi aynen duruyor.
+
+## Evler
+
+- **1. Bahçe Evi** (`house1.ts`): Level, Grid, Wall, Door/Window, Floor/Roof, Room/Tag.
+- **2. İki Katlı Ev** (`house2.ts`): iki Level, Wall › Draw: Rectangle/Line, Stair (kat yüksekliğine göre basamak),
+  Modify › Clipboard › Paste › Aligned to Selected Levels, merdiven boşluklu üst kat döşemesi, View › Create › Section (sonuç kartında kesit çizimi),
+  kat planı geçişi (Zemin Kat / 1. Kat), çatı.
+- Yakında: Teslim (tipler, ölçü, çizelge, pafta), Hata Avı (model kontrolü).
+- Ortak yapı `model.ts` (komut şeridi, LevelDef/HouseDef), kurallar `engine.ts`, liste `houses.ts`. Bir ev, öncekinin her bölümü bitince açılır.
+
 ## Yeni çekirdek: ev ev kampanya (prototip)
 
 İlk ev **Bahçe Evi** (`app/src/campaign/`): 10 × 7 m, tek katlı, iki oda; 6 kısa bölüm.

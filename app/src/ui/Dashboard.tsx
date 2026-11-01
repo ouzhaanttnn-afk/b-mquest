@@ -1,17 +1,8 @@
 import React, { useRef, useState } from 'react';
-import {
-  SIX_CHAPTER_CURRICULUM,
-  getTotalCurriculumMissionCount,
-} from '../content/curriculum';
-import {
-  calculateMissionXp,
-  calculateTotalPlayerXp,
-} from '../domain/pedagogy';
+import { SIX_CHAPTER_CURRICULUM } from '../content/curriculum';
 import { isMissionUnlocked } from '../domain/persistence';
-import { ACHIEVEMENTS, earnedAchievementIds, levelProgress, summarizeStats, type GameMeta } from '../domain/gameMeta';
-import { CHAPTER_STORIES, MENTOR_LINES, STORY_MENTOR, STORY_PROJECT } from '../content/story';
+import { ACHIEVEMENTS, earnedAchievementIds, summarizeStats, type GameMeta } from '../domain/gameMeta';
 import type {
-  BadgeType,
   MissionTask,
   SaveEnvelopeV1,
 } from '../domain/types';
@@ -30,9 +21,8 @@ export interface DashboardProps {
   meta: GameMeta;
   onSetPlayerName: (name: string) => void;
   onStartWorkshop: () => void;
-  /** The house-by-house campaign (Bahçe Evi). */
-  onStartCampaign?: () => void;
-  campaignStars?: { have: number; of: number };
+  /** Back to the home screen (the houses). */
+  onBackToHome?: () => void;
   onSetHaptics: (on: boolean) => void;
   onSetReminder: (on: boolean) => Promise<{ ok: boolean; reason?: string }>;
   initialInfoOpen?: boolean;
@@ -52,19 +42,6 @@ export interface DashboardProps {
   onDismissRecoveryIssue: () => void;
 }
 
-function badgeLabelTr(badge: BadgeType): string {
-  if (badge === 'gold') return 'Altın Rozet';
-  if (badge === 'silver') return 'Gümüş Rozet';
-  if (badge === 'bronze') return 'Bronz Rozet';
-  return '';
-}
-
-function scoreToBadge(score: number): BadgeType {
-  if (score >= 90) return 'gold';
-  if (score >= 75) return 'silver';
-  return 'bronze';
-}
-
 function scoreToStars(score: number): number {
   if (score >= 90) return 3;
   if (score >= 75) return 2;
@@ -75,12 +52,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   missions,
   save,
   theme,
-  streak,
   meta,
   onSetPlayerName,
   onStartWorkshop,
-  onStartCampaign,
-  campaignStars,
+  onBackToHome,
   onSetHaptics,
   onSetReminder,
   initialInfoOpen = false,
@@ -103,7 +78,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   } | null>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [selectedStageChapterId, setSelectedStageChapterId] = useState<string>('ch01');
-  const [expandedChapterId, setExpandedChapterId] = useState<string>('');
   const [infoModalOpen, setInfoModalOpen] = useState(initialInfoOpen);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [certificateOpen, setCertificateOpen] = useState(false);
@@ -151,10 +125,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const completedCount = Object.keys(save.completed).length;
-  const xpStats = calculateTotalPlayerXp(save.completed);
-  const totalCurriculumCount = getTotalCurriculumMissionCount();
-
-  const progress = levelProgress(save.completed);
   const statsSummary = summarizeStats(meta);
   const earnedIds = earnedAchievementIds(save.completed);
   const nextMission =
@@ -184,42 +154,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="bq-dashboard" data-testid="dashboard-screen">
       {/* Compact Game Topbar */}
       <header className="bq-dash-header">
-        <div className="bq-brand-row">
+        <div className="bq-brand-row bq-missions-head">
           <button
             type="button"
-            className="bq-brand-btn"
-            data-testid="brand-title-btn"
-            onClick={onBackToTitle}
-            disabled={!onBackToTitle}
-            aria-label="Ana ekrana dön"
+            className="bq-cmp-icon-btn"
+            data-testid="missions-back-btn"
+            onClick={onBackToHome ?? onBackToTitle}
           >
-            <img
-              src="./assets/brand/logo-horizontal.svg"
-              alt="BIM QUEST"
-              className="bq-brand-logo"
-              width={240}
-              height={48}
-            />
+            ← Evler
           </button>
+          <h1 className="bq-missions-title">Görevler</h1>
         </div>
 
         {/* Compact Player HUD Stats & Quick Controls */}
         <div className="bq-dash-actions" data-testid="progress-summary">
-          <div className="bq-hud-pill" data-testid="player-xp-summary">
-            <span className="bq-hud-xp">⚡ {xpStats.totalXp} XP</span>
-            <span className="bq-hud-sep">·</span>
-            <span>Sv.{xpStats.level} {xpStats.rankTitle}</span>
-          </div>
-
           <div className="bq-hud-pill" data-testid="mission-count-pill">
             ✓ {completedCount} / {missions.length} görev
           </div>
-
-          {streak > 0 && (
-            <div className="bq-hud-pill" data-testid="streak-pill" title="Üst üste oynadığın gün sayısı">
-              🔥 {streak} gün
-            </div>
-          )}
 
           <button
             type="button"
@@ -277,12 +228,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           />
         </div>
 
-        <div className="bq-level-bar" data-testid="level-bar" aria-label={`Seviye ${progress.level} ilerlemesi`}>
-          <span className="bq-level-bar-fill" style={{ width: `${progress.pct}%` }} />
-          <span className="bq-level-bar-txt">
-            Sv.{progress.level} → {progress.level + 1} · {progress.intoLevel}/{progress.perLevel} XP
-          </span>
-        </div>
       </header>
 
       {/* Storage or Recovery Banners */}
@@ -357,57 +302,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {onStartCampaign && (
-        <button
-          type="button"
-          className="bq-campaign-card"
-          data-testid="campaign-card"
-          onClick={() => {
-            playSound('click');
-            onStartCampaign();
-          }}
-        >
-          <svg viewBox="0 0 64 48" width="72" height="54" aria-hidden="true" className="bq-campaign-house">
-            <path d="M6 24 32 6l26 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-            <rect x="12" y="22" width="40" height="22" fill="none" stroke="currentColor" strokeWidth="3" />
-            <rect x="18" y="30" width="8" height="14" fill="currentColor" />
-            <rect x="34" y="28" width="12" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" />
-          </svg>
-          <span className="bq-campaign-body">
-            <small>İlk evin</small>
-            <strong>Bahçe Evi</strong>
-            <span>6 kısa bölüm · Revit komutlarıyla adım adım kur</span>
-          </span>
-          <span className="bq-campaign-side">
-            {campaignStars && campaignStars.have > 0 && (
-              <span className="bq-campaign-stars">★ {campaignStars.have}/{campaignStars.of}</span>
-            )}
-            <span className="bq-campaign-go">{campaignStars && campaignStars.have > 0 ? 'Devam' : 'Başla'} ▶</span>
-          </span>
-        </button>
-      )}
-
       {/* Hero: what to do next */}
       <section className="bq-hero" data-testid="hero-card" aria-label="Sıradaki görev">
-        <div className="bq-hero-mentor" aria-hidden="true">👷</div>
         <div className="bq-hero-body">
-          <span className="bq-hero-kicker">{STORY_PROJECT}</span>
           {allDone ? (
-            <>
-              <h2>Proje teslim edildi!</h2>
-              <p>{STORY_MENTOR}: “{MENTOR_LINES.done}”</p>
-            </>
+            <h2>Tüm görevler bitti!</h2>
           ) : nextMission ? (
             <>
-              <h2>
-                {completedCount === 0 ? 'İlk görevin' : 'Sıradaki görev'}:{' '}
-                {nextMission.title}
-              </h2>
-              <p>
-                {STORY_MENTOR}: “
-                {completedCount === 0 ? MENTOR_LINES.start : MENTOR_LINES.return}{' '}
-                {nextChapter ? CHAPTER_STORIES[nextChapter.id] : ''}”
-              </p>
+              <span className="bq-hero-kicker">{completedCount === 0 ? 'İlk görevin' : 'Sıradaki görev'}</span>
+              <h2>{nextMission.title}</h2>
             </>
           ) : null}
         </div>
@@ -449,8 +352,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="bq-stage-banner">
         <div className="bq-stage-title-block">
           <h1>{activeChapter.title}</h1>
-          <p className="bq-chapter-story">“{CHAPTER_STORIES[activeChapter.id]}”</p>
-          <p>{activeChapter.pedagogyNote} — {activeChapter.subtitle}</p>
           <div className="bq-chapter-pill-bar" role="tablist" aria-label="Bölüm Seçimi">
             {SIX_CHAPTER_CURRICULUM.map((ch) => {
               const doneInCh = ch.missions.filter((m) => m.id in save.completed).length;
@@ -476,47 +377,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* Connected Blueprint Progress Track for Active Chapter */}
-        <div className="bq-route-track" aria-label="Bölüm Görev İlerleme Yolu">
-          {visibleMissions.map((m) => {
-            const comp = save.completed[m.id];
-            const { unlocked } = isMissionUnlocked(m, save.completed);
-            const stars = comp ? scoreToStars(comp.bestScore) : 0;
-            const numStr = m.id.replace('m', '');
-            return (
-              <React.Fragment key={m.id}>
-                <div
-                  className={`bq-route-node ${
-                    comp ? 'done' : unlocked ? 'active' : 'locked'
-                  }`}
-                >
-                  <span className="bq-route-num">
-                    {comp ? '✓' : numStr}
-                  </span>
-                  <span className="bq-route-stars" aria-hidden="true">
-                    {comp ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '☆☆☆'}
-                  </span>
-                </div>
-                <span
-                  className={`bq-route-line ${comp ? 'done' : ''}`}
-                  aria-hidden="true"
-                />
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        <button
-          type="button"
-          className="bq-icon-pill-btn"
-          onClick={() => {
-            playSound('click');
-            setInfoModalOpen(true);
-          }}
-        >
-          <span className="bq-i-badge">i</span>
-          <span>BIM Nedir?</span>
-        </button>
       </div>
 
       {/* Playable Mission Cards Grid for Selected Chapter */}
@@ -528,12 +388,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           );
           const comp = save.completed[mission.id];
           const hasDraft = Boolean(save.drafts[mission.id]);
-          const badge = comp ? scoreToBadge(comp.bestScore) : null;
           const stars = comp ? scoreToStars(comp.bestScore) : 0;
-          const earnedXp = comp ? calculateMissionXp(comp.bestScore) : 0;
-          const metaSummary = activeChapter.missions.find(
-            (cm) => cm.id === mission.id
-          );
 
           return (
             <article
@@ -557,40 +412,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   ))}
                 </span>
-                <span className="bq-mission-time">
-                  ⏱️ {mission.estimatedMinutes} dk · ⚡ 200 XP
-                </span>
+                <span className="bq-mission-time">{mission.estimatedMinutes} dk</span>
               </div>
 
               <h2 className="bq-mission-title">{mission.title}</h2>
-              {metaSummary && (
-                <div className="bq-card-revit-path">
-                  <code>{metaSummary.revitPath}</code>
-                </div>
-              )}
-              <p className="bq-mission-obj">{mission.objective}</p>
-
-              <div className="bq-card-status">
-                {comp ? (
-                  <div
-                    className="bq-score-pill"
-                    data-testid={`mission-score-${mission.id}`}
-                  >
-                    <strong>
-                      ★ {comp.bestScore} Puan (+{earnedXp} XP)
-                    </strong>
-                    {badge && (
-                      <span className={`bq-badge bq-badge-${badge}`}>
-                        {badgeLabelTr(badge)}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="bq-status-pending">
-                    Ödül: +200 XP · ★★★ & Rozet
-                  </span>
-                )}
-              </div>
 
               {!unlocked ? (
                 <div
@@ -644,117 +469,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </article>
           );
         })}
-      </section>
-
-      {/* Compact 11-Chapter / 65-Mission Roadmap Accordion */}
-      <section
-        className="bq-curriculum-section"
-        aria-label="11 Bölüm ve 65 Görevlik Revit Eğitim Mimarisi"
-        data-testid="curriculum-chapters"
-      >
-        <div className="bq-curriculum-header">
-          <div className="bq-curriculum-title-row">
-            <h2>🗺️ 7 Bölüm · {totalCurriculumCount} Görev</h2>
-            <span className="bq-chip-tag">Bölüm seçerek tüm görevleri incele ve oyna</span>
-          </div>
-        </div>
-
-        <div className="bq-chapters-list">
-          {SIX_CHAPTER_CURRICULUM.map((chapter) => {
-            const isExpanded = expandedChapterId === chapter.id;
-            const completedInChapter = chapter.missions.filter(
-              (m) => m.id in save.completed
-            ).length;
-
-            return (
-              <div
-                key={chapter.id}
-                className={`bq-chapter-card ${isExpanded ? 'expanded' : ''}`}
-                data-testid={`chapter-card-${chapter.id}`}
-              >
-                <button
-                  type="button"
-                  className="bq-chapter-toggle"
-                  data-testid={`chapter-toggle-${chapter.id}`}
-                  aria-expanded={isExpanded}
-                  onClick={() =>
-                    setExpandedChapterId((prev) =>
-                      prev === chapter.id ? '' : chapter.id
-                    )
-                  }
-                >
-                  <div className="bq-chapter-title-col">
-                    <span className="bq-chapter-badge">
-                      {chapter.missionRangeLabel}
-                    </span>
-                    <strong>{chapter.title}</strong>
-                  </div>
-                  <div className="bq-chapter-meta-col">
-                    <span className="bq-chapter-count">
-                      {completedInChapter}/{chapter.missions.length}
-                    </span>
-                    <span aria-hidden="true">{isExpanded ? '▾' : '▸'}</span>
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <ul className="bq-chapter-missions">
-                    {chapter.missions.map((m) => {
-                      const liveTask = missions.find((t) => t.id === m.id);
-                      const isDone = Boolean(save.completed[m.id]);
-                      const unlockInfo = liveTask
-                        ? isMissionUnlocked(liveTask, save.completed)
-                        : { unlocked: false, missingPrerequisites: [] };
-
-                      return (
-                        <li
-                          key={m.id}
-                          className={`bq-chapter-mission-row ${
-                            m.playableInPrototype ? 'playable' : 'planned'
-                          }`}
-                          data-testid={`curriculum-mission-${m.id}`}
-                        >
-                          <span className="bq-cm-id">{m.id.toUpperCase()}</span>
-                          <div className="bq-cm-info">
-                            <strong>{m.title}</strong>
-                            <span>{m.focusConcept} · <code>{m.revitPath}</code></span>
-                          </div>
-                          <div className="bq-cm-status">
-                            {liveTask ? (
-                              isDone ? (
-                                <button
-                                  type="button"
-                                  className="bq-btn bq-btn-secondary bq-btn-compact"
-                                  onClick={() => onStartMission(m.id, true)}
-                                >
-                                  ✓ {save.completed[m.id].bestScore} Puan (Tekrar)
-                                </button>
-                              ) : unlockInfo.unlocked ? (
-                                <button
-                                  type="button"
-                                  className="bq-btn bq-btn-primary bq-btn-compact"
-                                  onClick={() => onStartMission(m.id, true)}
-                                >
-                                  Oyna
-                                </button>
-                              ) : (
-                                <span className="bq-cm-pill locked">
-                                  🔒 {unlockInfo.missingPrerequisites.join(', ')}
-                                </span>
-                              )
-                            ) : (
-                              <span className="bq-cm-pill roadmap">Yakında</span>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
       </section>
 
       {/* Collapsible Data & Settings Bar (Always in DOM for tests, compact layout) */}

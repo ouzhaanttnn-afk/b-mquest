@@ -5,6 +5,7 @@ import path from 'node:path';
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+    window.sessionStorage.setItem('bimquest.screen.v1', 'missions');
     if (!window.localStorage.getItem('bimquest.meta.v1')) {
       window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
     }

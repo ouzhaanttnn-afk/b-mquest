@@ -51,7 +51,7 @@ export const REMINDER_ID = 4101;
 
 export const REMINDER_TEXT = {
   title: 'BIM QUEST',
-  body: 'Bugünkü görevin seni bekliyor. Serini bozma!',
+  body: 'Evin seni bekliyor: 10 dakikalık bir bölüm daha?',
 };
 
 export interface ReminderResult {

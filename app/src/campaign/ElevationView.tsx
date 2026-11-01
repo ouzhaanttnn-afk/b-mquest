@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import type { BimModel, Point } from '../domain/types';
-import type { Ghost } from './house1';
+import type { Ghost } from './model';
 
 /**
  * Side view for placing Levels, the way Revit does it: levels are drawn in an
