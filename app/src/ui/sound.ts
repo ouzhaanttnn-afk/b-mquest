@@ -12,7 +12,8 @@ export type SoundEffectType =
   | 'snap'
   | 'build'
   | 'success'
-  | 'error';
+  | 'error'
+  | 'star';
 
 const MUTE_STORAGE_KEY = 'bimquest.soundMuted.v1';
 
@@ -99,6 +100,8 @@ export function playSound(effect: SoundEffectType): void {
     triggerHaptic('success');
   } else if (effect === 'error') {
     triggerHaptic('error');
+  } else if (effect === 'star') {
+    triggerHaptic('light');
   }
 
   const ctx = getAudioContext();
@@ -140,6 +143,12 @@ export function playSound(effect: SoundEffectType): void {
           0.085
         );
       });
+      break;
+    }
+    case 'star': {
+      // Bright sparkle for each star on the level-complete card
+      playTone(ctx, 1318.51, now, 0.12, 'sine', 0.07, 1567.98);
+      playTone(ctx, 1975.53, now + 0.05, 0.16, 'triangle', 0.05);
       break;
     }
     case 'error': {

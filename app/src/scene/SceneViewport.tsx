@@ -33,6 +33,8 @@ export interface SceneViewportProps {
   isVisible: boolean;
   theme?: 'light' | 'dark';
   onSelect: (id: string | null) => void;
+  /** Just the building: no toolbar, no footer, no labels (campaign preview). */
+  minimal?: boolean;
 }
 
 function detectWebGL2Support(): boolean {
@@ -467,6 +469,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   isVisible,
   theme = 'dark',
   onSelect,
+  minimal = false,
 }) => {
   const [webglSupported] = useState<boolean>(() => detectWebGL2Support());
   const [contextLost, setContextLost] = useState(false);
@@ -533,6 +536,14 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
     const id = requestAnimationFrame(() => resetCamera());
     return () => cancelAnimationFrame(id);
   }, [task.id, sceneMountKey, resetCamera]);
+
+  // The campaign grows the house step by step: keep it framed as walls appear.
+  const wallCount = minimal ? model.elements.filter((e) => e.type === 'wall').length : 0;
+  useEffect(() => {
+    if (!minimal) return;
+    const id = requestAnimationFrame(() => resetCamera());
+    return () => cancelAnimationFrame(id);
+  }, [minimal, wallCount, resetCamera]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -636,7 +647,8 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   }
 
   return (
-    <div className="bq-scene-container" data-testid="scene-viewport">
+    <div className={`bq-scene-container${minimal ? ' bq-scene-minimal' : ''}`} data-testid="scene-viewport">
+      {!minimal && (
       <div
         className="bq-viewport-toolbar bq-toolbar-3d"
         role="toolbar"
@@ -686,6 +698,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
           </button>
         </div>
       </div>
+      )}
 
       <div className="bq-canvas-wrapper">
         <Canvas
@@ -717,13 +730,14 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
             failedElementIds={failedElementIds}
             theme={theme}
             xrayMode={xrayMode}
-            show3dLabels={show3dLabels}
+            show3dLabels={show3dLabels && !minimal}
             onSelect={onSelect}
             controlsRef={controlsRef}
           />
         </Canvas>
       </div>
 
+      {!minimal && (
       <div className="bq-plan-footer">
         <div className="bq-viewport-quick-select">
           <span className="bq-quick-label">Hızlı Seç:</span>
@@ -741,6 +755,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
         </div>
         <span>Sürükle: Döndür · Göz: 1.65 m</span>
       </div>
+      )}
     </div>
   );
 };

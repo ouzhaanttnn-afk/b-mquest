@@ -9,6 +9,29 @@ Uygulama klasörü: `app/`.
 2. **Görevler ekranı** (`Dashboard`): sıradaki göreve götüren hero kartı ("Selin Mimar" notuyla), seviye çubuğu, gün serisi, başarım listesi, bölüm sekmeleri ve görev kartları.
 3. **Uygulama ekranı** (`Workspace`): 2B plan + 3B sahne, Properties, araç çubuğu, Rehber Turu, koç çubuğu, Kontrol Et, değerlendirme.
 
+## Yeni çekirdek: ev ev kampanya (prototip)
+
+İlk ev **Bahçe Evi** (`app/src/campaign/`): 10 × 7 m, tek katlı, iki oda; 6 kısa bölüm.
+Ana ekranın en üstündeki turuncu kartla açılır. Eski 65 görev olduğu gibi duruyor.
+
+| Bölüm | Komut (Revit yolu, kısayol) | Hedef |
+|---|---|---|
+| 1 Katlar | Architecture › Datum › Level (LL) | Görünüşte çatı seviyesini +3,00 m'ye koy |
+| 2 Akslar | Architecture › Datum › Grid (GR) | A, B, 1, 2 akslarını çiz |
+| 3 Duvarlar | Architecture › Build › Wall (WA) | Dış duvarlar + iç duvar (70 m², 2 oda) |
+| 4 Kapı ve pencereler | Door (DR), Window (WN) | Ön duvara kapı, arka duvara 2 pencere |
+| 5 Döşeme ve çatı | Floor (SB), Roof › Roof by Footprint | Evin içine dokun |
+| 6 Odalar | Room (RM), Annotate › Tag › Tag by Category (TG) | Odaları tanı, etiketle, adlandır |
+
+- Oynanış: şeritten komut seç → kesik çizgili hedefe dokun (1 m'ye yapışır). Adım başında parmak gösterimi (Atla/İzle).
+  Yanlış komut ★★'yi götürür; iki yanlıştan sonra doğru komut parlar. Yıldız: ★ bitir · ★★ yanlış komut yok · ★★★ hamle sınırında.
+- Bölüm sonu: yıldızlar + "Revit'te bu" (menü yolu, kısayol, AutoCAD köprüsü). Ev bitince 9 komutun listesi ve 3B ev.
+- Kurallar `engine.ts`/`house1.ts` saf fonksiyonlar; ekran yalnız çizer. Yıldızlar `bimquest.campaign.v1` anahtarında.
+- Dil: tüm metinler `i18n.ts` + bölüm tanımlarındaki `{ tr, en? }` alanlarında; İngilizce için `en` doldurulup `L` değiştirilecek.
+- Ses: yalnız efekt (seç, yapış, kur, hata, başarı, yıldız). Müzik yok.
+- Düzen: tablet yatay öncelikli (şerit üstte, 3B önizleme yanda); telefonda şerit başparmağın altında, 3B önizleme çizimin altında.
+- Testler: `tests/campaign.test.ts` (kurallar, 6 bölüm dokunarak), `tests/campaign.spec.ts` (tablet + telefon baştan sona, yanlış komut).
+
 ## Müfredat: 11 bölüm, 65 görev
 
 | Bölüm | Görevler | Konu |
