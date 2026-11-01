@@ -4,10 +4,38 @@ import { playSound } from '../ui/sound';
 import { CampaignPlan } from './CampaignPlan';
 import { ElevationView } from './ElevationView';
 import { RibbonIcon } from './RibbonIcon';
-import { currentStep, nameRoom, newPlay, pickCommand, starsFor, tap, undo, type Effect, type PlayState, type TapResult } from './engine';
-import { CAMPAIGN_TASK, HOUSE1, RIBBON, commandById, sessionFor, startModelFor, type CommandId, type LevelDef } from './house1';
+import {
+  currentStep,
+  nameRoom,
+  newPlay,
+  pasteTo,
+  pickCommand,
+  setDrawMode,
+  starsFor,
+  stepLevel,
+  tap,
+  undo,
+  type Effect,
+  type PlayState,
+  type TapResult,
+} from './engine';
+import {
+  CAMPAIGN_TASK,
+  RIBBON,
+  RIBBON_TABS,
+  commandById,
+  levelName,
+  sessionFor,
+  startModelFor,
+  type CommandId,
+  type HouseDef,
+  type LevelDef,
+  type RibbonTab,
+} from './model';
 import { UI, tx, type Locale } from './i18n';
-import { isUnlocked, loadProgress, recordStars, saveProgress, totalStars, type CampaignProgress } from './progress';
+import { houseStars, isUnlocked, recordStars, type CampaignProgress } from './progress';
+import { buildSection } from '../domain/viewDrawing';
+import { DrawingSvg } from '../plan/DrawingSvg';
 import './campaign.css';
 
 const SceneViewport = lazy(() => import('../scene/SceneViewport').then((m) => ({ default: m.SceneViewport })));
@@ -16,10 +44,12 @@ const SceneViewport = lazy(() => import('../scene/SceneViewport').then((m) => ({
 const L: Locale = 'tr';
 const t = (k: keyof typeof UI) => tx(UI[k], L);
 
-const NAME_CHOICES = ['Salon', 'Yatak Odası', 'Mutfak', 'Banyo'];
 const EMPTY_FAILED = new Set<string>();
 
 interface Props {
+  house: HouseDef;
+  progress: CampaignProgress;
+  onProgress: (p: CampaignProgress) => void;
   theme: 'light' | 'dark';
   reducedMotion: boolean;
   onExit: () => void;
@@ -37,20 +67,16 @@ const sound = (e: Effect | undefined) => {
   if (e) playSound(e);
 };
 
-export const CampaignScreen: React.FC<Props> = ({ theme, reducedMotion, onExit }) => {
-  const [progress, setProgress] = useState<CampaignProgress>(() => loadProgress());
+export const CampaignScreen: React.FC<Props> = ({ house, progress, onProgress, theme, reducedMotion, onExit }) => {
   const [levelIndex, setLevelIndex] = useState<number | null>(null);
   const [houseDone, setHouseDone] = useState(false);
   const [round, setRound] = useState(0);
-
-  const updateProgress = useCallback((p: CampaignProgress) => {
-    setProgress(p);
-    saveProgress(p);
-  }, []);
+  const levels = house.levels;
 
   if (houseDone) {
     return (
       <HouseComplete
+        house={house}
         progress={progress}
         theme={theme}
         onBack={() => {
@@ -62,20 +88,20 @@ export const CampaignScreen: React.FC<Props> = ({ theme, reducedMotion, onExit }
   }
 
   if (levelIndex === null) {
-    return <Hub progress={progress} onExit={onExit} onPlay={setLevelIndex} />;
+    return <Hub house={house} progress={progress} onExit={onExit} onPlay={setLevelIndex} />;
   }
 
   return (
     <LevelPlay
       key={`${levelIndex}-${round}`}
+      house={house}
       levelIndex={levelIndex}
       theme={theme}
       reducedMotion={reducedMotion}
-      bestStars={progress.stars[HOUSE1[levelIndex].id] ?? 0}
-      onFinish={(stars) => updateProgress(recordStars(progress, HOUSE1[levelIndex].id, stars))}
+      onFinish={(stars) => onProgress(recordStars(progress, levels[levelIndex].id, stars))}
       onExit={() => setLevelIndex(null)}
       onNext={() => {
-        if (levelIndex + 1 < HOUSE1.length) setLevelIndex(levelIndex + 1);
+        if (levelIndex + 1 < levels.length) setLevelIndex(levelIndex + 1);
         else setHouseDone(true);
       }}
       onReplay={() => setRound((r) => r + 1)}
@@ -84,11 +110,17 @@ export const CampaignScreen: React.FC<Props> = ({ theme, reducedMotion, onExit }
 };
 
 // ---------------------------------------------------------------------------
-// Hub: the six levels of the first house
+// Hub: the levels of one house
 // ---------------------------------------------------------------------------
 
-const Hub: React.FC<{ progress: CampaignProgress; onExit: () => void; onPlay: (i: number) => void }> = ({ progress, onExit, onPlay }) => {
-  const next = HOUSE1.findIndex((l) => !progress.stars[l.id]);
+const Hub: React.FC<{ house: HouseDef; progress: CampaignProgress; onExit: () => void; onPlay: (i: number) => void }> = ({
+  house,
+  progress,
+  onExit,
+  onPlay,
+}) => {
+  const levels = house.levels;
+  const next = levels.findIndex((l) => !progress.stars[l.id]);
   return (
     <div className="bq-cmp-hub" data-testid="campaign-hub">
       <header className="bq-cmp-hub-head">
@@ -96,16 +128,16 @@ const Hub: React.FC<{ progress: CampaignProgress; onExit: () => void; onPlay: (i
           {t('back')}
         </button>
         <div className="bq-cmp-hub-title">
-          <h1>{t('houseName')}</h1>
-          <p>{t('houseBrief')}</p>
+          <h1>{tx(house.title, L)}</h1>
+          <p>{tx(house.brief, L)}</p>
         </div>
         <span className="bq-cmp-hub-total" data-testid="campaign-total-stars">
-          ★ {totalStars(progress)} / {HOUSE1.length * 3}
+          ★ {houseStars(house, progress)} / {levels.length * 3}
         </span>
       </header>
       <ol className="bq-cmp-levels">
-        {HOUSE1.map((l, i) => {
-          const open = isUnlocked(progress, i);
+        {levels.map((l, i) => {
+          const open = isUnlocked(house, progress, i);
           const stars = progress.stars[l.id] ?? 0;
           return (
             <li key={l.id}>
@@ -143,20 +175,21 @@ const Hub: React.FC<{ progress: CampaignProgress; onExit: () => void; onPlay: (i
 // ---------------------------------------------------------------------------
 
 interface LevelProps {
+  house: HouseDef;
   levelIndex: number;
   theme: 'light' | 'dark';
   reducedMotion: boolean;
-  bestStars: number;
   onFinish: (stars: number) => void;
   onExit: () => void;
   onNext: () => void;
   onReplay: () => void;
 }
 
-const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onFinish, onExit, onNext, onReplay }) => {
-  const level: LevelDef = HOUSE1[levelIndex];
-  const [play, setPlay] = useState<PlayState>(() => newPlay(sessionFor(startModelFor(levelIndex))));
-  const [tab, setTab] = useState<'architecture' | 'annotate'>('architecture');
+const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMotion, onFinish, onExit, onNext, onReplay }) => {
+  const level: LevelDef = house.levels[levelIndex];
+  const isLast = levelIndex + 1 >= house.levels.length;
+  const [play, setPlay] = useState<PlayState>(() => newPlay(sessionFor(startModelFor(house, levelIndex))));
+  const [tab, setTab] = useState<RibbonTab>('architecture');
   const [toast, setToast] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState(false);
   const [bigPreview, setBigPreview] = useState(false);
@@ -242,7 +275,10 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
     apply(tap(level, play, p));
   };
 
-  const chainStart = play.chain.start ?? play.gridStart;
+  const chainStart = play.chain.start ?? play.firstTap;
+  const activeLevel = stepLevel(step);
+  const model = play.session.model;
+  const section = level.reveal === 'section' ? [...model.elements].reverse().find((e) => e.type === 'view' && e.kind === 'section') : undefined;
   const ghosts = play.done ? [] : step.ghost;
   const usedCommands = useMemo(() => [...new Set(level.steps.map((s) => s.command))].map(commandById), [level]);
   const hasModel = play.session.model.elements.length > 0;
@@ -283,7 +319,7 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
 
       <nav className="bq-cmp-ribbon" aria-label={t('ribbon')} data-testid="campaign-ribbon">
         <div className="bq-cmp-tabs" role="tablist">
-          {(['architecture', 'annotate'] as const).map((k) => (
+          {RIBBON_TABS.map((k) => (
             <button
               key={k}
               type="button"
@@ -327,13 +363,34 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
 
       <main className={`bq-cmp-stage ${hasModel ? 'with-preview' : ''}`}>
         <div className="bq-cmp-canvas">
+        <span className="bq-cmp-view-badge" data-testid="campaign-view-name">
+          {level.view === 'elevation' ? t('elevationView') : `${t('floorPlan')}: ${levelName(model, activeLevel)}`}
+        </span>
+        {play.command === 'wall' && (
+          <div className="bq-cmp-draw" role="group" aria-label="Draw" data-testid="campaign-draw">
+            {(['line', 'rect'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`bq-cmp-chip ${play.drawMode === m ? 'active' : ''}`}
+                aria-pressed={play.drawMode === m}
+                onClick={() => apply(setDrawMode(play, m))}
+                data-testid={`campaign-draw-${m}`}
+              >
+                {m === 'line' ? '╱ Line' : '▭ Rectangle'}
+              </button>
+            ))}
+          </div>
+        )}
         {level.view === 'elevation' ? (
           <ElevationView model={play.session.model} ghosts={ghosts} demo={demoPoint} onTap={onTapPlan} />
         ) : (
           <CampaignPlan
+            geom={level.geom}
+            activeLevel={activeLevel}
             model={play.session.model}
             ghosts={ghosts}
-            showDots={!!play.command && ['grid', 'wall'].includes(play.command)}
+            showDots={!!play.command && ['grid', 'wall', 'section'].includes(play.command)}
             chainStart={chainStart}
             demo={demoPoint}
             onTap={onTapPlan}
@@ -395,7 +452,7 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
         <div className="bq-cmp-sheet" role="dialog" aria-label={t('nameRoom')} data-testid="campaign-name-sheet">
           <strong>{t('nameRoom')}</strong>
           <div className="bq-cmp-name-chips">
-            {NAME_CHOICES.map((n) => (
+            {house.nameChoices.map((n) => (
               <button
                 key={n}
                 type="button"
@@ -408,6 +465,27 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
             ))}
           </div>
           <small>{t('namePickHint')}</small>
+        </div>
+      )}
+
+      {play.command === 'paste' && !play.done && (
+        <div className="bq-cmp-sheet" role="dialog" aria-label={t('pasteTitle')} data-testid="campaign-paste-sheet">
+          <strong>{t('pasteTitle')}</strong>
+          <div className="bq-cmp-name-chips">
+            {model.levels
+              .filter((l) => l.id !== (step.from ?? 'l0'))
+              .map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  className="bq-cmp-chip big"
+                  onClick={() => apply(pasteTo(level, play, l.id))}
+                  data-testid={`campaign-paste-${l.id}`}
+                >
+                  {l.name}
+                </button>
+              ))}
+          </div>
         </div>
       )}
 
@@ -431,6 +509,12 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
           <div className="bq-cmp-modal bq-cmp-done" role="dialog" aria-label={t('levelDone')} data-testid="campaign-level-done">
             <h2>{t('levelDone')}</h2>
             <AnimatedStars n={stars} reducedMotion={reducedMotion} />
+            {section && section.type === 'view' && (
+              <div className="bq-cmp-reveal" data-testid="campaign-reveal">
+                <DrawingSvg drawing={buildSection(model, section)} isDark={theme === 'dark'} title={section.name} />
+                <small>{section.name}</small>
+              </div>
+            )}
             <section className="bq-cmp-inrevit">
               <h3>{t('inRevit')}</h3>
               <ul>
@@ -453,7 +537,7 @@ const LevelPlay: React.FC<LevelProps> = ({ levelIndex, theme, reducedMotion, onF
                 {t('replay')}
               </button>
               <button type="button" className="bq-cmp-primary" onClick={onNext} data-testid="campaign-next">
-                {levelIndex + 1 < HOUSE1.length ? t('next') : t('seeHouse')} →
+                {!isLast ? t('next') : t('seeHouse')} →
               </button>
             </div>
           </div>
@@ -485,8 +569,17 @@ const AnimatedStars: React.FC<{ n: number; reducedMotion: boolean }> = ({ n, red
 // House complete
 // ---------------------------------------------------------------------------
 
-const HouseComplete: React.FC<{ progress: CampaignProgress; theme: 'light' | 'dark'; onBack: () => void }> = ({ progress, theme, onBack }) => {
-  const model = useMemo(() => startModelFor(HOUSE1.length), []);
+const HouseComplete: React.FC<{ house: HouseDef; progress: CampaignProgress; theme: 'light' | 'dark'; onBack: () => void }> = ({
+  house,
+  progress,
+  theme,
+  onBack,
+}) => {
+  const model = useMemo(() => startModelFor(house, house.levels.length), [house]);
+  const used = useMemo(
+    () => RIBBON.filter((c) => house.levels.some((l) => l.steps.some((st) => st.command === c.id))),
+    [house]
+  );
   useEffect(() => playSound('success'), []);
   return (
     <div className="bq-cmp-house-done" data-testid="campaign-house-done">
@@ -506,11 +599,11 @@ const HouseComplete: React.FC<{ progress: CampaignProgress; theme: 'light' | 'da
         </Suspense>
       </div>
       <div className="bq-cmp-house-text">
-        <h1>{t('houseDone')}</h1>
-        <p className="bq-cmp-hub-total">★ {totalStars(progress)} / {HOUSE1.length * 3}</p>
+        <h1>{tx(house.title, L)}: {t('houseDone')}</h1>
+        <p className="bq-cmp-hub-total">★ {houseStars(house, progress)} / {house.levels.length * 3}</p>
         <p>{t('houseDoneSub')}</p>
         <ul className="bq-cmp-cmd-list">
-          {RIBBON.map((c) => (
+          {used.map((c) => (
             <li key={c.id}>
               <RibbonIcon id={c.id} />
               <span className="bq-cmp-path">{c.path}</span>

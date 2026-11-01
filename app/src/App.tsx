@@ -29,7 +29,6 @@ import {
   type Achievement,
   type GameMeta,
 } from './domain/gameMeta';
-import { calculateTotalPlayerXp } from './domain/pedagogy';
 import { playSound } from './ui/sound';
 import { disableDailyReminder, enableDailyReminder, setHapticsEnabled } from './native/native';
 import { Dashboard } from './ui/Dashboard';
@@ -42,8 +41,10 @@ import {
   saveWorkshopModel,
 } from './content/workshop';
 import { FirstRunTour } from './ui/FirstRunTour';
-import { HOUSE1 } from './campaign/house1';
-import { loadProgress, totalStars } from './campaign/progress';
+import './campaign/campaign.css';
+import { HomeScreen } from './campaign/HomeScreen';
+import { HOUSES } from './campaign/houses';
+import { clearProgress, loadProgress, saveProgress, totalStars, type CampaignProgress } from './campaign/progress';
 const CampaignScreen = lazy(() =>
   import('./campaign/CampaignScreen').then((m) => ({ default: m.CampaignScreen }))
 );
@@ -53,6 +54,8 @@ const Workspace = lazy(() =>
 
 const THEME_STORAGE_KEY = 'bimquest.theme.v1';
 const TITLE_SEEN_KEY = 'bimquest.titleSeen.v1';
+/** Which home screen the player was on, so a reload returns there. */
+const SCREEN_KEY = 'bimquest.screen.v1';
 
 function titleAlreadySeen(): boolean {
   try {
@@ -92,7 +95,33 @@ export function App() {
     useState<MissionSessionState | null>(null);
 
   const [showTitle, setShowTitle] = useState(() => !titleAlreadySeen());
-  const [campaignOpen, setCampaignOpen] = useState(false);
+  /** Home shows the houses; 'missions' is the mission list. */
+  const [screen, setScreenState] = useState<'home' | 'missions'>(() => {
+    try {
+      return window.sessionStorage.getItem(SCREEN_KEY) === 'missions' ? 'missions' : 'home';
+    } catch {
+      return 'home';
+    }
+  });
+  const setScreen = useCallback((next: 'home' | 'missions') => {
+    setScreenState(next);
+    try {
+      window.sessionStorage.setItem(SCREEN_KEY, next);
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+  const [house, setHouse] = useState<number | null>(null);
+  const [progress, setProgress] = useState<CampaignProgress>(() => loadProgress());
+  // Every screen opens at its top.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screen, house, activeSession, showTitle]);
+
+  const updateProgress = useCallback((p: CampaignProgress) => {
+    setProgress(p);
+    saveProgress(p);
+  }, []);
   const [openInfoOnDashboard, setOpenInfoOnDashboard] = useState(false);
   const [meta, setMeta] = useState<GameMeta>(() => loadMeta());
   const [toast, setToast] = useState<Achievement | null>(null);
@@ -386,29 +415,68 @@ export function App() {
       )}
       {showTitle && !activeSession ? (
         <TitleScreen
-          hasProgress={Object.keys(save.completed).length > 0}
-          level={calculateTotalPlayerXp(save.completed).level}
-          rankTitle={calculateTotalPlayerXp(save.completed).rankTitle}
-          streak={visibleStreak(meta, today)}
+          hasProgress={totalStars(progress) > 0 || Object.keys(save.completed).length > 0}
+          stars={totalStars(progress)}
           onPlay={() => leaveTitle(false)}
           onHowToPlay={() => leaveTitle(true)}
         />
-      ) : campaignOpen && !activeSession ? (
+      ) : house !== null && !activeSession ? (
         <Suspense fallback={<div className="bq-scene-loading" role="status">Yükleniyor…</div>}>
           <CampaignScreen
+            house={HOUSES[house]}
+            progress={progress}
+            onProgress={updateProgress}
             theme={theme}
             reducedMotion={save.settings.reducedMotion}
-            onExit={() => setCampaignOpen(false)}
+            onExit={() => setHouse(null)}
           />
         </Suspense>
+      ) : screen === 'home' && !activeSession ? (
+        <HomeScreen
+          progress={progress}
+          missions={{
+            done: catalog.missions.filter((m) => m.id in save.completed).length,
+            total: catalog.missions.length,
+            next: catalog.missions.find((m) => !(m.id in save.completed))?.title ?? null,
+          }}
+          settings={{
+            theme,
+            reducedMotion: save.settings.reducedMotion,
+            hapticsOff: meta.hapticsOff,
+            reminderOn: meta.reminderHour !== null,
+          }}
+          initialHowTo={openInfoOnDashboard}
+          onOpenHouse={(i) => {
+            setHouse(i);
+            touchPlayDay();
+          }}
+          onOpenMissions={() => {
+            setOpenInfoOnDashboard(false);
+            setScreen('missions');
+          }}
+          onToggleTheme={handleToggleTheme}
+          onReducedMotion={(on) => handleUpdateSettings({ reducedMotion: on })}
+          onHaptics={(on) => updateMeta({ ...meta, hapticsOff: !on })}
+          onReminder={async (on) => {
+            if (!on) {
+              await disableDailyReminder();
+              updateMeta({ ...meta, reminderHour: null });
+              return { ok: true };
+            }
+            const res = await enableDailyReminder(19);
+            if (res.ok) updateMeta({ ...meta, reminderHour: 19 });
+            return res;
+          }}
+          onResetProgress={() => {
+            clearProgress();
+            setProgress({ stars: {} });
+          }}
+          onBackToTitle={() => setShowTitle(true)}
+        />
       ) : !activeSession ? (
         <>
         <Dashboard
-          onStartCampaign={() => {
-            setCampaignOpen(true);
-            touchPlayDay();
-          }}
-          campaignStars={{ have: totalStars(loadProgress()), of: HOUSE1.length * 3 }}
+          onBackToHome={() => setScreen('home')}
           streak={visibleStreak(meta, today)}
           meta={meta}
           onStartWorkshop={handleStartWorkshop}
@@ -424,7 +492,7 @@ export function App() {
             if (res.ok) updateMeta({ ...meta, reminderHour: 19 });
             return res;
           }}
-          initialInfoOpen={openInfoOnDashboard}
+          initialInfoOpen={false}
           onBackToTitle={() => setShowTitle(true)}
           missions={catalog.missions}
           save={save}
@@ -439,7 +507,7 @@ export function App() {
           onClearAllData={handleClearAllData}
           onDismissRecoveryIssue={handleDismissRecoveryIssue}
         />
-        {!meta.introDone && Object.keys(save.completed).length === 0 && !openInfoOnDashboard && (
+        {!meta.introDone && Object.keys(save.completed).length === 0 && (
           <FirstRunTour onDone={() => updateMeta({ ...meta, introDone: true })} />
         )}
         </>

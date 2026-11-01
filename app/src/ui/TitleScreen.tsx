@@ -1,24 +1,14 @@
 import React from 'react';
-import { STORY_PROJECT } from '../content/story';
 import { playSound } from './sound';
 
 export interface TitleScreenProps {
   hasProgress: boolean;
-  level: number;
-  rankTitle: string;
-  streak: number;
+  stars: number;
   onPlay: () => void;
   onHowToPlay: () => void;
 }
 
-export const TitleScreen: React.FC<TitleScreenProps> = ({
-  hasProgress,
-  level,
-  rankTitle,
-  streak,
-  onPlay,
-  onHowToPlay,
-}) => (
+export const TitleScreen: React.FC<TitleScreenProps> = ({ hasProgress, stars, onPlay, onHowToPlay }) => (
   <main className="bq-title" data-testid="title-screen">
     <div className="bq-title-grid" aria-hidden="true" />
     <svg className="bq-title-plan" viewBox="0 0 240 160" aria-hidden="true">
@@ -27,7 +17,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <path className="bq-draw d2" d="M220 20 V140" />
         <path className="bq-draw d3" d="M220 140 H20" />
         <path className="bq-draw d4" d="M20 140 V20" />
-        <path className="bq-draw d5" d="M110 20 V90" strokeWidth="2" />
+        <path className="bq-draw d5" d="M140 20 V140" strokeWidth="2" />
       </g>
     </svg>
 
@@ -39,10 +29,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         width={280}
         height={56}
       />
-      <p className="bq-title-tagline">Revit'i oynayarak öğren.</p>
+      <p className="bq-title-tagline">Revit'i ev yaparak öğren.</p>
       <p className="bq-title-sub">
-        {STORY_PROJECT}. Stajyer BIM modelleyici olarak başla, teslim edilmiş
-        bir proje ile bitir.
+        Kısa bölümler, gerçek Revit komutları. İlk evin bir bahçe evi.
       </p>
 
       <div className="bq-title-actions">
@@ -72,8 +61,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
 
       {hasProgress && (
         <p className="bq-title-player" data-testid="title-player">
-          Sv.{level} {rankTitle}
-          {streak > 1 ? ` · 🔥 ${streak} gün seri` : ''}
+          ★ {stars} yıldız
         </p>
       )}
     </div>

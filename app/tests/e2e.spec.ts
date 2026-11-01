@@ -5,6 +5,7 @@ import path from 'node:path';
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.sessionStorage.setItem('bimquest.titleSeen.v1', '1');
+    window.sessionStorage.setItem('bimquest.screen.v1', 'missions');
     if (!window.localStorage.getItem('bimquest.meta.v1')) {
       window.localStorage.setItem('bimquest.meta.v1', JSON.stringify({ introDone: true, announced: [] }));
     }
@@ -30,10 +31,9 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
 
     // E01: Dashboard initial state, 6-Chapter 40-Mission curriculum, prerequisite locks
     await expect(page.getByTestId('dashboard-screen')).toBeVisible();
-    await expect(page.getByTestId('player-xp-summary')).toContainText('0 XP');
-    await expect(page.getByTestId('curriculum-chapters')).toBeVisible();
-    await expect(page.getByTestId('chapter-card-ch01')).toBeVisible();
-    await expect(page.getByTestId('chapter-card-ch06')).toBeVisible();
+    await expect(page.getByTestId('mission-count-pill')).toContainText('0 / 65');
+    await expect(page.getByTestId('stage-tab-ch01')).toBeVisible();
+    await expect(page.getByTestId('stage-tab-ch06')).toBeVisible();
 
     // Test Dashboard ⓘ Info Modal
     await page.getByTestId('dash-menu-btn').click();
@@ -156,7 +156,7 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
     // Verify Reload Persistence of Draft before submitting Mission 2
     await page.reload();
     await expect(page.getByTestId('dashboard-screen')).toBeVisible();
-    await expect(page.getByTestId('player-xp-summary')).toContainText('200 XP');
+    await expect(page.getByTestId('mission-count-pill')).toContainText('1 / 65');
     await expect(page.getByTestId('continue-mission-m02')).toBeVisible();
     await page.getByTestId('continue-mission-m02').click();
     await expect(page.getByTestId('object-row-w4')).toBeVisible();
@@ -221,7 +221,7 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
     await page.getByTestId('finish-to-dashboard-btn').click();
     await expect(page.getByTestId('dashboard-screen')).toBeVisible();
     await expect(page.getByTestId('progress-summary')).toContainText(/3 \/ \d+ görev/);
-    await expect(page.getByTestId('player-xp-summary')).toContainText('590 XP');
+    await expect(page.getByTestId('mission-count-pill')).toContainText('/ 65');
   });
 
   test('E06, E07, E08: Corrupt Save Recovery, Multi-Viewport Screenshots (1920x1080, 1024x768, iPad, iPhone) & WebGL Fallback', async ({

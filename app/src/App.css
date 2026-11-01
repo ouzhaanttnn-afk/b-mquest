@@ -3492,3 +3492,20 @@ body:has(.bq-modal-backdrop) {
   .bq-campaign-card { width: 100%; margin: 8px 0 4px; }
   .bq-campaign-house { width: 52px; height: 40px; }
 }
+
+/* Simplified missions screen: back to the houses, a title, the list. */
+.bq-missions-head { display: flex; align-items: center; gap: 12px; }
+.bq-missions-title { margin: 0; font-size: 22px; }
+.bq-mission-obj {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bq-card-revit-path { display: none; }
+.bq-hero-body h2 { font-size: 18px; }
+/* Compact mission cards: number, stars, title, one button. */
+.bq-missions-grid .bq-mission-card { gap: 6px; padding: 12px 14px; }
+.bq-missions-grid .bq-mission-title { margin: 2px 0 6px; font-size: 16px; }
+.bq-missions-grid .bq-card-actions .bq-btn { min-height: 44px; }
+.bq-mission-time { color: var(--text-secondary); font-weight: 600; }

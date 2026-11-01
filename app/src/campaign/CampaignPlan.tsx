@@ -1,14 +1,18 @@
 import React, { useRef } from 'react';
 import type { BimModel, Point, WallElement } from '../domain/types';
 import { roomArea, roomBoundary } from '../domain/derived';
-import type { Ghost } from './house1';
+import { stairRect } from './engine';
+import type { Ghost, HouseGeom } from './model';
 
 /**
- * The play surface: a plan with big snap dots, the ghost target and the house
- * as it grows. Everything is in millimetres; taps are reported in plan mm.
+ * The play surface: a plan of one level with big snap dots, the ghost target
+ * and the house as it grows. The level below shows faintly (Revit's Underlay).
+ * Everything is in millimetres; taps are reported in plan mm.
  */
 
 interface Props {
+  geom: HouseGeom;
+  activeLevel: string;
   model: BimModel;
   ghosts: Ghost[];
   showDots: boolean;
@@ -17,9 +21,9 @@ interface Props {
   onTap: (p: Point) => void;
 }
 
-const VB = { x: -2000, y: -2000, w: 14000, h: 11000 };
+const MARGIN = 2000;
 
-export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainStart, demo, onTap }) => {
+export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts, showDots, chainStart, demo, onTap }) => {
   const ref = useRef<SVGSVGElement | null>(null);
   const toPlan = (e: React.PointerEvent): Point | null => {
     const svg = ref.current;
@@ -28,8 +32,12 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
     return [Math.round(pt.x), Math.round(pt.y)];
   };
-  const walls = model.elements.filter((e): e is WallElement => e.type === 'wall');
-  const wallPoint = (hostId: string, offset: number, width: number): [Point, Point] | null => {
+  const here = model.levels.find((l) => l.id === activeLevel)?.elevation ?? 0;
+  const below = [...model.levels].filter((l) => l.elevation < here).sort((a, b) => b.elevation - a.elevation)[0]?.id;
+  const allWalls = model.elements.filter((e): e is WallElement => e.type === 'wall');
+  const walls = allWalls.filter((w) => w.baseLevelId === activeLevel);
+  const underlay = below ? allWalls.filter((w) => w.baseLevelId === below) : [];
+  const wallSeg = (hostId: string, offset: number, width: number): [Point, Point] | null => {
     const w = walls.find((x) => x.id === hostId);
     if (!w) return null;
     const len = Math.abs(w.end[0] - w.start[0]) + Math.abs(w.end[1] - w.start[1]);
@@ -37,13 +45,13 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
     return [at(offset), at(offset + width)];
   };
   const dots: Point[] = [];
-  if (showDots) for (let x = -1000; x <= 11000; x += 1000) for (let z = -1000; z <= 8000; z += 1000) dots.push([x, z]);
+  if (showDots) for (let x = -1000; x <= geom.w + 1000; x += 1000) for (let z = -1000; z <= geom.d + 1000; z += 1000) dots.push([x, z]);
 
   return (
     <svg
       ref={ref}
       className="bq-cmp-plan"
-      viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`}
+      viewBox={`${-MARGIN} ${-MARGIN} ${geom.w + 2 * MARGIN} ${geom.d + 2 * MARGIN}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Plan: evin üstten görünüşü"
@@ -57,23 +65,57 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
         <circle key={`${x}:${z}`} cx={x} cy={z} r={70} className="bq-cmp-dot" />
       ))}
 
-      {model.elements.map((e) =>
-        e.type === 'roof' ? (
-          <rect
-            key={e.id}
-            className="bq-cmp-roof"
-            x={Math.min(...e.footprint.map((p) => p[0])) - e.overhang}
-            y={Math.min(...e.footprint.map((p) => p[1])) - e.overhang}
-            width={Math.max(...e.footprint.map((p) => p[0])) - Math.min(...e.footprint.map((p) => p[0])) + 2 * e.overhang}
-            height={Math.max(...e.footprint.map((p) => p[1])) - Math.min(...e.footprint.map((p) => p[1])) + 2 * e.overhang}
-          />
-        ) : e.type === 'floor' ? (
-          <polygon key={e.id} className="bq-cmp-floor" points={e.boundary.map(([x, z]) => `${x},${z}`).join(' ')} />
-        ) : null
-      )}
+      {model.elements.map((e) => {
+        if (e.type === 'roof') {
+          const xs = e.footprint.map((p) => p[0]);
+          const zs = e.footprint.map((p) => p[1]);
+          return (
+            <rect
+              key={e.id}
+              className="bq-cmp-roof"
+              x={Math.min(...xs) - e.overhang}
+              y={Math.min(...zs) - e.overhang}
+              width={Math.max(...xs) - Math.min(...xs) + 2 * e.overhang}
+              height={Math.max(...zs) - Math.min(...zs) + 2 * e.overhang}
+            />
+          );
+        }
+        if (e.type === 'floor' && e.levelId === activeLevel) {
+          return <polygon key={e.id} className="bq-cmp-floor" points={e.boundary.map(([x, z]) => `${x},${z}`).join(' ')} />;
+        }
+        return null;
+      })}
+
+      {underlay.map((w) => (
+        <line key={w.id} className="bq-cmp-underlay" x1={w.start[0]} y1={w.start[1]} x2={w.end[0]} y2={w.end[1]} strokeWidth={w.thickness} />
+      ))}
+
+      {model.elements.map((e) => {
+        if (e.type !== 'stair' || (e.baseLevelId !== activeLevel && e.topLevelId !== activeLevel)) return null;
+        const [x0, z0, x1, z1] = stairRect(e);
+        const along = e.direction.startsWith('x');
+        const lines = [];
+        for (let i = 1; i < e.risers; i++) {
+          const k = i * e.treadDepth;
+          const sgn = e.direction.endsWith('+') ? 1 : -1;
+          const base = along ? (sgn > 0 ? x0 : x1) : sgn > 0 ? z0 : z1;
+          const v = base + sgn * k;
+          lines.push(along ? <line key={i} x1={v} y1={z0} x2={v} y2={z1} /> : <line key={i} x1={x0} y1={v} x2={x1} y2={v} />);
+        }
+        const mid: Point = [(x0 + x1) / 2, (z0 + z1) / 2];
+        const tip: Point = along ? [e.direction === 'x+' ? x1 - 200 : x0 + 200, mid[1]] : [mid[0], e.direction === 'z+' ? z1 - 200 : z0 + 200];
+        const tail: Point = along ? [e.direction === 'x+' ? x0 + 200 : x1 - 200, mid[1]] : [mid[0], e.direction === 'z+' ? z0 + 200 : z1 - 200];
+        return (
+          <g key={e.id} className={`bq-cmp-stair ${e.baseLevelId === activeLevel ? '' : 'upper'}`} data-testid="cmp-stair">
+            <rect x={x0} y={z0} width={x1 - x0} height={z1 - z0} />
+            {lines}
+            <line className="bq-cmp-stair-arrow" x1={tail[0]} y1={tail[1]} x2={tip[0]} y2={tip[1]} markerEnd="url(#bq-cmp-arrow)" />
+          </g>
+        );
+      })}
 
       {model.elements.map((e) =>
-        e.type === 'room' && !roomBoundary(e, model).open ? (
+        e.type === 'room' && e.levelId === activeLevel && !roomBoundary(e, model).open ? (
           <g key={e.id} className="bq-cmp-room">
             <text x={e.seedPoint[0]} y={e.seedPoint[1] - 120} textAnchor="middle" className="bq-cmp-room-name">
               {e.name}
@@ -127,7 +169,7 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
 
       {model.elements.map((e) => {
         if (e.type !== 'door' && e.type !== 'window') return null;
-        const seg = wallPoint(e.hostWallId, e.offset, e.width);
+        const seg = wallSeg(e.hostWallId, e.offset, e.width);
         if (!seg) return null;
         return (
           <line
@@ -144,7 +186,7 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
       {model.elements.map((e) => {
         if (e.type !== 'tag') return null;
         const room = model.elements.find((r) => r.id === e.targetId);
-        if (!room || room.type !== 'room') return null;
+        if (!room || room.type !== 'room' || room.levelId !== activeLevel) return null;
         return (
           <rect
             key={e.id}
@@ -158,6 +200,16 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
         );
       })}
 
+      {model.elements.map((e) =>
+        e.type === 'view' && e.kind === 'section' && e.cutLine ? (
+          <g key={e.id} className="bq-cmp-section" data-testid="cmp-section-line">
+            <line x1={e.cutLine[0][0]} y1={e.cutLine[0][1]} x2={e.cutLine[1][0]} y2={e.cutLine[1][1]} />
+            <circle cx={e.cutLine[0][0]} cy={e.cutLine[0][1]} r={300} />
+            <text x={e.cutLine[0][0]} y={e.cutLine[0][1] + 110} textAnchor="middle">1</text>
+          </g>
+        ) : null
+      )}
+
       {chainStart && <circle className="bq-cmp-chain" cx={chainStart[0]} cy={chainStart[1]} r={260} />}
 
       {demo && (
@@ -166,6 +218,12 @@ export const CampaignPlan: React.FC<Props> = ({ model, ghosts, showDots, chainSt
           <circle r={160} className="bq-cmp-finger-core" />
         </g>
       )}
+
+      <defs>
+        <marker id="bq-cmp-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" className="bq-cmp-arrow-head" />
+        </marker>
+      </defs>
     </svg>
   );
 };

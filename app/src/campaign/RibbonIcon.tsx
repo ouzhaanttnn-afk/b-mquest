@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CommandId } from './house1';
+import type { CommandId } from './model';
 
 /** Small line icons in the spirit of Revit's ribbon buttons. */
 export const RibbonIcon: React.FC<{ id: CommandId }> = ({ id }) => {
@@ -49,6 +49,21 @@ export const RibbonIcon: React.FC<{ id: CommandId }> = ({ id }) => {
         <>
           <circle cx="12" cy="5" r="3" />
           <path d="M12 8v13" strokeDasharray="4 2" />
+        </>
+      )}
+      {id === 'stair' && <path d="M3 20h5v-4h4v-4h4V8h5" />}
+      {id === 'section' && (
+        <>
+          <path d="M12 3v18" strokeDasharray="3 2" />
+          <path d="M12 3h6l-2 3" />
+          <circle cx="12" cy="20" r="1.6" fill="currentColor" />
+        </>
+      )}
+      {id === 'paste' && (
+        <>
+          <rect x="6" y="5" width="12" height="16" rx="1.5" />
+          <path d="M9 5V3h6v2" />
+          <path d="M9 12h6M9 16h6" />
         </>
       )}
       {id === 'tag' && (
