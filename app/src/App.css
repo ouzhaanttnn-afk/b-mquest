@@ -3527,3 +3527,15 @@ body:has(.bq-modal-backdrop) {
 .bq-dashboard .bq-hero-kicker { color: var(--accent-action); }
 .bq-crit-evidence { opacity: 0.8; }
 .bq-dashboard .bq-btn-primary:hover:not(:disabled) { background: #ea580c; }
+
+/* ==========================================================================
+   Missions workspace, simplified (playtest): one goal line, a bigger plan.
+   The 5-step loop bar, the chief-architect line and the "Hızlı Seç" rows
+   repeated what the panels already say.
+   ========================================================================== */
+.bq-pedagogy-bar { display: none; }
+.bq-chief-bar { display: none; }
+.bq-plan-footer { display: none; }
+.bq-viewport-badge { font-size: 13px; letter-spacing: 0; text-transform: none; }
+/* With the chief-architect line gone, the dock only shows when something is selected. */
+.bq-game-dock:not(:has(.bq-quick-hud)) { display: none; }

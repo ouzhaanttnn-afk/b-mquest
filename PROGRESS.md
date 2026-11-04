@@ -16,6 +16,21 @@ Ayarlar (ses, titreşim, tema, hareketi azalt, hatırlatma, hakkında, ilerlemey
 Görevler ekranı (`ui/Dashboard.tsx`) sadeleştirildi: ← Evler, başlık, bölüm sekmeleri, kısa görev kartları (numara, yıldız, başlık, tek düğme).
 XP çubuğu, hikâye metinleri, rota şeridi ve tekrar eden müfredat listesi kaldırıldı; görevlerin kendisi aynen duruyor.
 
+## Oyuncu testleri (Kasım 2026)
+
+Altı ajan (lise öğrencisi/iPhone, mimar/iPad, görsel tasarımcı, oyun tasarımcısı, QA, görevler testçisi) oyunu oynadı.
+Raporlar ve düzeltilenler:
+- Hatalar: görevlerde "Kontrol et" çökmesi, İkiz Ev çatısı, 3B büyütme, telefonda ekran dışı komut, geri al sonrası komut,
+  küçük/yatay telefonda kart düğmeleri, Draw seçicinin planı örtmesi, liste iptali, merdiven sınırı, iki parmak.
+- Yıldız: geri al ve reddedilen dokunuş hamle saymaz; kart her yıldızın nedenini yazar; 👑 usta (en az hamle).
+- Revit doğruluğu: yatak odası kapısı, kapı açılım yayı, iç yüzden oda alanı, Floor/Roof çizim modu (✓ Finish),
+  n-1 basamak, pafta kutuları, kuzey oku, "Neden?" metinleri.
+- Görsel: koyu tema logosu, yıldız animasyonu, konfeti, açık tema yıldız rengi, toast kontrastı.
+- Görevler: iç kodlar gizli, kilitte görev adı, turuncu eylem, ayarlar yalnız menüden; görev ekranında 5 adım şeridi,
+  Baş Mimar satırı, Hızlı Seç satırları ve uzun ders kutusu (tek dokunuşla açılır) kaldırıldı.
+Açık kalanlar: görev planlarında kuzeyin aşağıda olması (içerik değişikliği gerekir), 65→~24 görev birleştirme,
+görev ekranına ev şeridi, günlük plan, serbest mod, yeni evler (Hata Avı, Dükkân, Tadilat, Metraj, Arazi).
+
 ## Evler
 
 - **1. Bahçe Evi** (`house1.ts`): Level, Grid, Wall, Door/Window, Floor/Roof, Room/Tag.

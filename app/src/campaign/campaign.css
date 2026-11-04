@@ -743,3 +743,6 @@
 .bq-cmp-north circle { fill: none; stroke: var(--text-secondary); stroke-width: 30; }
 .bq-cmp-north path { fill: var(--text-secondary); }
 .bq-cmp-north text { fill: var(--text-secondary); font-size: 300px; font-weight: 800; font-family: var(--font-sans); }
+.bq-cmp-star-why .master { color: #f59e0b; font-weight: 800; }
+.bq-cmp-tile-stars { grid-area: stars; display: inline-flex; align-items: center; gap: 6px; }
+.bq-cmp-crown { font-size: 18px; }

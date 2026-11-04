@@ -656,7 +656,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
         aria-label="3B Sahne Araçları"
       >
         <span className="bq-viewport-badge bq-badge-3d">
-          🧊 3B CANLI MİMARİ SAHNE (PERSPEKTİF · m)
+          3B
         </span>
         <div className="bq-viewport-controls">
           <button

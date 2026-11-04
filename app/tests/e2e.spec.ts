@@ -67,7 +67,7 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
     // =========================================================================
     await page.getByTestId('start-mission-m01').click();
     await expect(page.getByTestId('workspace-screen')).toBeVisible();
-    await expect(page.getByTestId('pedagogical-stepper')).toBeVisible();
+    await expect(page.getByTestId('pedagogical-stepper')).toBeHidden();
     await expect(page.getByTestId('live-progress-pill')).toBeVisible();
     await expect(page.getByTestId('plan-room-stamp')).toContainText('24.0 m²');
     await expect(page.getByTestId('learning-concept-box')).toContainText(

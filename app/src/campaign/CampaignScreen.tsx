@@ -11,6 +11,8 @@ import {
   LIST_COMMANDS,
   cancelCommand,
   finishSketch,
+  isMaster,
+  masterTaps,
   choicesFor,
   choose,
   pickCommand,
@@ -103,7 +105,7 @@ export const CampaignScreen: React.FC<Props> = ({ house, progress, onProgress, t
       levelIndex={levelIndex}
       theme={theme}
       reducedMotion={reducedMotion}
-      onFinish={(stars) => onProgress(recordStars(progress, levels[levelIndex].id, stars))}
+      onFinish={(stars, gold) => onProgress(recordStars(progress, levels[levelIndex].id, stars, gold))}
       onExit={() => setLevelIndex(null)}
       onNext={() => {
         if (levelIndex + 1 < levels.length) setLevelIndex(levelIndex + 1);
@@ -164,7 +166,18 @@ const Hub: React.FC<{ house: HouseDef; progress: CampaignProgress; onExit: () =>
                     <RibbonIcon key={c} id={c} />
                   ))}
                 </span>
-                {open ? <Stars n={stars} /> : <span className="bq-cmp-lock" aria-hidden="true">🔒</span>}
+                {open ? (
+                  <span className="bq-cmp-tile-stars">
+                    <Stars n={stars} />
+                    {progress.gold?.[l.id] && (
+                      <span className="bq-cmp-crown" title={t('master')} aria-label={t('master')}>
+                        👑
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="bq-cmp-lock" aria-hidden="true">🔒</span>
+                )}
               </button>
             </li>
           );
@@ -184,7 +197,7 @@ interface LevelProps {
   levelIndex: number;
   theme: 'light' | 'dark';
   reducedMotion: boolean;
-  onFinish: (stars: number) => void;
+  onFinish: (stars: number, gold: boolean) => void;
   onExit: () => void;
   onNext: () => void;
   onReplay: () => void;
@@ -255,8 +268,8 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
   useEffect(() => {
     if (!play.done || finishedOnce.current) return;
     finishedOnce.current = true;
-    onFinish(stars);
-  }, [play.done, stars, onFinish]);
+    onFinish(stars, isMaster(level, play));
+  }, [play.done, stars, onFinish, level, play]);
   useEffect(() => {
     if (!play.done) return;
     const id = window.setTimeout(() => setShowCard(true), reducedMotion ? 0 : 700);
@@ -561,7 +574,13 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
               <li className={play.taps <= level.par ? 'ok' : 'miss'}>
                 {play.taps <= level.par ? '✓' : '✗'} {t('moves')} {play.taps}/{level.par}
               </li>
-              {stars < 3 && <li className="tip">{t('starRetry')}</li>}
+              {isMaster(level, play) ? (
+                <li className="master" data-testid="campaign-master">👑 {t('masterDone')}</li>
+              ) : (
+                <li className="tip">
+                  {stars < 3 ? t('starRetry') : `👑 ${t('masterHint')} ${masterTaps(level)} ${t('movesLower')}.`}
+                </li>
+              )}
             </ul>
             {revealView && revealView.type === 'view' && (
               <div className="bq-cmp-reveal" data-testid="campaign-reveal">

@@ -11,6 +11,8 @@ import {
   newPlay,
   pasteTo,
   finishSketch,
+  isMaster,
+  masterTaps,
   pickCommand,
   setDrawMode,
   starsFor,
@@ -320,5 +322,26 @@ describe('Çizim modu (sketch)', () => {
     const f = st.session.model.elements.find((e) => e.type === 'floor');
     expect(f && f.type === 'floor' && f.boundary.length).toBeGreaterThanOrEqual(4);
     expect(st.sketch).toBeNull();
+  });
+});
+
+describe('Usta (👑) hedefi', () => {
+  it('en az hamleyle biten bölüm usta sayılır; fazla hamle sayılmaz', () => {
+    const level = HOUSE1[2];
+    expect(masterTaps(level)).toBe(7);
+    expect(isMaster(level, play(2, perfect[2]))).toBe(true);
+    const slow = play(2, [{ cmd: 'wall', taps: [[0, 0], [5000, 0], [W, 0], [W, D], [0, D], [0, 0], [S, 0], [S, D]] }]);
+    expect(slow.done).toBe(true);
+    expect(isMaster(level, slow)).toBe(false);
+  });
+});
+
+import { recordStars } from '../src/campaign/progress';
+describe('İlerleme kaydı', () => {
+  it('en iyi yıldızı ve tacı korur', () => {
+    let p = recordStars({ stars: {} }, 'h1-1', 3, true);
+    p = recordStars(p, 'h1-1', 1, false);
+    expect(p.stars['h1-1']).toBe(3);
+    expect(p.gold?.['h1-1']).toBe(true);
   });
 });

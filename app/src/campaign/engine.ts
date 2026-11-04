@@ -527,6 +527,12 @@ export function undo(level: LevelDef, st: PlayState): TapResult {
   };
 }
 
+/** Fewest moves that finish the level: the master (👑) target. */
+export const masterTaps = (level: LevelDef) => level.steps.reduce((s, st) => s + st.taps, 0);
+
+export const isMaster = (level: LevelDef, st: PlayState) =>
+  st.done && st.wrongPicks === 0 && st.taps <= masterTaps(level);
+
 /** ★ finished · ★★ no wrong command · ★★★ within the tap allowance. */
 export function starsFor(level: LevelDef, st: PlayState): number {
   if (!st.done) return 0;
