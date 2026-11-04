@@ -30,6 +30,8 @@ export const ElevationView: React.FC<Props> = ({ model, ghosts, demo, onTap }) =
       aria-label="Görünüş: katlar yan taraftan"
       data-testid="cmp-elevation"
       onPointerUp={(e) => {
+        // A second finger (pinch, two-finger tap) never draws.
+        if (!e.isPrimary) return;
         const m = ref.current?.getScreenCTM();
         if (!m) return;
         const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());

@@ -506,7 +506,8 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
     // Same three-quarter view as before, but the distance comes from the
     // narrower of the two fields of view, so tall phone panes and wide
     // desktop panes both show the whole building.
-    const dir = { x: 0.95, y: 0.6, z: 1.1 };
+    // The campaign houses have their entrance on the north (top of the plan): look at it.
+    const dir = { x: 0.95, y: 0.6, z: minimal ? -1.1 : 1.1 };
     const len = Math.hypot(dir.x, dir.y, dir.z);
     const radius = Math.hypot(f.w / 2, f.d / 2, 1.6);
     const vfov = ((cam.fov ?? 42) * Math.PI) / 180;
@@ -520,7 +521,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
     );
     ctrl.target.set(target.x, target.y, target.z);
     ctrl.update();
-  }, [frame]);
+  }, [frame, minimal]);
 
   const setInsideRoomCamera = useCallback(() => {
     const ctrl = controlsRef.current;
@@ -655,7 +656,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
         aria-label="3B Sahne Araçları"
       >
         <span className="bq-viewport-badge bq-badge-3d">
-          🧊 3B CANLI MİMARİ SAHNE (PERSPEKTİF · m)
+          3B
         </span>
         <div className="bq-viewport-controls">
           <button
@@ -713,7 +714,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
             position: (() => {
               const f = frame();
               const span = Math.max(f.w, f.d);
-              return [f.cx + span * 0.95, span * 0.75 + 1.7, f.cz + span * 1.1] as [number, number, number];
+              return [f.cx + span * 0.95, span * 0.75 + 1.7, f.cz + (minimal ? -1 : 1) * span * 1.1] as [number, number, number];
             })(),
             fov: 42,
             near: 0.1,

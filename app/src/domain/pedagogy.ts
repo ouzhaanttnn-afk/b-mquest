@@ -186,7 +186,14 @@ const CATEGORY_TR: Record<string, { noun: string; tool: string }> = {
   stair: { noun: 'merdiven (Stair)', tool: 'Merdiven' },
   room: { noun: 'oda (Room)', tool: 'Oda' },
   grid: { noun: 'aks (Grid)', tool: 'Aks' },
+  view: { noun: 'görünüm (View)', tool: 'View sekmesindeki görünüm' },
+  dimension: { noun: 'ölçü (Dimension)', tool: 'Ölçü' },
+  tag: { noun: 'etiket (Tag)', tool: 'Etiket' },
+  sheet: { noun: 'pafta (Sheet)', tool: 'Pafta' },
 };
+
+/** Any category, also ones added later, gets a readable fallback instead of a crash. */
+const categoryTr = (cat: string) => CATEGORY_TR[cat] ?? { noun: cat, tool: cat };
 
 /**
  * Hint-ladder feedback for model checks: the more hints the player has
@@ -378,7 +385,7 @@ export function explainCriterionFailureTr(
   }
 
   if (rule.type === 'exists') {
-    const c = CATEGORY_TR[rule.category];
+    const c = categoryTr(rule.category);
     return `Neden Yanlış: Modelde aranan ${c.noun} henüz yok ya da özellikleri istenenle uyuşmuyor. Nasıl Düzeltilir: Architecture → ${c.tool} aracıyla ekle, sonra Properties panelinde özellikleri kontrol et.`;
   }
 

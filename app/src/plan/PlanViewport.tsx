@@ -430,7 +430,7 @@ export const PlanViewport: React.FC<PlanViewportProps> = ({
         aria-label="2B Plan Araçları"
       >
         <span className="bq-viewport-badge bq-badge-2d bq-hide-mobile">
-          📐 2B MİMARİ KAT PLANI (ÜSTTEN GÖRÜNÜŞ · mm)
+          Plan
         </span>
         <div className="bq-viewport-controls">
           <button

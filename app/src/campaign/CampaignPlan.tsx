@@ -17,13 +17,27 @@ interface Props {
   ghosts: Ghost[];
   showDots: boolean;
   chainStart: Point | null;
+  /** Sketch lines waiting for Finish Edit Mode (magenta, as in Revit). */
+  sketch?: Point[] | null;
   demo: Point | null;
   onTap: (p: Point) => void;
 }
 
 const MARGIN = 2000;
 
-export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts, showDots, chainStart, demo, onTap }) => {
+/**
+ * Room area as Revit reports it: measured to the inner faces of the walls.
+ * Rooms here are rectangles between wall centre lines, so take half a wall off each side.
+ */
+function innerArea(room: Extract<BimModel['elements'][number], { type: 'room' }>, model: BimModel): number {
+  const b = roomBoundary(room, model);
+  if (b.open || b.rects.length !== 1) return roomArea(room, model);
+  const [x0, z0, x1, z1] = b.rects[0];
+  const t = 200;
+  return (Math.max(0, Math.abs(x1 - x0) - t) * Math.max(0, Math.abs(z1 - z0) - t)) / 1_000_000;
+}
+
+export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts, showDots, chainStart, sketch, demo, onTap }) => {
   const ref = useRef<SVGSVGElement | null>(null);
   const toPlan = (e: React.PointerEvent): Point | null => {
     const svg = ref.current;
@@ -57,6 +71,8 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
       aria-label="Plan: evin üstten görünüşü"
       data-testid="cmp-plan"
       onPointerUp={(e) => {
+        // A second finger (pinch, two-finger tap) never draws.
+        if (!e.isPrimary) return;
         const p = toPlan(e);
         if (p) onTap(p);
       }}
@@ -95,7 +111,7 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
         const [x0, z0, x1, z1] = stairRect(e);
         const along = e.direction.startsWith('x');
         const lines = [];
-        for (let i = 1; i < e.risers; i++) {
+        for (let i = 1; i < e.risers - 1; i++) {
           const k = i * e.treadDepth;
           const sgn = e.direction.endsWith('+') ? 1 : -1;
           const base = along ? (sgn > 0 ? x0 : x1) : sgn > 0 ? z0 : z1;
@@ -121,7 +137,7 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
               {e.name}
             </text>
             <text x={e.seedPoint[0]} y={e.seedPoint[1] + 360} textAnchor="middle" className="bq-cmp-room-area">
-              {roomArea(e, model).toFixed(1)} m²
+              {innerArea(e, model).toFixed(1).replace('.', ',')} m²
             </text>
           </g>
         ) : null
@@ -171,7 +187,7 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
         if (e.type !== 'door' && e.type !== 'window') return null;
         const seg = wallSeg(e.hostWallId, e.offset, e.width);
         if (!seg) return null;
-        return (
+        const opening = (
           <line
             key={e.id}
             className={e.type === 'door' ? 'bq-cmp-door' : 'bq-cmp-window'}
@@ -180,6 +196,27 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
             x2={seg[1][0]}
             y2={seg[1][1]}
           />
+        );
+        if (e.type !== 'door') return opening;
+        // Door symbol: leaf at 90° and its swing arc, opening into the house.
+        const [h, t] = seg;
+        const ux = (t[0] - h[0]) / e.width;
+        const uz = (t[1] - h[1]) / e.width;
+        let nx = -uz;
+        let nz = ux;
+        const cx = geom.w / 2 - h[0];
+        const cz = geom.d / 2 - h[1];
+        if (nx * cx + nz * cz < 0) {
+          nx = -nx;
+          nz = -nz;
+        }
+        const leaf: Point = [h[0] + nx * e.width, h[1] + nz * e.width];
+        const sweep = nx * uz - nz * ux > 0 ? 0 : 1;
+        return (
+          <g key={e.id} className="bq-cmp-door-sym">
+            {opening}
+            <path d={`M ${h[0]} ${h[1]} L ${leaf[0]} ${leaf[1]} A ${e.width} ${e.width} 0 0 ${sweep} ${t[0]} ${t[1]}`} />
+          </g>
         );
       })}
 
@@ -205,7 +242,9 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
           <g key={e.id} className="bq-cmp-section" data-testid="cmp-section-line">
             <line x1={e.cutLine[0][0]} y1={e.cutLine[0][1]} x2={e.cutLine[1][0]} y2={e.cutLine[1][1]} />
             <circle cx={e.cutLine[0][0]} cy={e.cutLine[0][1]} r={300} />
-            <text x={e.cutLine[0][0]} y={e.cutLine[0][1] + 110} textAnchor="middle">1</text>
+            <text x={e.cutLine[0][0]} y={e.cutLine[0][1] + 110} textAnchor="middle">
+              {e.name.replace(/\D+/g, '') || '1'}
+            </text>
           </g>
         ) : null
       )}
@@ -278,6 +317,10 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
         );
       })}
 
+      {sketch && (
+        <polygon className="bq-cmp-sketch" points={sketch.map(([x, z]) => `${x},${z}`).join(' ')} data-testid="cmp-sketch" />
+      )}
+
       {chainStart && <circle className="bq-cmp-chain" cx={chainStart[0]} cy={chainStart[1]} r={260} />}
 
       {demo && (
@@ -286,6 +329,13 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
           <circle r={160} className="bq-cmp-finger-core" />
         </g>
       )}
+
+      {/* North is up in the campaign plans; the entrance faces north. */}
+      <g className="bq-cmp-north" transform={`translate(${geom.w + MARGIN - 700} ${-MARGIN + 800})`} aria-hidden="true">
+        <circle r={420} />
+        <path d="M 0 -300 L 180 220 L 0 120 L -180 220 Z" />
+        <text y={-480} textAnchor="middle">K</text>
+      </g>
 
       <defs>
         <marker id="bq-cmp-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">

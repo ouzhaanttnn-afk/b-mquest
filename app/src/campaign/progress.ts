@@ -5,6 +5,8 @@ export const CAMPAIGN_KEY = 'bimquest.campaign.v1';
 
 export interface CampaignProgress {
   stars: Record<string, number>;
+  /** Levels finished in the fewest possible moves (👑). */
+  gold?: Record<string, true>;
 }
 
 export function loadProgress(): CampaignProgress {
@@ -15,7 +17,9 @@ export function loadProgress(): CampaignProgress {
     for (const [id, v] of Object.entries(p.stars ?? {})) {
       if (/^h\d+-\d+$/.test(id) && typeof v === 'number' && v >= 1 && v <= 3) stars[id] = Math.round(v);
     }
-    return { stars };
+    const gold: Record<string, true> = {};
+    for (const id of Object.keys((p as { gold?: Record<string, unknown> }).gold ?? {})) if (stars[id] === 3) gold[id] = true;
+    return { stars, gold };
   } catch {
     return { stars: {} };
   }
@@ -38,8 +42,11 @@ export function clearProgress(): void {
 }
 
 /** Keeps the best result for a level. */
-export function recordStars(p: CampaignProgress, levelId: string, stars: number): CampaignProgress {
-  return { stars: { ...p.stars, [levelId]: Math.max(p.stars[levelId] ?? 0, stars) } };
+export function recordStars(p: CampaignProgress, levelId: string, stars: number, gold = false): CampaignProgress {
+  return {
+    stars: { ...p.stars, [levelId]: Math.max(p.stars[levelId] ?? 0, stars) },
+    gold: gold || p.gold?.[levelId] ? { ...p.gold, [levelId]: true } : { ...p.gold },
+  };
 }
 
 export const isUnlocked = (house: HouseDef, p: CampaignProgress, index: number) =>

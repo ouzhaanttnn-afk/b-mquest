@@ -126,7 +126,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
   // Compact ⓘ Info Cards in Left Panel
-  const [showLearnDetail, setShowLearnDetail] = useState(true);
+  // The long lesson text is one tap away instead of filling the panel.
+  const [showLearnDetail, setShowLearnDetail] = useState(false);
   const [showMoreLearn, setShowMoreLearn] = useState(false);
   const [showRulesDetail, setShowRulesDetail] = useState(false);
   const [showStepByStepGuide, setShowStepByStepGuide] = useState(false);

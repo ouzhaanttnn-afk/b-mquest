@@ -3509,3 +3509,33 @@ body:has(.bq-modal-backdrop) {
 .bq-missions-grid .bq-mission-title { margin: 2px 0 6px; font-size: 16px; }
 .bq-missions-grid .bq-card-actions .bq-btn { min-height: 44px; }
 .bq-mission-time { color: var(--text-secondary); font-weight: 600; }
+
+/* Wordmark: one image per theme */
+.bq-logo-dark { display: none; }
+[data-theme='dark'] .bq-logo-dark { display: inline-block; }
+[data-theme='dark'] .bq-logo-light { display: none; }
+
+/* Missions list: same look as the houses (orange action, no settings wall). */
+.bq-dash-settings:not(.open) { display: none; }
+.bq-dashboard .bq-btn-primary,
+.bq-dashboard .bq-hero-cta {
+  background: var(--accent-action);
+  border-color: transparent;
+  color: #fff;
+}
+.bq-dashboard .bq-hero { border-color: var(--accent-action); }
+.bq-dashboard .bq-hero-kicker { color: var(--accent-action); }
+.bq-crit-evidence { opacity: 0.8; }
+.bq-dashboard .bq-btn-primary:hover:not(:disabled) { background: #ea580c; }
+
+/* ==========================================================================
+   Missions workspace, simplified (playtest): one goal line, a bigger plan.
+   The 5-step loop bar, the chief-architect line and the "Hızlı Seç" rows
+   repeated what the panels already say.
+   ========================================================================== */
+.bq-pedagogy-bar { display: none; }
+.bq-chief-bar { display: none; }
+.bq-plan-footer { display: none; }
+.bq-viewport-badge { font-size: 13px; letter-spacing: 0; text-transform: none; }
+/* With the chief-architect line gone, the dock only shows when something is selected. */
+.bq-game-dock:not(:has(.bq-quick-hud)) { display: none; }

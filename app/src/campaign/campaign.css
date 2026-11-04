@@ -174,9 +174,15 @@
   display: flex;
   gap: 2px;
   padding: 6px 8px;
-  background: var(--bg-elevated);
   overflow-x: auto;
   scrollbar-width: none;
+  /* Edge shadows appear only while there is more ribbon to scroll to. */
+  background:
+    linear-gradient(to right, var(--bg-elevated) 30%, transparent) left / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--bg-elevated) 30%, transparent) right / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(249, 115, 22, 0.55), transparent) left / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(249, 115, 22, 0.55), transparent) right / 14px 100% no-repeat scroll,
+    var(--bg-elevated);
 }
 .bq-cmp-panels::-webkit-scrollbar { display: none; }
 .bq-cmp-panel {
@@ -292,7 +298,17 @@
   box-shadow: var(--card-shadow);
   z-index: 2;
 }
-.bq-cmp-preview.big { position: absolute; inset: 8px; width: auto; margin: 0; aspect-ratio: auto; }
+.bq-cmp-preview.big {
+  position: absolute;
+  inset: 8px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  aspect-ratio: auto;
+  justify-self: stretch;
+  align-self: stretch;
+  z-index: 6;
+}
 @media (orientation: portrait) {
   .bq-cmp-stage.with-preview { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   .bq-cmp-preview { justify-self: end; width: min(46%, 280px); margin: 6px 10px 10px; }
@@ -324,13 +340,14 @@
 .bq-cmp-toast {
   position: absolute;
   left: 50%;
-  top: 12px;
+  top: 44px;
   transform: translateX(-50%);
   max-width: calc(100% - 24px);
   padding: 10px 16px;
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #fff;
+  background: var(--text-primary);
+  color: var(--bg-canvas);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   font-weight: 600;
   z-index: 4;
   pointer-events: none;
@@ -414,7 +431,20 @@
   background: var(--bg-surface);
   color: var(--text-primary);
 }
-.bq-cmp-done-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+.bq-cmp-done-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 18px -22px -22px;
+  padding: 12px 22px 22px;
+  flex-wrap: wrap;
+  /* Always reachable, also on short screens where the card scrolls. */
+  position: sticky;
+  bottom: -22px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+}
+.bq-cmp-chip-ghost { background: transparent; }
 
 /* House complete */
 .bq-cmp-house-done {
@@ -495,7 +525,7 @@
 .bq-cmp-draw {
   position: absolute;
   left: 10px;
-  top: 44px;
+  bottom: 10px;
   z-index: 2;
   display: flex;
   gap: 6px;
@@ -635,3 +665,84 @@
 .bq-cmp-elev-mark path { fill: var(--accent-action); }
 .bq-cmp-reveal-sheet { background: #fff; }
 .bq-cmp-reveal-sheet svg { height: 260px; }
+
+/* ---------- Reward polish ---------- */
+.bq-cmp-big-stars .bq-cmp-stars span { display: inline-block; }
+.bq-cmp-big-stars .bq-cmp-stars .on { animation: bq-star-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both; text-shadow: 0 0 18px rgba(251, 191, 36, 0.65); }
+@keyframes bq-star-pop {
+  0% { transform: scale(0.2) rotate(-30deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.bq-cmp-star-why { list-style: none; margin: 10px auto 0; padding: 0; display: inline-flex; flex-direction: column; gap: 4px; text-align: left; font-size: 14px; }
+.bq-cmp-star-why .ok { color: var(--status-pass); }
+.bq-cmp-star-why .miss { color: var(--status-warn); }
+.bq-cmp-star-why .tip { color: var(--text-secondary); font-size: 13px; }
+.bq-cmp-house-done { position: relative; overflow: hidden; }
+.bq-cmp-confetti { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.bq-cmp-confetti span {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: bq-confetti 2.4s ease-in forwards;
+}
+@keyframes bq-confetti {
+  0% { opacity: 1; translate: 0 0; }
+  100% { opacity: 0; translate: 30px 105vh; rotate: 540deg; }
+}
+.reduced-motion .bq-cmp-confetti,
+.reduced-motion .bq-cmp-big-stars .bq-cmp-stars .on { animation: none; display: none; }
+.reduced-motion .bq-cmp-big-stars .bq-cmp-stars .on { display: inline-block; }
+@media (prefers-reduced-motion: reduce) {
+  .bq-cmp-confetti { display: none; }
+  .bq-cmp-big-stars .bq-cmp-stars .on { animation: none; }
+}
+@media (max-height: 700px) {
+  .bq-cmp-reveal svg { height: 150px; }
+  .bq-cmp-big-stars .bq-cmp-stars { font-size: 34px; }
+  .bq-cmp-modal { padding: 16px; }
+  .bq-cmp-done-actions { margin: 12px -16px -16px; padding: 10px 16px 16px; bottom: -16px; }
+}
+
+/* Light theme: stars need an edge on white */
+[data-theme='light'] .bq-cmp-stars .on,
+[data-theme='light'] .bq-cmp-hub-total,
+[data-theme='light'] .bq-home-stars,
+[data-theme='light'] .bq-home-house-stars,
+[data-theme='light'] .bq-campaign-stars { color: #d97706; }
+[data-theme='light'] .bq-cmp-stars .off { color: #94a3b8; }
+[data-theme='light'] .bq-home-dots span.on { background: #f59e0b; }
+.bq-cmp-panel-draw { background: rgba(249, 115, 22, 0.12); border-radius: 10px; }
+.bq-cmp-panel-draw .bq-cmp-cmd svg { color: var(--accent-action); }
+.bq-cmp-panel-draw .bq-cmp-cmd.active svg { color: #fff; }
+/* Short landscape phones: give the drawing the room */
+@media (max-height: 520px) {
+  .bq-cmp-preview { width: 150px; margin: 6px; }
+  .bq-cmp-cmd { width: 58px; min-height: 46px; font-size: 11px; }
+  .bq-cmp-panel-btns { max-width: 124px; }
+  .bq-cmp-goal-text { font-size: 15px; }
+}
+/* Sketch mode: magenta boundary + green Finish, as in Revit */
+.bq-cmp-sketch { fill: rgba(236, 72, 153, 0.08); stroke: #ec4899; stroke-width: 60; stroke-linejoin: round; }
+.bq-cmp-finish {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--status-pass);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: bq-cmp-glow 1s ease-in-out infinite;
+}
+.bq-cmp-door-sym path { fill: none; stroke: var(--accent-action); stroke-width: 30; }
+.bq-cmp-north circle { fill: none; stroke: var(--text-secondary); stroke-width: 30; }
+.bq-cmp-north path { fill: var(--text-secondary); }
+.bq-cmp-north text { fill: var(--text-secondary); font-size: 300px; font-weight: 800; font-family: var(--font-sans); }
+.bq-cmp-star-why .master { color: #f59e0b; font-weight: 800; }
+.bq-cmp-tile-stars { grid-area: stars; display: inline-flex; align-items: center; gap: 6px; }
+.bq-cmp-crown { font-size: 18px; }

@@ -68,7 +68,7 @@ const sectionDone = (m: BimModel) =>
 const front = (s: MissionSessionState, on: string) => wallsOn(s.model, on).find((w) => w.start[1] === 0 && w.end[1] === 0)!;
 
 /** Upper floor outline the floor step expects (stair opening on the left). */
-const UPPER_OUTLINE: Point[] = [[0, 0], [W, 0], [W, D], [0, D], [0, 5460], [1300, 5460], [1300, 500], [0, 500]];
+const UPPER_OUTLINE: Point[] = [[0, 0], [W, 0], [W, D], [0, D], [0, 5180], [1300, 5180], [1300, 500], [0, 500]];
 
 const HOUSE2_LEVELS: LevelDef[] = [
   {
@@ -147,7 +147,7 @@ const HOUSE2_LEVELS: LevelDef[] = [
         command: 'stair',
         goal: { tr: 'Stair’i seç: sol duvarın dibindeki başlangıca, sonra çıkış yönüne (arkaya) dokun.' },
         ghost: [
-          { kind: 'area', points: [[200, 600], [1200, 600], [1200, 5360], [200, 5360]], label: 'Merdiven' },
+          { kind: 'area', points: [[200, 600], [1200, 600], [1200, 5080], [200, 5080]], label: 'Merdiven' },
         ],
         magnet: STAIR_AT,
         demo: [[700, 600], [700, 5000]],
@@ -165,7 +165,7 @@ const HOUSE2_LEVELS: LevelDef[] = [
     bridge: { tr: "AutoCAD'de katı kopyalayıp yeni dosyaya taşırsın; Revit'te aynı modelde başka bir Level'a hizalı yapıştırırsın." },
     view: 'plan',
     geom: GEOM,
-    par: 3,
+    par: 4,
     steps: [
       {
         id: 'paste',
@@ -182,14 +182,14 @@ const HOUSE2_LEVELS: LevelDef[] = [
       {
         id: 'floor',
         command: 'floor',
-        goal: { tr: '1. Kat planındasın. İçeri dokun: döşeme otursun, merdiven boşluğu açık kalsın.' },
+        goal: { tr: '1. Kat planındasın. Floor ile içeri dokun; sınırda merdiven boşluğu var. ✓ ile bitir.' },
         ghost: [{ kind: 'area', points: UPPER_OUTLINE, label: 'Döşeme' }],
         demo: [[5000, 3000]],
         on: 'l1',
         done: (m) => m.elements.some((e) => e.type === 'floor' && e.levelId === levelId(m, 3000)),
         solve: (s) =>
           step(s, createFloorCommand(s, { levelId: levelId(s.model, 3000), boundary: floorOutlineWithOpening(GEOM, s.model, levelId(s.model, 3000)) })),
-        taps: 1,
+        taps: 2,
       },
     ],
   },
@@ -224,7 +224,7 @@ const HOUSE2_LEVELS: LevelDef[] = [
     bridge: { tr: "AutoCAD'de katlar arasında dosya değiştirirsin; Revit'te Project Browser'dan kat planını seçersin." },
     view: 'plan',
     geom: GEOM,
-    par: 5,
+    par: 6,
     steps: [
       {
         id: 'door',
@@ -261,13 +261,13 @@ const HOUSE2_LEVELS: LevelDef[] = [
       {
         id: 'roof',
         command: 'roof',
-        goal: { tr: 'Evin içine dokun: çatı en üst kata otursun.' },
+        goal: { tr: 'Roof: evin içine dokun, sonra ✓ ile bitir; çatı en üst kata oturur.' },
         ghost: [{ kind: 'area', points: [[-500, -500], [W + 500, -500], [W + 500, D + 500], [-500, D + 500]], label: 'Çatı' }],
         demo: [[W / 2, D / 2]],
         on: 'l1',
         done: (m) => m.elements.some((e) => e.type === 'roof' && e.baseLevelId === roofLevelId(m)),
         solve: (s) => step(s, createRoofCommand(s, { baseLevelId: roofLevelId(s.model), slope: 30, overhang: 500 })),
-        taps: 1,
+        taps: 2,
       },
     ],
   },

@@ -193,7 +193,8 @@ export const SceneExtras: React.FC<ExtrasProps> = ({
           const along = Math.abs(dx) > 0;
           return (
             <group key={el.id} userData={{ elementId: el.id, elementType: 'stair' }}>
-              {Array.from({ length: el.risers }).map((_, i) => {
+              {/* n risers, n - 1 treads: the top step is the upper floor. */}
+              {Array.from({ length: Math.max(1, el.risers - 1) }).map((_, i) => {
                 const h = (i + 1) * el.riserHeight * MM;
                 const cx = el.start[0] * MM + dx * (i + 0.5) * el.treadDepth * MM + (along ? 0 : (el.width * MM) / 2);
                 const cz = el.start[1] * MM + dz * (i + 0.5) * el.treadDepth * MM + (along ? (el.width * MM) / 2 : 0);

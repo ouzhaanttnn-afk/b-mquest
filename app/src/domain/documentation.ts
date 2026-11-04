@@ -1,4 +1,6 @@
 import { levelById, wallsOf } from './derived';
+// Runtime-only cycle (viewDrawing uses helpers from here); both sides only call functions.
+import { buildViewDrawing } from './viewDrawing';
 import {
   cloneModelDeep,
   nextId,
@@ -210,18 +212,9 @@ export function createSheetOp(model: BimModel, input: { number?: string; name?: 
 
 /** Paper size (mm) a view occupies on a sheet at its scale. */
 export function viewPaperSize(view: ViewElement, model: BimModel): { w: number; h: number } {
-  const crop = viewCrop(view) ?? modelBounds(model) ?? { minX: 0, maxX: 6000, minZ: 0, maxZ: 4000 };
-  const widthMm =
-    view.kind === 'section' && view.cutLine
-      ? Math.hypot(view.cutLine[1][0] - view.cutLine[0][0], view.cutLine[1][1] - view.cutLine[0][1])
-      : view.kind === 'elevation' && (view.direction === 'E' || view.direction === 'W')
-      ? crop.maxZ - crop.minZ
-      : crop.maxX - crop.minX;
-  const heightMm =
-    view.kind === 'plan'
-      ? crop.maxZ - crop.minZ
-      : Math.max(...model.levels.map((l) => l.elevation), 0) + 3600;
-  return { w: Math.max(10, widthMm / view.scale), h: Math.max(10, heightMm / view.scale) };
+  // The box is the drawing itself (with its level heads and margins), so views never spill out of it.
+  const d = buildViewDrawing(model, view);
+  return { w: Math.max(10, d.width / view.scale), h: Math.max(10, d.height / view.scale) };
 }
 
 const TITLE_BLOCK = { x: SHEET_W - 130, z: SHEET_H - 50, w: 120, h: 40 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { playSound } from './sound';
+import { BrandLogo } from './BrandLogo';
 
 export interface TitleScreenProps {
   hasProgress: boolean;
@@ -22,13 +23,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ hasProgress, stars, on
     </svg>
 
     <div className="bq-title-body">
-      <img
-        src="./assets/brand/logo-horizontal.svg"
-        alt="BIM QUEST"
-        className="bq-title-logo"
-        width={280}
-        height={56}
-      />
+      <BrandLogo className="bq-title-logo" width={280} height={56} />
       <p className="bq-title-tagline">Revit'i ev yaparak öğren.</p>
       <p className="bq-title-sub">
         Kısa bölümler, gerçek Revit komutları. İlk evin bir bahçe evi.
