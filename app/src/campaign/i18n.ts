@@ -24,6 +24,7 @@ export const UI = {
   preview3d: { tr: '3B' },
   close: { tr: 'Kapat' },
   cancel: { tr: 'Vazgeç' },
+  finish: { tr: 'Bitir' },
   starDone: { tr: 'Bölümü bitirdin' },
   starNoWrong: { tr: 'Hiç yanlış komut yok' },
   starWrong: { tr: 'yanlış komut' },

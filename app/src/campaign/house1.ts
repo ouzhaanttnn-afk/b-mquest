@@ -59,6 +59,14 @@ const openingsOnFront = (m: BimModel, type: 'door' | 'window', z: number) =>
     .map((e) => openingCentre(m, e.id))
     .filter((p): p is Point => !!p && near(p[1], z, 1));
 
+/** A door in the interior wall, away from its ends. */
+const bedroomDoor = (m: BimModel) =>
+  m.elements.some((e) => {
+    if (e.type !== 'door') return false;
+    const p = openingCentre(m, e.id);
+    return !!p && near(p[0], S, 1) && p[1] > 800 && p[1] < D - 800;
+  });
+
 const roomAtSide = (m: BimModel, side: 'left' | 'right') =>
   m.elements.find(
     (e) =>
@@ -80,7 +88,7 @@ export const HOUSE1: LevelDef[] = [
     id: 'h1-1',
     number: 1,
     title: { tr: 'Katlar' },
-    why: { tr: "Revit'te her duvar, döşeme ve çatı bir kata (Level) bağlıdır. Katı yükseltirsen ona bağlı her şey birlikte yükselir. Katlar bir görünüşte (elevation) çizilir." },
+    why: { tr: "Revit'te her duvar, döşeme ve çatı bir kata (Level) bağlıdır. Katı taşırsan tabanı ona bağlı her şey birlikte taşınır; duvarın üstünü de bir kata bağlarsan (Top Constraint) kat yükselince duvar da uzar. Katlar bir görünüşte (elevation) çizilir." },
     bridge: { tr: "AutoCAD'de kat diye bir şey yoktur; Revit'te her şey bir kata bağlıdır." },
     view: 'elevation',
     geom: GEOM,
@@ -103,7 +111,7 @@ export const HOUSE1: LevelDef[] = [
     id: 'h1-2',
     number: 2,
     title: { tr: 'Akslar' },
-    why: { tr: 'Akslar (Grid) planın iskeletidir. Duvarlar akslara oturur; aksı taşırsan ona bağlı duvarlar da taşınabilir. Revit aks adlarını kendisi verir: A, B… ve 1, 2…' },
+    why: { tr: 'Akslar (Grid) planın iskeletidir. Duvarı aksa hizalayıp kilitlersen (Align + kilit) aksı taşıdığında duvar da gelir. Revit yeni aksa bir öncekinin adını bir artırarak verir: A’dan sonra B, 1’den sonra 2.' },
     bridge: { tr: 'Aks çizgisi gibi görünür, ama Revit’te duvarlar ona yapışır ve projede referans olarak kalır.' },
     view: 'plan',
     geom: GEOM,
@@ -173,17 +181,23 @@ export const HOUSE1: LevelDef[] = [
     bridge: { tr: "AutoCAD'deki blok gibi görünür, ama Revit'te duvarı gerçekten deler ve duvara bağlı kalır." },
     view: 'plan',
     geom: GEOM,
-    par: 5,
+    par: 6,
     steps: [
       {
         id: 'door',
         command: 'door',
-        goal: { tr: 'Salonun ön duvarına giriş kapısını koy.' },
-        ghost: [{ kind: 'opening', a: [2550, 0], b: [3450, 0], label: 'Kapı' }],
-        demo: [[3000, 900], [3000, 0]],
-        done: (m) => openingsOnFront(m, 'door', 0).some((p) => p[0] > 1000 && p[0] < S - 500),
-        solve: (s) => step(s, placeOpening(s, 'door', wallById(s, [0, 0], [W, 0]), 3000, { width: 900, height: 2100, sill: 0, mark: 'D-01', fireRating: 'none' })),
-        taps: 1,
+        goal: { tr: 'İki kapı koy: salonun ön duvarına giriş kapısı, iç duvara yatak odası kapısı.' },
+        ghost: [
+          { kind: 'opening', a: [2550, 0], b: [3450, 0], label: 'Giriş' },
+          { kind: 'opening', a: [S, 4550], b: [S, 5450], label: 'Oda kapısı' },
+        ],
+        demo: [[3000, 900], [3000, 0], [S - 900, 5000], [S, 5000]],
+        done: (m) => openingsOnFront(m, 'door', 0).some((p) => p[0] > 1000 && p[0] < S - 500) && bedroomDoor(m),
+        solve: (s) => {
+          const x = step(s, placeOpening(s, 'door', wallById(s, [0, 0], [W, 0]), 3000, { width: 900, height: 2100, sill: 0, mark: 'D-01', fireRating: 'none' }));
+          return step(x, placeOpening(x, 'door', wallById(x, [S, 0], [S, D]), 5000, { width: 900, height: 2100, sill: 0, mark: 'D-02', fireRating: 'none' }));
+        },
+        taps: 2,
       },
       {
         id: 'windows',
@@ -212,31 +226,31 @@ export const HOUSE1: LevelDef[] = [
     id: 'h1-5',
     number: 5,
     title: { tr: 'Döşeme ve çatı' },
-    why: { tr: 'Döşeme ve çatı duvarlardan oluşturulur: Revit duvarları seçince sınırı kendisi bulur. Çatı en üst kata (Level) oturur.' },
+    why: { tr: 'Döşeme ve çatı bir çizim modunda (sketch) yapılır: duvarları seçince (Pick Walls) pembe sınır çizgileri oluşur, ✓ Finish Edit Mode ile nesne yaratılır. Çatı en üst kata (Level) oturur.' },
     bridge: { tr: "AutoCAD'deki tarama gibi değil: Revit'te döşemenin kalınlığı ve malzemesi olan gerçek bir nesne." },
     view: 'plan',
     geom: GEOM,
-    par: 4,
+    par: 6,
     steps: [
       {
         id: 'floor',
         command: 'floor',
-        goal: { tr: 'Evin içine dokun: zemin döşemesi oluşsun.' },
+        goal: { tr: 'Floor: evin içine dokun, sınır çizilsin; sonra ✓ ile bitir.' },
         ghost: [{ kind: 'area', points: [[0, 0], [W, 0], [W, D], [0, D]], label: 'Döşeme' }],
         demo: [[W / 2, D / 2]],
         done: (m) => m.elements.some((e) => e.type === 'floor' && e.levelId === 'l0'),
         solve: (s) => step(s, createFloorCommand(s, { levelId: 'l0' })),
-        taps: 1,
+        taps: 2,
       },
       {
         id: 'roof',
         command: 'roof',
-        goal: { tr: 'Evin içine dokun: çatı otursun.' },
+        goal: { tr: 'Roof: evin içine dokun, sınır çizilsin; sonra ✓ ile bitir.' },
         ghost: [{ kind: 'area', points: [[-500, -500], [W + 500, -500], [W + 500, D + 500], [-500, D + 500]], label: 'Çatı' }],
         demo: [[W / 2, D / 2]],
         done: (m) => m.elements.some((e) => e.type === 'roof'),
         solve: (s) => step(s, createRoofCommand(s, { baseLevelId: roofLevelId(s.model), slope: 30, overhang: 500 })),
-        taps: 1,
+        taps: 2,
       },
     ],
   },
@@ -244,7 +258,7 @@ export const HOUSE1: LevelDef[] = [
     id: 'h1-6',
     number: 6,
     title: { tr: 'Odalar' },
-    why: { tr: 'Oda (Room) duvarların çevrelediği alanı tanır; alanını ve hacmini Revit hesaplar. Etiket (Tag) odanın adını ve alanını planda yazar; bilgi modelden gelir.' },
+    why: { tr: 'Oda (Room) duvarların çevrelediği alanı tanır; alanı duvarların iç yüzünden Revit hesaplar (hacim hesabı ayarlardan açılır). Etiket (Tag) odanın adını ve alanını planda yazar; bilgi modelden gelir.' },
     bridge: { tr: "AutoCAD'de alanı sen ölçersin; Revit'te oda alanı modelden kendiliğinden hesaplanır." },
     view: 'plan',
     geom: GEOM,

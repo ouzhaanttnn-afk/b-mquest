@@ -15,7 +15,7 @@ import {
   mirrorWallsCommand,
   createStairCommand,
 } from '../domain/commandsExtended';
-import { roomBoundary } from '../domain/derived';
+import { roomBoundary, wallsOutline } from '../domain/derived';
 import type { BimModel, CompassDir, Point, RoomElement, StairDirection, StairElement, WallElement } from '../domain/types';
 import { lockAxis, projectOnWall } from '../plan/snap';
 import { EMPTY_CHAIN, placeOpening, placeRoomAt, wallChainTap, type ChainState } from '../ui/workspace/toolActions';
@@ -43,6 +43,8 @@ export interface PlayState {
   taps: number;
   wrongPicks: number;
   done: boolean;
+  /** Floor/Roof sketch waiting for Finish Edit Mode (✓). */
+  sketch: { kind: 'floor' | 'roof'; points: Point[] } | null;
 }
 
 export type Effect = 'select' | 'snap' | 'build' | 'error' | 'success';
@@ -66,6 +68,7 @@ export function newPlay(session: MissionSessionState): PlayState {
     chain: EMPTY_CHAIN,
     firstTap: null,
     drawMode: 'line',
+    sketch: null,
     namingRoomId: null,
     taps: 0,
     wrongPicks: 0,
@@ -80,12 +83,12 @@ export const stepLevel = (s: StepDef) => s.on ?? 'l0';
 export function pickCommand(level: LevelDef, st: PlayState, id: CommandId): TapResult {
   const want = currentStep(level, st).command;
   if (id !== want) return { state: { ...st, wrongPicks: st.wrongPicks + 1 }, effect: 'error' };
-  return { state: { ...st, command: id, chain: EMPTY_CHAIN, firstTap: null }, effect: 'select' };
+  return { state: { ...st, command: id, chain: EMPTY_CHAIN, firstTap: null, sketch: null }, effect: 'select' };
 }
 
 /** Line / Rectangle on the wall tool's Draw panel. */
 export function setDrawMode(st: PlayState, mode: DrawMode): TapResult {
-  return { state: { ...st, drawMode: mode, chain: EMPTY_CHAIN, firstTap: null }, effect: 'select' };
+  return { state: { ...st, drawMode: mode, chain: EMPTY_CHAIN, firstTap: null, sketch: null }, effect: 'select' };
 }
 
 const wallsOn = (m: BimModel, levelId: string) =>
@@ -152,7 +155,8 @@ const insideHouse = (g: HouseGeom, p: Point) => p[0] > 0 && p[0] < g.w && p[1] >
 
 /** Plan rectangle a stair covers: [x0, z0, x1, z1]. */
 export function stairRect(s: StairElement): [number, number, number, number] {
-  const run = s.risers * s.treadDepth;
+  // n risers need n - 1 treads: the last step is the upper floor itself.
+  const run = Math.max(1, s.risers - 1) * s.treadDepth;
   const [x, z] = s.start;
   switch (s.direction) {
     case 'x+':
@@ -223,12 +227,12 @@ function settle(level: LevelDef, st: PlayState, effect: Effect): TapResult {
   while (i < level.steps.length && level.steps[i].done(st.session.model)) i++;
   if (i >= level.steps.length) {
     return {
-      state: { ...st, stepIndex: level.steps.length - 1, done: true, command: null, chain: EMPTY_CHAIN, firstTap: null },
+      state: { ...st, stepIndex: level.steps.length - 1, done: true, command: null, chain: EMPTY_CHAIN, firstTap: null, sketch: null },
       effect: 'success',
     };
   }
   if (i !== st.stepIndex) {
-    return { state: { ...st, stepIndex: i, command: null, chain: EMPTY_CHAIN, firstTap: null }, effect: 'build' };
+    return { state: { ...st, stepIndex: i, command: null, chain: EMPTY_CHAIN, firstTap: null, sketch: null }, effect: 'build' };
   }
   return { state: st, effect };
 }
@@ -291,7 +295,7 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
           height: g.wallH,
           thickness: 200,
         });
-        return applied(level, { ...st, firstTap: null }, r);
+        return applied(level, { ...st, firstTap: null, sketch: null }, r);
       }
       const o = wallChainTap(s, st.chain, p, { baseLevelId: on, height: g.wallH, thickness: 200 });
       if (!o.result) return { state: { ...st, chain: o.next }, effect: 'snap' };
@@ -306,16 +310,41 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
         level,
         st,
         placeOpening(s, st.command, w, projectOnWall(w, raw), isDoor
-          ? { width: 900, height: 2100, sill: 0, mark: 'D-01', fireRating: 'none' }
+          ? {
+              width: 900,
+              height: 2100,
+              sill: 0,
+              mark: `D-${String(s.model.elements.filter((e) => e.type === 'door').length + 1).padStart(2, '0')}`,
+              fireRating: 'none',
+            }
           : { width: 1200, height: 1200, sill: 900 })
       );
     }
-    case 'floor':
+    case 'floor': {
+      if (st.sketch) return { state: st0 };
       if (!insideHouse(g, raw)) return { state: st, effect: 'error', message: 'Evin içine dokun.' };
-      return applied(level, st, createFloorCommand(s, { levelId: on, boundary: floorOutlineWithOpening(g, s.model, on) }));
-    case 'roof':
+      const points = floorOutlineWithOpening(g, s.model, on) ?? wallsOutline(s.model, on);
+      if (!points) return { state: st, effect: 'error', message: 'Bu katta kapalı bir duvar hattı yok.' };
+      return {
+        state: { ...st, sketch: { kind: 'floor', points } },
+        effect: 'snap',
+        message: 'Sınır çizgileri duvarlardan alındı (Pick Walls). ✓ ile bitir.',
+      };
+    }
+    case 'roof': {
+      if (st.sketch) return { state: st0 };
       if (!insideHouse(g, raw)) return { state: st, effect: 'error', message: 'Evin içine dokun.' };
-      return applied(level, st, createRoofCommand(s, { baseLevelId: roofLevelId(s.model), slope: 30, overhang: 500 }));
+      const ws = s.model.elements.filter((e): e is WallElement => e.type === 'wall');
+      if (ws.length < 3) return { state: st, effect: 'error', message: 'Çatı için önce duvarlar gerekir.' };
+      const xs = ws.flatMap((w) => [w.start[0], w.end[0]]);
+      const zs = ws.flatMap((w) => [w.start[1], w.end[1]]);
+      const [x0, x1, z0, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)];
+      return {
+        state: { ...st, sketch: { kind: 'roof', points: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] } },
+        effect: 'snap',
+        message: 'Çatı sınırı dış duvarlardan alındı. ✓ ile bitir.',
+      };
+    }
     case 'stair': {
       const top = levelAbove(s.model, on);
       if (!top) return { state: st, effect: 'error', message: 'Merdiven için üstte bir kat gerekir.' };
@@ -332,10 +361,10 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
       const input = stairInput(s.model, on, top, a, dir);
       const [x0, z0, x1, z1] = stairRect({ ...input, id: '', type: 'stair', name: '' } as StairElement);
       if (x0 < 100 || z0 < 100 || x1 > g.w - 100 || z1 > g.d - 100) {
-        return { state: { ...st, firstTap: null }, effect: 'error', message: 'Merdiven evin içine sığmalı: başlangıcı ve yönü yeniden seç.' };
+        return { state: { ...st, firstTap: null, sketch: null }, effect: 'error', message: 'Merdiven evin içine sığmalı: başlangıcı ve yönü yeniden seç.' };
       }
       const r = createStairCommand(s, input);
-      return applied(level, { ...st, firstTap: null }, r);
+      return applied(level, { ...st, firstTap: null, sketch: null }, r);
     }
     case 'section': {
       const p = snapPoint(raw);
@@ -343,7 +372,7 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
       const end = lockAxis(st.firstTap, p);
       if (end[0] === st.firstTap[0] && end[1] === st.firstTap[1]) return { state: st };
       const r = createViewCommand(s, { kind: 'section', cutLine: [st.firstTap, end] });
-      return applied(level, { ...st, firstTap: null }, r);
+      return applied(level, { ...st, firstTap: null, sketch: null }, r);
     }
     case 'paste':
       return { state: st0, effect: 'error', message: 'Yapıştırılacak katı seç.' };
@@ -359,7 +388,7 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
       if (!st.firstTap) return { state: { ...st, firstTap: raw }, effect: 'snap' };
       const a = nearestWall(s.model, on, st.firstTap);
       if (!a || a.id === w.id) return { state: { ...st, firstTap: raw }, effect: 'snap' };
-      return applied(level, { ...st, firstTap: null }, createDimensionCommand(s, a.id, w.id));
+      return applied(level, { ...st, firstTap: null, sketch: null }, createDimensionCommand(s, a.id, w.id));
     }
     case 'elevation': {
       const dir = facadeAt(g, raw);
@@ -451,8 +480,20 @@ export function choose(level: LevelDef, st: PlayState, id: string): TapResult {
   return { state: st };
 }
 
+/** Finish Edit Mode (✓): the sketch becomes a floor or a roof. */
+export function finishSketch(level: LevelDef, st: PlayState): TapResult {
+  if (st.done || !st.sketch) return { state: st };
+  const s = st.session;
+  const on = stepLevel(currentStep(level, st));
+  const next = { ...st, sketch: null, taps: st.taps + 1 };
+  if (st.sketch.kind === 'floor') {
+    return applied(level, next, createFloorCommand(s, { levelId: on, boundary: st.sketch.points }));
+  }
+  return applied(level, next, createRoofCommand(s, { baseLevelId: roofLevelId(s.model), footprint: st.sketch.points, slope: 30, overhang: 500 }));
+}
+
 /** Leaves a list command without choosing anything. */
-export const cancelCommand = (st: PlayState): TapResult => ({ state: { ...st, command: null, firstTap: null, chain: EMPTY_CHAIN }, effect: 'select' });
+export const cancelCommand = (st: PlayState): TapResult => ({ state: { ...st, command: null, firstTap: null, chain: EMPTY_CHAIN, sketch: null }, effect: 'select' });
 
 /** Paste Aligned to Selected Levels: the walls of the step's source level go onto `levelId`. */
 export const pasteTo = (level: LevelDef, st: PlayState, levelId: string): TapResult =>
@@ -466,7 +507,7 @@ export function nameRoom(level: LevelDef, st: PlayState, name: string): TapResul
 }
 
 export function undo(level: LevelDef, st: PlayState): TapResult {
-  if (st.session.past.length === 0) return { state: { ...st, chain: EMPTY_CHAIN, firstTap: null } };
+  if (st.session.past.length === 0) return { state: { ...st, chain: EMPTY_CHAIN, firstTap: null, sketch: null } };
   const session = undoCommand(st.session);
   let i = 0;
   while (i < level.steps.length - 1 && level.steps[i].done(session.model)) i++;

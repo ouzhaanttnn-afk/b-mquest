@@ -10,6 +10,7 @@ import {
   newPlay,
   LIST_COMMANDS,
   cancelCommand,
+  finishSketch,
   choicesFor,
   choose,
   pickCommand,
@@ -323,7 +324,19 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
           </span>
         )}
         <span className="bq-cmp-goal-text">{play.done ? t('levelDone') : tx(step.goal, L)}</span>
+        {play.sketch && !play.done && (
+          <button
+            type="button"
+            className="bq-cmp-finish"
+            onClick={() => apply(finishSketch(level, play))}
+            data-testid="campaign-finish"
+            title="Finish Edit Mode"
+          >
+            ✓ {t('finish')}
+          </button>
+        )}
         {!play.done &&
+          !play.sketch &&
           step.demo.length > 0 &&
           (demoActive ? (
             <button type="button" className="bq-cmp-chip" onClick={() => setDemoFrame(-1)} data-testid="campaign-skip-demo">
@@ -421,6 +434,7 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
             ghosts={ghosts}
             showDots={!!play.command && ['grid', 'wall', 'section'].includes(play.command)}
             chainStart={chainStart}
+            sketch={play.sketch?.points ?? null}
             demo={demoPoint}
             onTap={onTapPlan}
           />

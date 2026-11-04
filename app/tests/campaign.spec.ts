@@ -77,6 +77,7 @@ async function playWholeHouse(page: Page) {
 
   await pick(page, 'door');
   await tapAt(page, 3000, 0);
+  await tapAt(page, 6000, 5000);
   await expect(page.getByTestId('campaign-goal')).toContainText('pencere');
   await pick(page, 'window');
   await tapAt(page, 3000, 7000);
@@ -85,9 +86,11 @@ async function playWholeHouse(page: Page) {
 
   await pick(page, 'floor');
   await tapAt(page, 5000, 3500);
-  await expect(page.getByTestId('campaign-goal')).toContainText('çatı');
+  await page.getByTestId('campaign-finish').click();
+  await expect(page.getByTestId('campaign-goal')).toContainText('Roof');
   await pick(page, 'roof');
   await tapAt(page, 5000, 3500);
+  await page.getByTestId('campaign-finish').click();
   await finish(page);
 
   await pick(page, 'room');
@@ -138,6 +141,7 @@ async function playSecondHouse(page: Page) {
   await expect(page.getByTestId('campaign-view-name')).toContainText('1. Kat');
   await pick(page, 'floor');
   await tapAt(page, 5000, 3000);
+  await page.getByTestId('campaign-finish').click();
   await finish(page);
 
   await pick(page, 'section');
@@ -154,6 +158,7 @@ async function playSecondHouse(page: Page) {
   await tapAt(page, 6000, 0);
   await pick(page, 'roof');
   await tapAt(page, 4000, 3000);
+  await page.getByTestId('campaign-finish').click();
   await finish(page);
 
   await expect(page.getByTestId('campaign-house-done')).toBeVisible();
@@ -237,6 +242,7 @@ test.describe('Bahçe Evi', () => {
 
     await pick(page, 'tag');
     await tapAt(page, 3000, 0);
+    await tapAt(page, 6000, 5000);
     await tapAt(page, 3000, 7000);
     await tapAt(page, 8000, 7000);
     await finish(page);
@@ -282,8 +288,10 @@ test.describe('Bahçe Evi', () => {
 
     await pick(page, 'floor');
     await tapAt(page, 6000, 4000);
+    await page.getByTestId('campaign-finish').click();
     await pick(page, 'roof');
     await tapAt(page, 6000, 4000);
+    await page.getByTestId('campaign-finish').click();
     await finish(page);
 
     await pick(page, 'room');

@@ -132,7 +132,8 @@ function stairPrims(s: StairElement, m: BimModel, proj: Proj): Prim[] {
     : [0, s.direction === 'z+' ? 1 : -1];
   const prims: Prim[] = [];
   const uRun = Math.abs(proj.u(dx, dz)) === 1;
-  for (let i = 0; i < s.risers; i++) {
+  // n risers, n - 1 treads: the last riser lands on the upper floor.
+  for (let i = 0; i < Math.max(1, s.risers - 1); i++) {
     const a = proj.u(s.start[0] + dx * i * s.treadDepth, s.start[1] + dz * i * s.treadDepth);
     const b = proj.u(s.start[0] + dx * (i + 1) * s.treadDepth, s.start[1] + dz * (i + 1) * s.treadDepth);
     const h = (i + 1) * s.riserHeight;
@@ -187,7 +188,8 @@ function wallFace(w: WallElement, m: BimModel, proj: Proj, uClip?: [number, numb
   prims.push({ t: 'rect', x: l, y: -top, w: r - l, h: top - base, fill: 'beyond', id: w.id });
 
   const len = wallLengthMm(w);
-  if (len > 0) {
+  // A wall seen end-on shows no openings: they face sideways.
+  if (len > 0 && a !== b) {
     const dirU = b >= a ? 1 : -1;
     for (const op of openingsOn(w, m)) {
       const s1 = a + dirU * op.from;

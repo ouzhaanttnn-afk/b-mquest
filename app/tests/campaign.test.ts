@@ -10,6 +10,7 @@ import {
   nameRoom,
   newPlay,
   pasteTo,
+  finishSketch,
   pickCommand,
   setDrawMode,
   starsFor,
@@ -21,7 +22,7 @@ import type { Point } from '../src/domain/types';
 
 const startModelFor = (i: number) => startModelOf(HOUSE1_DEF, i);
 
-type Script = Array<{ cmd?: string; taps?: Point[]; name?: string; mode?: 'line' | 'rect'; paste?: string; pick?: string[] }>;
+type Script = Array<{ cmd?: string; taps?: Point[]; name?: string; mode?: 'line' | 'rect'; paste?: string; pick?: string[]; finish?: boolean }>;
 
 function playHouse(house: HouseDef, index: number, script: Script): PlayState {
   const level = house.levels[index];
@@ -36,6 +37,7 @@ function playHouse(house: HouseDef, index: number, script: Script): PlayState {
       st = choose(level, st, c.id).state;
     }
     for (const p of s.taps ?? []) st = tap(level, st, p).state;
+    if (s.finish) st = finishSketch(level, st).state;
     if (s.name) st = nameRoom(level, st, s.name).state;
   }
   return st;
@@ -50,8 +52,8 @@ const perfect: Array<Array<{ cmd?: string; taps?: Point[]; name?: string }>> = [
   [{ cmd: 'level', taps: [[0, 3100]] }],
   [{ cmd: 'grid', taps: [[0, -1000], [0, D + 1000], [W, -1000], [W, D + 1000], [-1000, 0], [W + 1000, 0], [-1000, D], [W + 1000, D]] }],
   [{ cmd: 'wall', taps: [[0, 0], [W, 0], [W, D], [0, D], [0, 0], [S, 0], [S, D]] }],
-  [{ cmd: 'door', taps: [[3000, 150]] }, { cmd: 'window', taps: [[3000, D - 150], [8000, D + 100]] }],
-  [{ cmd: 'floor', taps: [[5000, 3500]] }, { cmd: 'roof', taps: [[5000, 3500]] }],
+  [{ cmd: 'door', taps: [[3000, 150], [S - 150, 5000]] }, { cmd: 'window', taps: [[3000, D - 150], [8000, D + 100]] }],
+  [{ cmd: 'floor', taps: [[5000, 3500]], finish: true }, { cmd: 'roof', taps: [[5000, 3500]], finish: true }],
   [
     { cmd: 'room', taps: [[3000, 3500], [8000, 3500]] },
     { cmd: 'tag', taps: [[3000, 3500]], name: ROOM_NAMES.left },
@@ -103,9 +105,12 @@ describe('Bahçe Evi — kampanya mantığı', () => {
 
   it('reddedilen dokunuş hamle saymaz; fazla çizim üçüncü yıldızı götürür', () => {
     const level4 = HOUSE1[4];
-    const free = play(4, [{ cmd: 'floor', taps: [[-500, -500], [-800, 200], [20000, 1], [5000, 3500]] }, { cmd: 'roof', taps: [[5000, 3500]] }]);
+    const free = play(4, [
+      { cmd: 'floor', taps: [[-500, -500], [-800, 200], [20000, 1], [5000, 3500]], finish: true },
+      { cmd: 'roof', taps: [[5000, 3500]], finish: true },
+    ]);
     expect(free.done).toBe(true);
-    expect(free.taps).toBe(2);
+    expect(free.taps).toBe(4);
     expect(starsFor(level4, free)).toBe(3);
 
     const level = HOUSE1[1];
@@ -117,7 +122,7 @@ describe('Bahçe Evi — kampanya mantığı', () => {
 
   it('geri al hamle saymaz ve önceki adıma dönünce komutu bırakır', () => {
     const level = HOUSE1[3];
-    let st = play(3, [{ cmd: 'door', taps: [[3000, 150]] }, { cmd: 'window' }]);
+    let st = play(3, [{ cmd: 'door', taps: [[3000, 150], [S, 5000]] }, { cmd: 'window' }]);
     expect(st.stepIndex).toBe(1);
     expect(st.command).toBe('window');
     const before = st.taps;
@@ -157,9 +162,9 @@ const perfect2: Script[] = [
   [{ cmd: 'level', taps: [[0, 3000], [0, 6100]] }],
   [{ cmd: 'wall', mode: 'rect', taps: [[0, 0], [W2, D2]] }, { cmd: 'wall', mode: 'line', taps: [[S2, 0], [S2, D2]] }],
   [{ cmd: 'stair', taps: [[700, 700], [700, 5000]] }],
-  [{ cmd: 'paste', paste: 'l1' }, { cmd: 'floor', taps: [[5000, 3000]] }],
+  [{ cmd: 'paste', paste: 'l1' }, { cmd: 'floor', taps: [[5000, 3000]], finish: true }],
   [{ cmd: 'section', taps: [[1000, -1000], [1000, D2 + 1000]] }],
-  [{ cmd: 'door', taps: [[2500, 100]] }, { cmd: 'window', taps: [[2000, 0], [6000, -100]] }, { cmd: 'roof', taps: [[4000, 3000]] }],
+  [{ cmd: 'door', taps: [[2500, 100]] }, { cmd: 'window', taps: [[2000, 0], [6000, -100]] }, { cmd: 'roof', taps: [[4000, 3000]], finish: true }],
 ];
 
 describe('İki Katlı Ev — kampanya mantığı', () => {
@@ -218,7 +223,7 @@ describe('İki Katlı Ev — kampanya mantığı', () => {
 const H3 = HOUSE3_DEF.levels;
 const perfect3: Script[] = [
   [{ cmd: 'dimension', taps: [[100, 3500], [9900, 3500]] }, { cmd: 'dimension', taps: [[5000, 100], [5000, 6900]] }],
-  [{ cmd: 'tag', taps: [[3000, 0], [3000, 7000], [8000, 7100]] }],
+  [{ cmd: 'tag', taps: [[3000, 0], [6000, 5000], [3000, 7000], [8000, 7100]] }],
   [{ cmd: 'elevation', taps: [[5000, 8200], [5000, -1200]] }],
   [{ cmd: 'section', taps: [[-1000, 4000], [11000, 4000]] }],
   [{ cmd: 'sheet', pick: ['A3'] }, { cmd: 'place', pick: ['Kat Planı', 'Cephe - Güney'] }],
@@ -258,7 +263,7 @@ const H4 = HOUSE4_DEF.levels;
 const perfect4: Script[] = [
   [{ cmd: 'wall', mode: 'rect', taps: [[0, 0], [HF, D4]] }, { cmd: 'door', taps: [[2000, 100]] }],
   [{ cmd: 'mirror', taps: [[HF + 100, 4000]] }],
-  [{ cmd: 'floor', taps: [[6000, 4000]] }, { cmd: 'roof', taps: [[6000, 4000]] }],
+  [{ cmd: 'floor', taps: [[6000, 4000]], finish: true }, { cmd: 'roof', taps: [[6000, 4000]], finish: true }],
   [
     { cmd: 'room', taps: [[3000, 4000], [9000, 4000]] },
     { cmd: 'tag', taps: [[3000, 4000]], name: UNIT_NAMES.left },
@@ -303,4 +308,17 @@ describe('Her evin bitmiş hali', () => {
       for (const r of roofs) if (r.type === 'roof') expect(elev(r.baseLevelId)).toBe(wallTop);
     });
   }
+});
+
+describe('Çizim modu (sketch)', () => {
+  it('döşeme ✓ ile bitirilmeden oluşmaz; ✓ sonrası sınır duvarlardan gelir', () => {
+    const level = HOUSE1[4];
+    let st = play(4, [{ cmd: 'floor', taps: [[5000, 3500]] }]);
+    expect(st.sketch?.kind).toBe('floor');
+    expect(st.session.model.elements.some((e) => e.type === 'floor')).toBe(false);
+    st = finishSketch(level, st).state;
+    const f = st.session.model.elements.find((e) => e.type === 'floor');
+    expect(f && f.type === 'floor' && f.boundary.length).toBeGreaterThanOrEqual(4);
+    expect(st.sketch).toBeNull();
+  });
 });

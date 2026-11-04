@@ -103,25 +103,26 @@ const HOUSE3_LEVELS: LevelDef[] = [
     bridge: { tr: "AutoCAD'de etiketi elle yazarsın; Revit'te etiket nesnenin bilgisini gösterir, elle değiştirmen gerekmez." },
     view: 'plan',
     geom: GEOM,
-    par: 4,
+    par: 5,
     steps: [
       {
         id: 'tags',
         command: 'tag',
-        goal: { tr: 'Annotate’ten Tag by Category’yi seç; kapıya ve iki pencereye dokun.' },
+        goal: { tr: 'Annotate’ten Tag by Category’yi seç; iki kapıya ve iki pencereye dokun.' },
         ghost: [
           { kind: 'opening', a: [2550, 0], b: [3450, 0], label: 'Kapı' },
+          { kind: 'opening', a: [6000, 4550], b: [6000, 5450] },
           { kind: 'opening', a: [2400, D], b: [3600, D], label: 'Pencere' },
           { kind: 'opening', a: [7400, D], b: [8600, D], label: 'Pencere' },
         ],
-        demo: [[3000, 0], [3000, D], [8000, D]],
+        demo: [[3000, 0], [6000, 5000], [3000, D], [8000, D]],
         done: openingsTagged,
         solve: (s) => {
           let x = s;
           for (const o of s.model.elements.filter((e) => e.type === 'door' || e.type === 'window')) x = step(x, createTagCommand(x, o.id));
           return x;
         },
-        taps: 3,
+        taps: 4,
       },
     ],
   },

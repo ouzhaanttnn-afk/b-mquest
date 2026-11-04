@@ -724,3 +724,22 @@
   .bq-cmp-panel-btns { max-width: 124px; }
   .bq-cmp-goal-text { font-size: 15px; }
 }
+/* Sketch mode: magenta boundary + green Finish, as in Revit */
+.bq-cmp-sketch { fill: rgba(236, 72, 153, 0.08); stroke: #ec4899; stroke-width: 60; stroke-linejoin: round; }
+.bq-cmp-finish {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--status-pass);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: bq-cmp-glow 1s ease-in-out infinite;
+}
+.bq-cmp-door-sym path { fill: none; stroke: var(--accent-action); stroke-width: 30; }
+.bq-cmp-north circle { fill: none; stroke: var(--text-secondary); stroke-width: 30; }
+.bq-cmp-north path { fill: var(--text-secondary); }
+.bq-cmp-north text { fill: var(--text-secondary); font-size: 300px; font-weight: 800; font-family: var(--font-sans); }
