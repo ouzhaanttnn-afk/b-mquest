@@ -9,6 +9,7 @@ import {
   nameRoom,
   newPlay,
   LIST_COMMANDS,
+  cancelCommand,
   choicesFor,
   choose,
   pickCommand,
@@ -213,6 +214,8 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
   const seenDemo = useRef<Set<string>>(new Set());
   const startDemo = useCallback(() => {
     if (step.demo.length === 0) return;
+    // The demo starts at the ribbon: open the right tab so the glowing button is in view.
+    setTab(commandById(step.command).tab);
     setDemoFrame(0);
   }, [step]);
   useEffect(() => {
@@ -238,6 +241,12 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
   const wantCmd = step.command;
   const hint = !play.done && !play.command && (demoActive || play.wrongPicks >= 2);
   const wantTab = commandById(wantCmd).tab;
+  // On phones the ribbon scrolls sideways: bring the glowing button into view.
+  const cmdRefs = useRef<Partial<Record<CommandId, HTMLButtonElement | null>>>({});
+  useEffect(() => {
+    if (!hint || tab !== wantTab) return;
+    cmdRefs.current[wantCmd]?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+  }, [hint, tab, wantTab, wantCmd, reducedMotion]);
 
   // Level finished: record, then show the card after a beat.
   const stars = starsFor(level, play);
@@ -315,6 +324,7 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
         )}
         <span className="bq-cmp-goal-text">{play.done ? t('levelDone') : tx(step.goal, L)}</span>
         {!play.done &&
+          step.demo.length > 0 &&
           (demoActive ? (
             <button type="button" className="bq-cmp-chip" onClick={() => setDemoFrame(-1)} data-testid="campaign-skip-demo">
               {t('skipDemo')}
@@ -346,12 +356,38 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
           ))}
         </div>
         <div className="bq-cmp-panels">
+          {play.command === 'wall' && tab === 'architecture' && (
+            // Revit opens a "Modify | Place Wall" tab with the Draw panel; here it sits first on the ribbon.
+            <div className="bq-cmp-panel bq-cmp-panel-draw" role="group" aria-label="Draw" data-testid="campaign-draw">
+              <div className="bq-cmp-panel-btns">
+                {(['line', 'rect'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`bq-cmp-cmd ${play.drawMode === m ? 'active' : ''}`}
+                    aria-pressed={play.drawMode === m}
+                    onClick={() => apply(setDrawMode(play, m))}
+                    data-testid={`campaign-draw-${m}`}
+                  >
+                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      {m === 'line' ? <path d="M4 19 20 5" /> : <rect x="4" y="6" width="16" height="12" />}
+                    </svg>
+                    <span>{m === 'line' ? 'Line' : 'Rectangle'}</span>
+                  </button>
+                ))}
+              </div>
+              <span className="bq-cmp-panel-name">Draw</span>
+            </div>
+          )}
           {[...new Set(RIBBON.filter((c) => c.tab === tab).map((c) => c.panel))].map((panel) => (
             <div className="bq-cmp-panel" key={panel}>
               <div className="bq-cmp-panel-btns">
                 {RIBBON.filter((c) => c.tab === tab && c.panel === panel).map((c) => (
                   <button
                     key={c.id}
+                    ref={(el) => {
+                      cmdRefs.current[c.id] = el;
+                    }}
                     type="button"
                     className={`bq-cmp-cmd ${play.command === c.id ? 'active' : ''} ${hint && wantCmd === c.id ? 'hint' : ''}`}
                     aria-pressed={play.command === c.id}
@@ -375,22 +411,6 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
         <span className="bq-cmp-view-badge" data-testid="campaign-view-name">
           {level.view === 'elevation' ? t('elevationView') : `${t('floorPlan')}: ${levelName(model, activeLevel)}`}
         </span>
-        {play.command === 'wall' && (
-          <div className="bq-cmp-draw" role="group" aria-label="Draw" data-testid="campaign-draw">
-            {(['line', 'rect'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={`bq-cmp-chip ${play.drawMode === m ? 'active' : ''}`}
-                aria-pressed={play.drawMode === m}
-                onClick={() => apply(setDrawMode(play, m))}
-                data-testid={`campaign-draw-${m}`}
-              >
-                {m === 'line' ? '╱ Line' : '▭ Rectangle'}
-              </button>
-            ))}
-          </div>
-        )}
         {level.view === 'elevation' ? (
           <ElevationView model={play.session.model} ghosts={ghosts} demo={demoPoint} onTap={onTapPlan} />
         ) : (
@@ -492,6 +512,9 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
                 {c.label}
               </button>
             ))}
+            <button type="button" className="bq-cmp-chip big bq-cmp-chip-ghost" onClick={() => apply(cancelCommand(play))} data-testid="campaign-choice-cancel">
+              {t('cancel')}
+            </button>
           </div>
         </div>
       )}
@@ -516,6 +539,16 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
           <div className="bq-cmp-modal bq-cmp-done" role="dialog" aria-label={t('levelDone')} data-testid="campaign-level-done">
             <h2>{t('levelDone')}</h2>
             <AnimatedStars n={stars} reducedMotion={reducedMotion} />
+            <ul className="bq-cmp-star-why" data-testid="campaign-star-why">
+              <li className="ok">✓ {t('starDone')}</li>
+              <li className={play.wrongPicks === 0 ? 'ok' : 'miss'}>
+                {play.wrongPicks === 0 ? '✓' : '✗'} {play.wrongPicks === 0 ? t('starNoWrong') : `${play.wrongPicks} ${t('starWrong')}`}
+              </li>
+              <li className={play.taps <= level.par ? 'ok' : 'miss'}>
+                {play.taps <= level.par ? '✓' : '✗'} {t('moves')} {play.taps}/{level.par}
+              </li>
+              {stars < 3 && <li className="tip">{t('starRetry')}</li>}
+            </ul>
             {revealView && revealView.type === 'view' && (
               <div className="bq-cmp-reveal" data-testid="campaign-reveal">
                 <DrawingSvg
@@ -579,7 +612,6 @@ const AnimatedStars: React.FC<{ n: number; reducedMotion: boolean }> = ({ n, red
   return (
     <div className="bq-cmp-big-stars" data-testid="campaign-stars" data-stars={n}>
       <Stars n={shown} />
-      <small>{t('starsInfo')}</small>
     </div>
   );
 };
@@ -602,6 +634,19 @@ const HouseComplete: React.FC<{ house: HouseDef; progress: CampaignProgress; the
   useEffect(() => playSound('success'), []);
   return (
     <div className="bq-cmp-house-done" data-testid="campaign-house-done">
+      <div className="bq-cmp-confetti" aria-hidden="true">
+        {Array.from({ length: 28 }, (_, i) => (
+          <span
+            key={i}
+            style={{
+              left: `${(i * 37) % 100}%`,
+              animationDelay: `${(i % 7) * 0.12}s`,
+              background: ['#f97316', '#fbbf24', '#38bdf8', '#10b981'][i % 4],
+              transform: `rotate(${i * 29}deg)`,
+            }}
+          />
+        ))}
+      </div>
       <div className="bq-cmp-house-3d">
         <Suspense fallback={null}>
           <SceneViewport

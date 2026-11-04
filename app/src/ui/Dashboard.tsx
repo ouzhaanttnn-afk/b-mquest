@@ -422,7 +422,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className="bq-lock-notice"
                   data-testid={`mission-lock-${mission.id}`}
                 >
-                  🔒 Önce <strong>{missingPrerequisites.join(', ')}</strong> görevini tamamla
+                  🔒 Önce{' '}
+                  <strong>
+                    {missingPrerequisites
+                      .map((id) => missions.find((m) => m.id === id)?.title ?? id)
+                      .join(', ')}
+                  </strong>{' '}
+                  görevini bitir
                 </div>
               ) : (
                 <div className="bq-card-actions">

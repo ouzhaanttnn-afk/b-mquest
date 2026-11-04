@@ -101,11 +101,30 @@ describe('Bahçe Evi — kampanya mantığı', () => {
     expect(starsFor(level, done)).toBe(2);
   });
 
-  it('çok dokunuş üçüncü yıldızı götürür', () => {
-    const level = HOUSE1[4];
-    const st = play(4, [{ cmd: 'floor', taps: [[-500, -500], [-800, 200], [20000, 1], [5000, 3500]] }, { cmd: 'roof', taps: [[5000, 3500]] }]);
+  it('reddedilen dokunuş hamle saymaz; fazla çizim üçüncü yıldızı götürür', () => {
+    const level4 = HOUSE1[4];
+    const free = play(4, [{ cmd: 'floor', taps: [[-500, -500], [-800, 200], [20000, 1], [5000, 3500]] }, { cmd: 'roof', taps: [[5000, 3500]] }]);
+    expect(free.done).toBe(true);
+    expect(free.taps).toBe(2);
+    expect(starsFor(level4, free)).toBe(3);
+
+    const level = HOUSE1[1];
+    const extra: Point[] = [[2000, -1000], [2000, D + 1000], [5000, -1000], [5000, D + 1000]];
+    const st = play(1, [{ cmd: 'grid', taps: [...extra, ...perfect[1][0].taps!] }]);
     expect(st.done).toBe(true);
     expect(starsFor(level, st)).toBe(2);
+  });
+
+  it('geri al hamle saymaz ve önceki adıma dönünce komutu bırakır', () => {
+    const level = HOUSE1[3];
+    let st = play(3, [{ cmd: 'door', taps: [[3000, 150]] }, { cmd: 'window' }]);
+    expect(st.stepIndex).toBe(1);
+    expect(st.command).toBe('window');
+    const before = st.taps;
+    st = undo(level, st).state;
+    expect(st.stepIndex).toBe(0);
+    expect(st.command).toBeNull();
+    expect(st.taps).toBe(before);
   });
 
   it('kat bölümü: görünüşte dokunulan yükseklik 50 cm’ye yapışır', () => {
@@ -269,4 +288,19 @@ describe('İkiz Ev — kampanya mantığı', () => {
     expect(st.done).toBe(false);
     expect(W4).toBe(12000);
   });
+});
+
+describe('Her evin bitmiş hali', () => {
+  for (const house of [HOUSE1_DEF, HOUSE2_DEF, HOUSE3_DEF, HOUSE4_DEF]) {
+    it(`${house.title.tr}: çatı duvarların üstüne oturur`, () => {
+      const end = startModelOf(house, house.levels.length);
+      const elev = (id: string) => end.levels.find((l) => l.id === id)?.elevation ?? 0;
+      const wallTop = Math.max(
+        ...end.elements.filter((e) => e.type === 'wall').map((w) => (w.type === 'wall' ? elev(w.baseLevelId) + w.height : 0))
+      );
+      const roofs = end.elements.filter((e) => e.type === 'roof');
+      expect(roofs.length).toBeGreaterThan(0);
+      for (const r of roofs) if (r.type === 'roof') expect(elev(r.baseLevelId)).toBe(wallTop);
+    });
+  }
 });

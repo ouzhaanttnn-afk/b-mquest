@@ -1,11 +1,11 @@
-import { createFloorCommand, createRoofCommand, updateElementProperty, type MissionSessionState } from '../domain/commands';
+import { createFloorCommand, createInitialSession, createRoofCommand, updateElementProperty, type MissionSessionState } from '../domain/commands';
 import { createTagCommand } from '../domain/commandsDocs';
 import { createRectangleWallsCommand, mirrorWallsCommand } from '../domain/commandsExtended';
 import { enclosedRegions, roomBoundary } from '../domain/derived';
 import type { BimModel, Point, WallElement } from '../domain/types';
 import { placeOpening, placeRoomAt } from '../ui/workspace/toolActions';
 import { openingCentre } from './engine';
-import { roofLevelId, step, type HouseDef, type LevelDef } from './model';
+import { CAMPAIGN_TASK, levelTap, roofLevelId, step, type HouseDef, type LevelDef } from './model';
 
 /**
  * Dördüncü ev: "İkiz Ev". Yarım evi kur, ortak duvardan aynala (Mirror),
@@ -125,7 +125,10 @@ const HOUSE4_LEVELS: LevelDef[] = [
         goal: { tr: 'Evin içine dokun: çatı otursun.' },
         ghost: [{ kind: 'area', points: [[-500, -500], [W + 500, -500], [W + 500, D + 500], [-500, D + 500]], label: 'Çatı' }],
         demo: [[W / 2, D / 2]],
-        done: (m) => m.elements.some((e) => e.type === 'roof'),
+        done: (m) =>
+          m.elements.some(
+            (e) => e.type === 'roof' && (m.levels.find((l) => l.id === e.baseLevelId)?.elevation ?? 0) === HOUSE4.wallH
+          ),
         solve: (s) => step(s, createRoofCommand(s, { baseLevelId: roofLevelId(s.model), slope: 30, overhang: 500 })),
         taps: 1,
       },
@@ -188,7 +191,14 @@ const HOUSE4_LEVELS: LevelDef[] = [
   },
 ];
 
+/** The project starts with its roof level in place, so the roof sits on the walls. */
+function base(): MissionSessionState {
+  const s = createInitialSession(CAMPAIGN_TASK);
+  return step(s, levelTap(s, HOUSE4.wallH, [{ at: HOUSE4.wallH, name: 'Çatı' }]));
+}
+
 export const HOUSE4_DEF: HouseDef = {
+  base,
   id: 'ikiz-ev',
   title: { tr: 'İkiz Ev' },
   brief: { tr: '12 × 8 m, iki daire. Yarısını kur, Mirror ile aynala, sonra döşeme, çatı ve daireler.' },

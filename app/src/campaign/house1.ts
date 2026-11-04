@@ -89,7 +89,7 @@ export const HOUSE1: LevelDef[] = [
       {
         id: 'level',
         command: 'level',
-        goal: { tr: 'Çatı seviyesini +3,00 m’ye koy.' },
+        goal: { tr: 'Level’i seç ve +3,00 m’ye yeni bir kat çizgisi koy.' },
         ghost: [{ kind: 'elevation', at: HOUSE.roofLevel, label: '+3,00' }],
         demo: [[0, 0], [0, HOUSE.roofLevel]],
         levels: [{ at: HOUSE.roofLevel, name: 'Çatı' }],

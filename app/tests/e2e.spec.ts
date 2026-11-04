@@ -55,8 +55,8 @@ test.describe('BIM QUEST — Layer 3 Playwright E2E & Acceptance Suite (E01–E0
 
     // m01 unlocked, m02 and m03 locked
     await expect(page.getByTestId('start-mission-m01')).toBeVisible();
-    await expect(page.getByTestId('mission-lock-m02')).toContainText('m01');
-    await expect(page.getByTestId('mission-lock-m03')).toContainText('m02');
+    await expect(page.getByTestId('mission-lock-m02')).toContainText('İlk Model Kontrolü');
+    await expect(page.getByTestId('mission-lock-m03')).toContainText('Kapalı Oda');
 
     await page.screenshot({
       path: path.join(SCREENSHOT_DIR, '01-dashboard-initial-1280x720.png'),

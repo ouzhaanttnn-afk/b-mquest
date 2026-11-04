@@ -57,6 +57,8 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
       aria-label="Plan: evin üstten görünüşü"
       data-testid="cmp-plan"
       onPointerUp={(e) => {
+        // A second finger (pinch, two-finger tap) never draws.
+        if (!e.isPrimary) return;
         const p = toPlan(e);
         if (p) onTap(p);
       }}
@@ -205,7 +207,9 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
           <g key={e.id} className="bq-cmp-section" data-testid="cmp-section-line">
             <line x1={e.cutLine[0][0]} y1={e.cutLine[0][1]} x2={e.cutLine[1][0]} y2={e.cutLine[1][1]} />
             <circle cx={e.cutLine[0][0]} cy={e.cutLine[0][1]} r={300} />
-            <text x={e.cutLine[0][0]} y={e.cutLine[0][1] + 110} textAnchor="middle">1</text>
+            <text x={e.cutLine[0][0]} y={e.cutLine[0][1] + 110} textAnchor="middle">
+              {e.name.replace(/\D+/g, '') || '1'}
+            </text>
           </g>
         ) : null
       )}

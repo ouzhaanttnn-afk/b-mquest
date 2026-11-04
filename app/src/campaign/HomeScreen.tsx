@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AboutSheet } from '../ui/AboutSheet';
+import { BrandLogo } from '../ui/BrandLogo';
 import { isSoundMuted, playSound, setSoundMuted } from '../ui/sound';
 import { COMING_SOON, HOUSES } from './houses';
 import { tx } from './i18n';
@@ -114,7 +115,7 @@ export const HomeScreen: React.FC<Props> = ({
     <div className="bq-home" data-testid="home-screen">
       <header className="bq-home-head">
         <button type="button" className="bq-brand-btn" onClick={onBackToTitle} aria-label="Giriş ekranına dön" data-testid="brand-title-btn">
-          <img src="./assets/brand/logo-horizontal.svg" alt="BIM QUEST" width={150} height={30} />
+          <BrandLogo width={150} height={30} />
         </button>
         <span className="bq-home-stars" data-testid="home-total-stars">★ {totalStars(progress)}</span>
         <button

@@ -130,7 +130,8 @@ export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
             )}
 
             <ul className="bq-criteria-items">
-              {lastEvaluation.criteria.map((c) => (
+              {/* What still fails comes first; internal rule ids stay hidden. */}
+              {[...lastEvaluation.criteria].sort((a, b) => Number(a.pass) - Number(b.pass)).map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
@@ -141,11 +142,12 @@ export const CheckFeedback: React.FC<CheckFeedbackProps> = ({
                     <span className="bq-crit-badge">
                       {c.pass ? '✓ Geçti' : '✕ Hata'}
                     </span>
-                    <span className="bq-crit-id">{c.id}</span>
                     <span className="bq-crit-msg">{c.message}</span>
-                    <span className="bq-crit-evidence">
-                      {formatCriterionEvidenceTr(c)}
-                    </span>
+                    {!c.pass && (
+                      <span className="bq-crit-evidence">
+                        {formatCriterionEvidenceTr(c)}
+                      </span>
+                    )}
                     {!c.pass && (
                       <span
                         className="bq-crit-remediation"

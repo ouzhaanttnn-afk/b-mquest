@@ -241,6 +241,15 @@ const applied = (level: LevelDef, st: PlayState, r: CommandResult | null, effect
 
 /** A tap on the drawing with the current command. */
 export function tap(level: LevelDef, st0: PlayState, raw: Point): TapResult {
+  const r = tapInner(level, st0, raw);
+  // A tap that was refused or did nothing costs no move.
+  if (r.effect === 'error' || !r.effect) return { ...r, state: { ...r.state, taps: st0.taps } };
+  return r;
+}
+
+const fmtElev = (mm: number) => `+${(mm / 1000).toFixed(2).replace('.', ',')}`;
+
+function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
   if (st0.done) return { state: st0 };
   if (!st0.command) return { state: st0, effect: 'error' };
   if (st0.namingRoomId) return { state: st0 };
@@ -253,7 +262,11 @@ export function tap(level: LevelDef, st0: PlayState, raw: Point): TapResult {
     case 'level': {
       const elev = Math.max(ELEVATION_SNAP, snap(raw[1], ELEVATION_SNAP));
       const targets = stp.levels ?? [{ at: g.wallH, name: 'Kat 1' }];
-      return applied(level, st, levelTap(s, elev, targets));
+      const r = applied(level, st, levelTap(s, elev, targets));
+      if (r.effect === 'build' && !r.state.done && r.state.stepIndex === st.stepIndex) {
+        return { ...r, message: `Kat ${fmtElev(elev)} kotuna kondu. Hedef çizgiye dokun.` };
+      }
+      return r;
     }
     case 'grid': {
       const p = snapPoint(raw);
@@ -316,7 +329,12 @@ export function tap(level: LevelDef, st0: PlayState, raw: Point): TapResult {
       const dz = raw[1] - a[1];
       if (Math.hypot(dx, dz) < 300) return { state: st };
       const dir: StairDirection = Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? 'x+' : 'x-') : dz > 0 ? 'z+' : 'z-';
-      const r = createStairCommand(s, stairInput(s.model, on, top, a, dir));
+      const input = stairInput(s.model, on, top, a, dir);
+      const [x0, z0, x1, z1] = stairRect({ ...input, id: '', type: 'stair', name: '' } as StairElement);
+      if (x0 < 100 || z0 < 100 || x1 > g.w - 100 || z1 > g.d - 100) {
+        return { state: { ...st, firstTap: null }, effect: 'error', message: 'Merdiven evin içine sığmalı: başlangıcı ve yönü yeniden seç.' };
+      }
+      const r = createStairCommand(s, input);
       return applied(level, { ...st, firstTap: null }, r);
     }
     case 'section': {
@@ -433,6 +451,9 @@ export function choose(level: LevelDef, st: PlayState, id: string): TapResult {
   return { state: st };
 }
 
+/** Leaves a list command without choosing anything. */
+export const cancelCommand = (st: PlayState): TapResult => ({ state: { ...st, command: null, firstTap: null, chain: EMPTY_CHAIN }, effect: 'select' });
+
 /** Paste Aligned to Selected Levels: the walls of the step's source level go onto `levelId`. */
 export const pasteTo = (level: LevelDef, st: PlayState, levelId: string): TapResult =>
   st.command === 'paste' ? choose(level, st, levelId) : { state: st };
@@ -449,8 +470,18 @@ export function undo(level: LevelDef, st: PlayState): TapResult {
   const session = undoCommand(st.session);
   let i = 0;
   while (i < level.steps.length - 1 && level.steps[i].done(session.model)) i++;
+  // Undo is free; going back a step also drops the next step's command.
   return {
-    state: { ...st, session, stepIndex: i, done: false, chain: EMPTY_CHAIN, firstTap: null, namingRoomId: null, taps: st.taps + 1 },
+    state: {
+      ...st,
+      session,
+      stepIndex: i,
+      command: i === st.stepIndex ? st.command : null,
+      done: false,
+      chain: EMPTY_CHAIN,
+      firstTap: null,
+      namingRoomId: null,
+    },
     effect: 'select',
   };
 }
