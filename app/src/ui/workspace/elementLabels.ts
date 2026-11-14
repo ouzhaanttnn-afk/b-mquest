@@ -13,6 +13,7 @@ const LABELS: Record<BimElement['type'], string> = {
   dimension: 'Ölçü',
   tag: 'Etiket',
   sheet: 'Pafta',
+  column: 'Kolon',
 };
 
 const ICONS: Record<BimElement['type'], string> = {
@@ -28,6 +29,7 @@ const ICONS: Record<BimElement['type'], string> = {
   dimension: '↔',
   tag: '🏷',
   sheet: '📄',
+  column: '▪',
 };
 
 export const elementLabelTr = (el: BimElement): string => LABELS[el.type];
@@ -52,6 +54,8 @@ export function elementMetaTr(el: BimElement): string {
       return `${el.number || '—'} · ${el.name}`;
     case 'grid':
       return el.name;
+    case 'column':
+      return `${el.baseLevelId}→${el.topLevelId} · ${el.width} mm`;
     case 'view':
       return `${el.kind} · 1:${el.scale}`;
     case 'dimension':

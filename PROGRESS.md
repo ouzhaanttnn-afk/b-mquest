@@ -40,6 +40,10 @@ görev ekranına ev şeridi, günlük plan, serbest mod, yeni evler (Hata Avı, 
 - **3. Teslim** (`house3.ts`, Bahçe Evi'nin bitmiş modeliyle başlar): Annotate › Dimension › Aligned (DI), Tag by Category ile kapı/pencere etiketi,
   View › Create › Elevation (kuzey/güney, sonuç kartında cephe çizimi), Section, View › Sheet Composition › Sheet ve View (A3 pafta, sonuç kartında pafta).
 - **4. İkiz Ev** (`house4.ts`): yarım ev (dikdörtgen duvar + kapı), Modify › Mirror - Pick Axis (MM) ile ortak duvardan aynalama, döşeme ve çatı, iki daire (Room + Tag + ad).
+- **5. Gökdelen — final** (`house5.ts`): 18 × 18 m, 19 kat + çatı (80 m). Level + Modify › Array (AR), 3 × 3 aks, Structure › Column (CL) "At Grids",
+  çekirdek (Top Constraint), tipik kat + Paste Aligned (bütün katlar), Curtain Wall + Curtain Grid + Mullion (tip parametresi), düz çatı,
+  Revit 2027 Autodesk Assistant (doğru istek, Kat 13 hatasını Review'da bulma). Final ekranı kampanyayı kapatır.
+  Domain: çok katlı `column`, 32 kat ve 200 m duvar sınırı; 3B cam cephe, kolon, yüksek bina kadrajı.
 - Yakında: Hata Avı (model kontrolü).
 - Ortak yapı `model.ts` (komut şeridi, LevelDef/HouseDef), kurallar `engine.ts`, liste `houses.ts`. Bir ev, öncekinin her bölümü bitince açılır.
 

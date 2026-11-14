@@ -656,8 +656,8 @@ export function updateExtendedFieldOp(
 
 /** Adds a Level 3000 mm above the highest one (Project Browser → Levels). */
 export function addLevelOp(model: BimModel): OpResult {
-  if (model.levels.length >= 16) {
-    return fail('E_MAX_LEVELS', 'Bir modelde en fazla 16 kat olabilir.');
+  if (model.levels.length >= 32) {
+    return fail('E_MAX_LEVELS', 'Bir modelde en fazla 32 kat olabilir.');
   }
   const used = new Set(model.levels.map((l) => l.id));
   let n = model.levels.length;

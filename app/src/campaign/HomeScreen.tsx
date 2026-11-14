@@ -59,6 +59,14 @@ const HouseIcon: React.FC<{ icon: HouseDef['icon'] }> = ({ icon }) => (
           <path d="M12 44h26" strokeWidth="2" strokeDasharray="3 2" />
         </>
       )}
+      {icon === 'tower' && (
+        <>
+          <path d="M22 54V10l10-6 10 6v44" />
+          <path d="M27 14v36M32 10v40M37 14v36" strokeWidth="1.6" />
+          <path d="M22 22h20M22 32h20M22 42h20" strokeWidth="1.6" />
+          <path d="M8 54h48" />
+        </>
+      )}
       {icon === 'twin' && (
         <>
           <path d="M2 26 17 12l15 14 15-14 15 14" />

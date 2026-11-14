@@ -27,9 +27,15 @@ export type CommandId =
   | 'elevation'
   | 'sheet'
   | 'place'
-  | 'mirror';
+  | 'mirror'
+  | 'column'
+  | 'array'
+  | 'curtaingrid'
+  | 'mullion'
+  | 'assistant'
+  | 'review';
 
-export type RibbonTab = 'architecture' | 'annotate' | 'view' | 'modify';
+export type RibbonTab = 'architecture' | 'structure' | 'annotate' | 'view' | 'modify' | 'ai';
 
 export interface RibbonCommand {
   id: CommandId;
@@ -41,7 +47,7 @@ export interface RibbonCommand {
   shortcut?: string;
 }
 
-export const RIBBON_TABS: RibbonTab[] = ['architecture', 'annotate', 'view', 'modify'];
+export const RIBBON_TABS: RibbonTab[] = ['architecture', 'structure', 'annotate', 'view', 'modify', 'ai'];
 
 export const RIBBON: RibbonCommand[] = [
   { id: 'wall', label: 'Wall', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Wall', shortcut: 'WA' },
@@ -49,16 +55,22 @@ export const RIBBON: RibbonCommand[] = [
   { id: 'window', label: 'Window', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Window', shortcut: 'WN' },
   { id: 'floor', label: 'Floor', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Floor', shortcut: 'SB' },
   { id: 'roof', label: 'Roof', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Roof › Roof by Footprint' },
+  { id: 'curtaingrid', label: 'Curtain Grid', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Curtain Grid' },
+  { id: 'mullion', label: 'Mullion', tab: 'architecture', panel: 'Build', path: 'Architecture › Build › Mullion' },
   { id: 'stair', label: 'Stair', tab: 'architecture', panel: 'Circulation', path: 'Architecture › Circulation › Stair' },
   { id: 'room', label: 'Room', tab: 'architecture', panel: 'Room & Area', path: 'Architecture › Room & Area › Room', shortcut: 'RM' },
   { id: 'level', label: 'Level', tab: 'architecture', panel: 'Datum', path: 'Architecture › Datum › Level', shortcut: 'LL' },
   { id: 'grid', label: 'Grid', tab: 'architecture', panel: 'Datum', path: 'Architecture › Datum › Grid', shortcut: 'GR' },
+  { id: 'column', label: 'Column', tab: 'structure', panel: 'Structure', path: 'Structure › Structure › Column', shortcut: 'CL' },
   { id: 'tag', label: 'Tag by Category', tab: 'annotate', panel: 'Tag', path: 'Annotate › Tag › Tag by Category', shortcut: 'TG' },
   { id: 'dimension', label: 'Aligned', tab: 'annotate', panel: 'Dimension', path: 'Annotate › Dimension › Aligned', shortcut: 'DI' },
   { id: 'section', label: 'Section', tab: 'view', panel: 'Create', path: 'View › Create › Section' },
   { id: 'elevation', label: 'Elevation', tab: 'view', panel: 'Create', path: 'View › Create › Elevation' },
   { id: 'sheet', label: 'Sheet', tab: 'view', panel: 'Sheet Composition', path: 'View › Sheet Composition › Sheet' },
   { id: 'place', label: 'Place View', tab: 'view', panel: 'Sheet Composition', path: 'View › Sheet Composition › View' },
+  { id: 'array', label: 'Array', tab: 'modify', panel: 'Modify', path: 'Modify › Modify › Array', shortcut: 'AR' },
+  { id: 'assistant', label: 'Assistant', tab: 'ai', panel: 'Autodesk Assistant', path: 'Autodesk Assistant › istek yaz ve uygula (Revit 2027)' },
+  { id: 'review', label: 'Review', tab: 'ai', panel: 'Autodesk Assistant', path: 'Autodesk Assistant › sonucu modelde kontrol et' },
   { id: 'mirror', label: 'Mirror', tab: 'modify', panel: 'Modify', path: 'Modify › Modify › Mirror - Pick Axis', shortcut: 'MM' },
   {
     id: 'paste',
@@ -97,6 +109,15 @@ export interface StepDef {
   magnet?: Point;
   /** Paste step: the level the walls come from. */
   from?: string;
+  /** Floor step: the sketch outline when there are no walls on the level to pick. */
+  outline?: Point[];
+  /** Roof step: slope in degrees (default 30); 0 is a flat roof. */
+  roofSlope?: number;
+  /** Wall step: walls reach the top level (Top Constraint) instead of one storey. */
+  fullHeight?: boolean;
+  /** List step: what the list offers, and what picking an entry does. */
+  choices?: (m: BimModel) => Array<{ id: string; label: string }>;
+  choose?: (s: MissionSessionState, id: string) => CommandResult | { error: string; wrong?: boolean };
 }
 
 export interface HouseGeom {
@@ -128,7 +149,9 @@ export interface HouseDef {
   /** Names offered when a room is tagged. */
   nameChoices: string[];
   /** Picture on the home screen. */
-  icon: 'single' | 'double' | 'sheet' | 'twin';
+  icon: 'single' | 'double' | 'sheet' | 'twin' | 'tower';
+  /** The last house: its end screen closes the campaign. */
+  finale?: boolean;
   /** Where the first level starts; default: an empty project. */
   base?: () => MissionSessionState;
 }
@@ -145,7 +168,7 @@ export const CAMPAIGN_TASK: MissionTask = {
   initialModel: { levels: [{ id: 'l0', name: 'Zemin Kat', elevation: 0 }], elements: [] },
   permissions: {
     editableFields: ['elevation', 'name', 'number', 'typeParams', 'placements'],
-    creatableTypes: ['wall', 'door', 'window', 'floor', 'roof', 'room', 'grid', 'tag', 'stair', 'view', 'dimension', 'sheet'],
+    creatableTypes: ['wall', 'door', 'window', 'floor', 'roof', 'room', 'grid', 'tag', 'stair', 'view', 'dimension', 'sheet', 'column'],
     deletableCreated: true,
     editableSeedIds: [],
   },

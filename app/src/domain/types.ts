@@ -53,7 +53,8 @@ export type CreatableElementType =
   | 'view'
   | 'dimension'
   | 'tag'
-  | 'sheet';
+  | 'sheet'
+  | 'column';
 
 export type ElementCategory = CreatableElementType;
 export type Point = [number, number];
@@ -157,6 +158,18 @@ export interface RoomElement {
   seedPoint: Point;
 }
 
+/** Structural column standing on one level and reaching another (multi-storey, as Revit allows). */
+export interface ColumnElement {
+  id: string;
+  type: 'column';
+  name: string;
+  baseLevelId: string;
+  topLevelId: string;
+  at: Point;
+  /** Square section side (mm). */
+  width: number;
+}
+
 export interface GridElement {
   id: string;
   type: 'grid';
@@ -237,7 +250,8 @@ export type BimElement =
   | RoofElement
   | StairElement
   | RoomElement
-  | GridElement;
+  | GridElement
+  | ColumnElement;
 
 /** Revit Type: shared parameters that drive every instance using it. */
 export interface ElementType {

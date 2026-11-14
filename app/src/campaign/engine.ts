@@ -16,6 +16,9 @@ import {
   createStairCommand,
 } from '../domain/commandsExtended';
 import { roomBoundary, wallsOutline } from '../domain/derived';
+import { commitModelTransaction } from '../domain/commandCore';
+import { rectangleWallsOp } from '../domain/modifyOps';
+import type { ColumnElement, ElementType } from '../domain/types';
 import type { BimModel, CompassDir, Point, RoomElement, StairDirection, StairElement, WallElement } from '../domain/types';
 import { lockAxis, projectOnWall } from '../plan/snap';
 import { EMPTY_CHAIN, placeOpening, placeRoomAt, wallChainTap, type ChainState } from '../ui/workspace/toolActions';
@@ -38,6 +41,10 @@ export interface PlayState {
   firstTap: Point | null;
   /** Wall tool draw option, as on Revit's Draw panel. */
   drawMode: DrawMode;
+  /** Wall type from the Type Selector. */
+  wallType: 'generic' | 'curtain';
+  /** Column placement: one at a time, or At Grids (every grid crossing). */
+  columnMode: 'single' | 'grids';
   /** Room waiting for a name after it was tagged. */
   namingRoomId: string | null;
   taps: number;
@@ -68,6 +75,8 @@ export function newPlay(session: MissionSessionState): PlayState {
     chain: EMPTY_CHAIN,
     firstTap: null,
     drawMode: 'line',
+    wallType: 'generic',
+    columnMode: 'single',
     sketch: null,
     namingRoomId: null,
     taps: 0,
@@ -85,6 +94,9 @@ export function pickCommand(level: LevelDef, st: PlayState, id: CommandId): TapR
   if (id !== want) return { state: { ...st, wrongPicks: st.wrongPicks + 1 }, effect: 'error' };
   return { state: { ...st, command: id, chain: EMPTY_CHAIN, firstTap: null, sketch: null }, effect: 'select' };
 }
+
+export const setWallType = (st: PlayState, wallType: PlayState['wallType']): TapResult => ({ state: { ...st, wallType }, effect: 'select' });
+export const setColumnMode = (st: PlayState, columnMode: PlayState['columnMode']): TapResult => ({ state: { ...st, columnMode }, effect: 'select' });
 
 /** Line / Rectangle on the wall tool's Draw panel. */
 export function setDrawMode(st: PlayState, mode: DrawMode): TapResult {
@@ -286,6 +298,9 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
         if (!st.firstTap) return { state: { ...st, firstTap: p }, effect: 'snap' };
         const a = st.firstTap;
         if (a[0] === p[0] || a[1] === p[1]) return { state: st, effect: 'error', message: 'Karşı köşeye dokun.' };
+        if (stp.fullHeight || st.wallType === 'curtain') {
+          return applied(level, { ...st, firstTap: null, sketch: null }, tallRectangle(s, on, a, p, st.wallType, !!stp.fullHeight));
+        }
         const r = createRectangleWallsCommand(s, {
           x: Math.min(a[0], p[0]),
           z: Math.min(a[1], p[1]),
@@ -323,7 +338,7 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
     case 'floor': {
       if (st.sketch) return { state: st0 };
       if (!insideHouse(g, raw)) return { state: st, effect: 'error', message: 'Evin içine dokun.' };
-      const points = floorOutlineWithOpening(g, s.model, on) ?? wallsOutline(s.model, on);
+      const points = stp.outline ?? floorOutlineWithOpening(g, s.model, on) ?? wallsOutline(s.model, on);
       if (!points) return { state: st, effect: 'error', message: 'Bu katta kapalı bir duvar hattı yok.' };
       return {
         state: { ...st, sketch: { kind: 'floor', points } },
@@ -407,7 +422,33 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
     }
     case 'sheet':
     case 'place':
+    case 'array':
+    case 'assistant':
+    case 'review':
       return { state: st0, effect: 'error', message: 'Listeden seç.' };
+    case 'column': {
+      const xs = gridLines(s.model, true);
+      const zs = gridLines(s.model, false);
+      if (xs.length === 0 || zs.length === 0) return { state: st, effect: 'error', message: 'Önce akslar gerekir.' };
+      const crossings: Point[] = xs.flatMap((x) => zs.map((z) => [x, z] as Point));
+      const free = (p: Point) => !s.model.elements.some((e) => e.type === 'column' && e.at[0] === p[0] && e.at[1] === p[1]);
+      let targets: Point[];
+      if (st.columnMode === 'grids') targets = crossings.filter(free);
+      else {
+        const near = crossings.filter((c) => Math.hypot(c[0] - raw[0], c[1] - raw[1]) <= 1500).sort((a, b) => Math.hypot(a[0] - raw[0], a[1] - raw[1]) - Math.hypot(b[0] - raw[0], b[1] - raw[1]));
+        targets = near.slice(0, 1).filter(free);
+      }
+      if (targets.length === 0) return { state: st, effect: 'error', message: 'Bir aks kesişimine dokun.' };
+      return applied(level, st, placeColumns(s, on, targets));
+    }
+    case 'curtaingrid':
+    case 'mullion': {
+      const w = nearestWall(s.model, on, raw, 1500);
+      const type = w?.typeId ? s.model.types?.find((t) => t.id === w.typeId) : undefined;
+      if (!w || Number(type?.params.curtain ?? 0) !== 1) return { state: st, effect: 'error', message: 'Bir cam cepheye (Curtain Wall) dokun.' };
+      const param: Record<string, number> = st.command === 'curtaingrid' ? { gridU: 1500 } : { mullion: 1 };
+      return applied(level, st, setTypeParams(s, type!.id, param));
+    }
     case 'tag': {
       const opening = openingNear(s.model, on, raw);
       if (opening) {
@@ -429,7 +470,7 @@ function tapInner(level: LevelDef, st0: PlayState, raw: Point): TapResult {
 }
 
 /** Commands that open a list instead of waiting for a tap on the drawing. */
-export const LIST_COMMANDS: CommandId[] = ['paste', 'sheet', 'place'];
+export const LIST_COMMANDS: CommandId[] = ['paste', 'sheet', 'place', 'array', 'assistant', 'review'];
 
 export interface Choice {
   id: string;
@@ -439,6 +480,8 @@ export interface Choice {
 /** What the list shows for the current command. */
 export function choicesFor(level: LevelDef, st: PlayState): Choice[] {
   const m = st.session.model;
+  const stp = currentStep(level, st);
+  if (stp.choices && st.command === stp.command) return stp.choices(m);
   switch (st.command) {
     case 'paste': {
       const from = currentStep(level, st).from ?? 'l0';
@@ -463,6 +506,18 @@ export function choose(level: LevelDef, st: PlayState, id: string): TapResult {
   if (st.done || !st.command || !LIST_COMMANDS.includes(st.command)) return { state: st };
   const s = st.session;
   const next = { ...st, taps: st.taps + 1 };
+  const stp = currentStep(level, st);
+  if (stp.choose && st.command === stp.command) {
+    const r = stp.choose(s, id);
+    if (!('ok' in r)) {
+      return {
+        state: { ...st, wrongPicks: st.wrongPicks + (r.wrong ? 1 : 0) },
+        effect: 'error',
+        message: r.error,
+      };
+    }
+    return applied(level, next, r);
+  }
   switch (st.command) {
     case 'paste': {
       const from = currentStep(level, st).from ?? 'l0';
@@ -489,7 +544,12 @@ export function finishSketch(level: LevelDef, st: PlayState): TapResult {
   if (st.sketch.kind === 'floor') {
     return applied(level, next, createFloorCommand(s, { levelId: on, boundary: st.sketch.points }));
   }
-  return applied(level, next, createRoofCommand(s, { baseLevelId: roofLevelId(s.model), footprint: st.sketch.points, slope: 30, overhang: 500 }));
+  const slope = currentStep(level, st).roofSlope ?? 30;
+  return applied(
+    level,
+    next,
+    createRoofCommand(s, { baseLevelId: roofLevelId(s.model), footprint: st.sketch.points, slope, overhang: slope === 0 ? 0 : 500 })
+  );
 }
 
 /** Leaves a list command without choosing anything. */
@@ -537,4 +597,91 @@ export const isMaster = (level: LevelDef, st: PlayState) =>
 export function starsFor(level: LevelDef, st: PlayState): number {
   if (!st.done) return 0;
   return 1 + (st.wrongPicks === 0 ? 1 : 0) + (st.taps <= level.par ? 1 : 0);
+}
+
+// ---- Tower helpers ------------------------------------------------------------
+
+const topLevelId = (m: BimModel) => [...m.levels].sort((a, b) => b.elevation - a.elevation)[0].id;
+const elevOf = (m: BimModel, id: string) => m.levels.find((l) => l.id === id)?.elevation ?? 0;
+
+/** Positions of the vertical (x) or horizontal (z) grid lines. */
+export function gridLines(m: BimModel, vertical: boolean): number[] {
+  const out = new Set<number>();
+  for (const e of m.elements) {
+    if (e.type !== 'grid') continue;
+    if (vertical && e.start[0] === e.end[0]) out.add(e.start[0]);
+    if (!vertical && e.start[1] === e.end[1]) out.add(e.start[1]);
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
+export const CURTAIN_TYPE: ElementType = {
+  id: 't-curtain',
+  category: 'wall',
+  family: 'Curtain Wall',
+  name: 'Storefront',
+  params: { thickness: 100, curtain: 1, gridU: 0, mullion: 0 },
+};
+
+/**
+ * Four walls in one go (Rectangle), optionally Curtain Wall type and tied to
+ * the top level (Top Constraint) so they rise with the building.
+ */
+export function tallRectangle(
+  s: MissionSessionState,
+  on: string,
+  a: Point,
+  b: Point,
+  wallType: 'generic' | 'curtain',
+  fullHeight: boolean
+): CommandResult {
+  const top = topLevelId(s.model);
+  const base = elevOf(s.model, on);
+  const height = fullHeight ? Math.max(1, elevOf(s.model, top) - base) : 3000;
+  const curtain = wallType === 'curtain';
+  const op = rectangleWallsOp(s.model, {
+    x: Math.min(a[0], b[0]),
+    z: Math.min(a[1], b[1]),
+    width: Math.abs(b[0] - a[0]),
+    depth: Math.abs(b[1] - a[1]),
+    baseLevelId: on,
+    height,
+    thickness: curtain ? 100 : 300,
+  });
+  if (!op.ok) return { ok: false, state: s, error: op.error };
+  const before = new Set(s.model.elements.map((e) => e.id));
+  const m: BimModel = {
+    ...op.model,
+    types: curtain && !(op.model.types ?? []).some((t) => t.id === CURTAIN_TYPE.id) ? [...(op.model.types ?? []), CURTAIN_TYPE] : op.model.types,
+    elements: op.model.elements.map((e) =>
+      e.type === 'wall' && !before.has(e.id)
+        ? {
+            ...e,
+            name: curtain ? 'Cam cephe' : 'Çekirdek perdesi',
+            ...(curtain ? { typeId: CURTAIN_TYPE.id } : {}),
+            ...(fullHeight ? { topConstraint: top, topOffset: 0 } : {}),
+          }
+        : e
+    ),
+  };
+  return commitModelTransaction(s, m);
+}
+
+/** Columns standing on `on` and reaching the top level (multi-storey). */
+export function placeColumns(s: MissionSessionState, on: string, at: Point[]): CommandResult {
+  const top = topLevelId(s.model);
+  const used = new Set(s.model.elements.map((e) => e.id));
+  let n = 1;
+  const cols: ColumnElement[] = at.map((p) => {
+    while (used.has(`col${n}`)) n++;
+    used.add(`col${n}`);
+    return { id: `col${n}`, type: 'column', name: 'Kolon 60×60', baseLevelId: on, topLevelId: top, at: [p[0], p[1]], width: 600 };
+  });
+  return commitModelTransaction(s, { ...s.model, elements: [...s.model.elements, ...cols] });
+}
+
+/** Edit Type: one change, every curtain wall of that type follows. */
+export function setTypeParams(s: MissionSessionState, typeId: string, params: Record<string, number>): CommandResult {
+  const types = (s.model.types ?? []).map((t) => (t.id === typeId ? { ...t, params: { ...t.params, ...params } } : t));
+  return commitModelTransaction(s, { ...s.model, types });
 }
