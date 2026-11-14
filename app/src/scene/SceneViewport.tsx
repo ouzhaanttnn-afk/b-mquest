@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SceneExtras } from './SceneExtras';
+import { CurtainWall3D, SceneExtras } from './SceneExtras';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Edges, Grid, Html, Line, OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -93,6 +93,14 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
     () => model.elements.filter((e): e is DoorElement => e.type === 'door'),
     [model.elements]
   );
+  // Size of the building in metres (plan and height): tall towers need a bigger stage.
+  const span = useMemo(() => {
+    const xs = walls.flatMap((w) => [w.start[0], w.end[0]]);
+    const zs = walls.flatMap((w) => [w.start[1], w.end[1]]);
+    const top = Math.max(0, ...model.levels.map((l) => l.elevation));
+    if (xs.length === 0) return top / 1000;
+    return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), top) / 1000;
+  }, [walls, model.levels]);
 
   const targetRoomTopLoop = useMemo(
     (): [number, number, number][] => [
@@ -144,7 +152,7 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
         makeDefault
         target={[3, 1.25, 2]}
         minDistance={1.2}
-        maxDistance={24}
+        maxDistance={Math.max(24, span * 3)}
         maxPolarAngle={Math.PI / 2 - 0.02}
         enableDamping={false}
       />
@@ -183,14 +191,14 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
 
       <Grid
         position={[3, 0.012, 2]}
-        args={[16, 14]}
+        args={[Math.max(16, span + 6), Math.max(14, span + 6)]}
         cellSize={0.5}
         cellThickness={0.7}
         cellColor={isDark ? '#1E3A5F' : '#CBD5E1'}
         sectionSize={1}
         sectionThickness={1.4}
         sectionColor={isDark ? '#38BDF8' : '#64748B'}
-        fadeDistance={24}
+        fadeDistance={Math.max(24, span * 3)}
         infiniteGrid={false}
       />
 
@@ -263,6 +271,22 @@ const BuildingSceneContent: React.FC<BuildingSceneContentProps> = ({
         const midZ = ((wall.start[1] + wall.end[1]) * 0.5) * MM_TO_M;
         const topY = (baseElev + wall.height + 260) * MM_TO_M;
         const isLowWall = task.id === 'm01' && wall.height !== 3000;
+        const wallType = wall.typeId ? model.types?.find((t) => t.id === wall.typeId) : undefined;
+        const isCurtain = Number(wallType?.params.curtain ?? 0) === 1;
+        if (isCurtain) {
+          return (
+            <CurtainWall3D
+              key={wall.id}
+              wall={wall}
+              baseElev={baseElev}
+              gridU={Number(wallType?.params.gridU ?? 0)}
+              mullions={Number(wallType?.params.mullion ?? 0) === 1}
+              levels={model.levels.map((l) => l.elevation)}
+              isDark={isDark}
+              onSelect={onSelect}
+            />
+          );
+        }
 
         const wallColor = isSelected
           ? '#38BDF8'
@@ -483,17 +507,29 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   const modelRef = useRef(model);
   modelRef.current = model;
   const frame = useCallback(() => {
-    const walls = modelRef.current.elements.filter((e) => e.type === 'wall');
-    if (walls.length === 0) return { cx: 3, cz: 2, w: 6, d: 4 };
-    const xs = walls.flatMap((w) => [w.start[0], w.end[0]]);
-    const zs = walls.flatMap((w) => [w.start[1], w.end[1]]);
+    const m = modelRef.current;
+    const walls = m.elements.filter((e): e is WallElement => e.type === 'wall');
+    const elevOf = (id: string) => m.levels.find((l) => l.id === id)?.elevation ?? 0;
+    // Walls frame the building; before there are any, columns do.
+    const pts: Array<[number, number]> = walls.length
+      ? walls.flatMap((w) => [w.start, w.end])
+      : m.elements.flatMap((e) => (e.type === 'column' ? [e.at] : []));
+    if (pts.length === 0) return { cx: 3, cz: 2, w: 6, d: 4, h: 3 };
+    const xs = pts.map((p) => p[0]);
+    const zs = pts.map((p) => p[1]);
     const w = (Math.max(...xs) - Math.min(...xs)) / 1000;
     const d = (Math.max(...zs) - Math.min(...zs)) / 1000;
+    const tops = [
+      ...walls.map((x) => elevOf(x.baseLevelId) + x.height),
+      ...m.elements.flatMap((e) => (e.type === 'column' ? [elevOf(e.topLevelId)] : [])),
+    ];
+    const h = Math.max(...tops) / 1000;
     return {
       cx: (Math.max(...xs) + Math.min(...xs)) / 2000,
       cz: (Math.max(...zs) + Math.min(...zs)) / 2000,
       w: Math.max(w, 4),
       d: Math.max(d, 3),
+      h: Math.max(h, 3),
     };
   }, []);
 
@@ -502,14 +538,15 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
     if (!ctrl) return;
     const f = frame();
     const cam = ctrl.object as { position: { set: (x: number, y: number, z: number) => void }; fov?: number; aspect?: number };
-    const target = { x: f.cx, y: 1.2, z: f.cz };
+    // Low houses look at eye height; a tower is framed around its middle.
+    const target = { x: f.cx, y: f.h > 8 ? f.h * 0.45 : 1.2, z: f.cz };
     // Same three-quarter view as before, but the distance comes from the
     // narrower of the two fields of view, so tall phone panes and wide
     // desktop panes both show the whole building.
     // The campaign houses have their entrance on the north (top of the plan): look at it.
     const dir = { x: 0.95, y: 0.6, z: minimal ? -1.1 : 1.1 };
     const len = Math.hypot(dir.x, dir.y, dir.z);
-    const radius = Math.hypot(f.w / 2, f.d / 2, 1.6);
+    const radius = Math.hypot(f.w / 2, f.d / 2, f.h > 8 ? f.h / 2 : 1.6);
     const vfov = ((cam.fov ?? 42) * Math.PI) / 180;
     const aspect = cam.aspect && Number.isFinite(cam.aspect) ? cam.aspect : 1;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
@@ -539,7 +576,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
   }, [task.id, sceneMountKey, resetCamera]);
 
   // The campaign grows the house step by step: keep it framed as walls appear.
-  const wallCount = minimal ? model.elements.filter((e) => e.type === 'wall').length : 0;
+  const wallCount = minimal ? model.elements.filter((e) => e.type === 'wall' || e.type === 'column').length : 0;
   useEffect(() => {
     if (!minimal) return;
     const id = requestAnimationFrame(() => resetCamera());
@@ -718,7 +755,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({
             })(),
             fov: 42,
             near: 0.1,
-            far: 120,
+            far: 800,
           }}
           onPointerMissed={() => onSelect(null)}
           onCreated={handleCreated}

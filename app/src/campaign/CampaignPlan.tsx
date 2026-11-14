@@ -49,8 +49,12 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
   const here = model.levels.find((l) => l.id === activeLevel)?.elevation ?? 0;
   const below = [...model.levels].filter((l) => l.elevation < here).sort((a, b) => b.elevation - a.elevation)[0]?.id;
   const allWalls = model.elements.filter((e): e is WallElement => e.type === 'wall');
-  const walls = allWalls.filter((w) => w.baseLevelId === activeLevel);
-  const underlay = below ? allWalls.filter((w) => w.baseLevelId === below) : [];
+  const elevOf = (id: string) => model.levels.find((l) => l.id === id)?.elevation ?? 0;
+  // A wall shows on every plan it passes through (multi-storey walls in a tower).
+  const cuts = (w: WallElement) => elevOf(w.baseLevelId) <= here && elevOf(w.baseLevelId) + w.height > here;
+  const walls = allWalls.filter(cuts);
+  const underlay = below ? allWalls.filter((w) => w.baseLevelId === below && !cuts(w)) : [];
+  const isCurtain = (w: WallElement) => Number(model.types?.find((t) => t.id === w.typeId)?.params.curtain ?? 0) === 1;
   const wallSeg = (hostId: string, offset: number, width: number): [Point, Point] | null => {
     const w = walls.find((x) => x.id === hostId);
     if (!w) return null;
@@ -179,8 +183,30 @@ export const CampaignPlan: React.FC<Props> = ({ geom, activeLevel, model, ghosts
         ) : null
       )}
 
+      {model.elements.map((e) =>
+        e.type === 'column' && elevOf(e.baseLevelId) <= here && elevOf(e.topLevelId) > here ? (
+          <rect
+            key={e.id}
+            className="bq-cmp-column"
+            x={e.at[0] - e.width / 2}
+            y={e.at[1] - e.width / 2}
+            width={e.width}
+            height={e.width}
+            data-testid="cmp-column"
+          />
+        ) : null
+      )}
+
       {walls.map((w) => (
-        <line key={w.id} className="bq-cmp-wall" x1={w.start[0]} y1={w.start[1]} x2={w.end[0]} y2={w.end[1]} strokeWidth={w.thickness} />
+        <line
+          key={w.id}
+          className={isCurtain(w) ? 'bq-cmp-wall bq-cmp-curtain' : 'bq-cmp-wall'}
+          x1={w.start[0]}
+          y1={w.start[1]}
+          x2={w.end[0]}
+          y2={w.end[1]}
+          strokeWidth={isCurtain(w) ? 160 : w.thickness}
+        />
       ))}
 
       {model.elements.map((e) => {

@@ -18,8 +18,21 @@ const fmt = (mm: number) => `${mm === 0 ? '±' : '+'}${(mm / 1000).toFixed(2).re
 
 export const ElevationView: React.FC<Props> = ({ model, ghosts, demo, onTap }) => {
   const ref = useRef<SVGSVGElement | null>(null);
+  // Tall buildings are drawn compressed (k mm per drawing unit) so the view always fits.
+  const highest = Math.max(
+    6000,
+    ...model.levels.map((l) => l.elevation),
+    ...ghosts.map((g) => (g.kind === 'elevation' ? g.at : 0))
+  );
+  const k = Math.max(1, (highest + 600) / 6600);
+  const Y = (mm: number) => -mm / k;
+  const tickStep = k > 3 ? 5000 : 500;
   const ticks: number[] = [];
-  for (let e = 0; e <= 6000; e += 500) ticks.push(e);
+  for (let e = 0; e <= highest; e += tickStep) ticks.push(e);
+  const sorted = [...model.levels].sort((a, b) => a.elevation - b.elevation);
+  // With many levels only every fifth label (and the top) is written out.
+  const crowded = sorted.length > 8;
+  const labelled = (i: number) => !crowded || i % 5 === 0 || i === sorted.length - 1;
   return (
     <svg
       ref={ref}
@@ -35,32 +48,36 @@ export const ElevationView: React.FC<Props> = ({ model, ghosts, demo, onTap }) =
         const m = ref.current?.getScreenCTM();
         if (!m) return;
         const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
-        onTap([0, Math.round(-pt.y)]);
+        onTap([0, Math.round(-pt.y * k)]);
       }}
     >
       <rect x={-2600} y={0} width={15200} height={1200} className="bq-cmp-ground" />
       {ticks.map((t) => (
         <g key={t} className="bq-cmp-tick">
-          <line x1={-1800} y1={-t} x2={-1400} y2={-t} />
+          <line x1={-1800} y1={Y(t)} x2={-1400} y2={Y(t)} />
         </g>
       ))}
       {ghosts.map((g, i) =>
         g.kind === 'elevation' ? (
           <g key={i} className="bq-cmp-ghost">
-            <line x1={-1200} y1={-g.at} x2={12000} y2={-g.at} />
-            {g.label && <text x={12200} y={-g.at + 130}>{g.label}</text>}
+            <line x1={-1200} y1={Y(g.at)} x2={12000} y2={Y(g.at)} />
+            {g.label && <text x={12200} y={Y(g.at) + 130}>{g.label}</text>}
           </g>
         ) : null
       )}
-      {model.levels.map((l) => (
+      {sorted.map((l, i) => (
         <g key={l.id} className="bq-cmp-level">
-          <line x1={-1200} y1={-l.elevation} x2={11200} y2={-l.elevation} />
-          <circle cx={11600} cy={-l.elevation} r={330} />
-          <text x={-1200} y={-l.elevation - 200}>{l.name} {fmt(l.elevation)}</text>
+          <line x1={-1200} y1={Y(l.elevation)} x2={11200} y2={Y(l.elevation)} />
+          {labelled(i) && <circle cx={11600} cy={Y(l.elevation)} r={crowded ? 160 : 330} />}
+          {labelled(i) && (
+            <text x={-1200} y={Y(l.elevation) - 120}>
+              {l.name} {fmt(l.elevation)}
+            </text>
+          )}
         </g>
       ))}
       {demo && (
-        <g className="bq-cmp-finger" style={{ transform: `translate(5000px, ${-demo[1]}px)` }} aria-hidden="true">
+        <g className="bq-cmp-finger" style={{ transform: `translate(5000px, ${Y(demo[1])}px)` }} aria-hidden="true">
           <circle r={420} />
           <circle r={160} className="bq-cmp-finger-core" />
         </g>

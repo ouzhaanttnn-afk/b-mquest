@@ -746,3 +746,21 @@
 .bq-cmp-star-why .master { color: #f59e0b; font-weight: 800; }
 .bq-cmp-tile-stars { grid-area: stars; display: inline-flex; align-items: center; gap: 6px; }
 .bq-cmp-crown { font-size: 18px; }
+
+/* ---------- Gökdelen ---------- */
+.bq-cmp-column { fill: var(--text-primary); stroke: none; }
+.bq-cmp-curtain { stroke: #38bdf8 !important; stroke-dasharray: 600 120; opacity: 0.95; }
+.bq-cmp-finale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(249, 115, 22, 0.12));
+  border: 1px solid #f59e0b;
+}
+.bq-cmp-finale span { font-size: 34px; }
+.bq-cmp-finale strong { font-size: 20px; }
+.bq-cmp-finale p { margin: 0; color: var(--text-secondary); line-height: 1.45; }
+.bq-cmp-sheet { max-height: 62dvh; overflow-y: auto; }

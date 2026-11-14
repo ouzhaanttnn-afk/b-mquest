@@ -88,7 +88,7 @@ describe('Bahçe Evi — kampanya mantığı', () => {
 
   it('ribbon her komutu bir kez ve gerçek Revit yoluyla içerir', () => {
     expect(new Set(RIBBON.map((c) => c.id)).size).toBe(RIBBON.length);
-    const tabName = { architecture: 'Architecture', annotate: 'Annotate', view: 'View', modify: 'Modify' };
+    const tabName = { architecture: 'Architecture', structure: 'Structure', annotate: 'Annotate', view: 'View', modify: 'Modify', ai: 'Autodesk Assistant' };
     for (const c of RIBBON) expect(c.path.startsWith(`${tabName[c.tab]} ›`)).toBe(true);
   });
 
@@ -343,5 +343,87 @@ describe('İlerleme kaydı', () => {
     p = recordStars(p, 'h1-1', 1, false);
     expect(p.stars['h1-1']).toBe(3);
     expect(p.gold?.['h1-1']).toBe(true);
+  });
+});
+
+import { HOUSE5_DEF, TOWER_FLOORS } from '../src/campaign/house5';
+import { setColumnMode, setWallType } from '../src/campaign/engine';
+
+describe('Gökdelen — final', () => {
+  const H5 = HOUSE5_DEF.levels;
+  const W5 = 18000;
+  type Act = { cmd?: string; taps?: Point[]; pick?: string[]; finish?: boolean; mode?: 'line' | 'rect'; wallType?: 'curtain'; grids?: boolean };
+  function play5(i: number, acts: Act[]) {
+    const level = H5[i];
+    let st = newPlay(sessionFor(startModelOf(HOUSE5_DEF, i)));
+    for (const a of acts) {
+      if (a.cmd) st = pickCommand(level, st, a.cmd as never).state;
+      if (a.mode) st = setDrawMode(st, a.mode).state;
+      if (a.wallType) st = setWallType(st, a.wallType).state;
+      if (a.grids) st = setColumnMode(st, 'grids').state;
+      for (const label of a.pick ?? []) {
+        const c = choicesFor(level, st).find((x) => x.label.includes(label));
+        if (!c) throw new Error(`no choice ${label}: ${JSON.stringify(choicesFor(level, st))}`);
+        st = choose(level, st, c.id).state;
+      }
+      for (const p of a.taps ?? []) st = tap(level, st, p).state;
+      if (a.finish) st = finishSketch(level, st).state;
+    }
+    return st;
+  }
+  const perfect5: Act[][] = [
+    [{ cmd: 'level', taps: [[0, 3500]] }, { cmd: 'array', pick: ['Number: 20'] }],
+    [{ cmd: 'grid', taps: [[9000, -1000], [9000, W5 + 1000], [W5, -1000], [W5, W5 + 1000], [-1000, 9000], [W5 + 1000, 9000], [-1000, W5], [W5 + 1000, W5]] }],
+    [{ cmd: 'column', grids: true, taps: [[9000, 9000]] }],
+    [{ cmd: 'wall', mode: 'rect', taps: [[6000, 6000], [12000, 12000]] }],
+    [{ cmd: 'floor', taps: [[9000, 3000]], finish: true }, { cmd: 'paste', pick: ['Bütün katlar'] }],
+    [
+      { cmd: 'wall', mode: 'rect', wallType: 'curtain', taps: [[0, 0], [W5, W5]] },
+      { cmd: 'curtaingrid', taps: [[W5 / 2, 100]] },
+      { cmd: 'mullion', taps: [[W5 / 2, 0]] },
+    ],
+    [{ cmd: 'roof', taps: [[9000, 9000]], finish: true }],
+    [{ cmd: 'assistant', pick: ['kat planı'] }, { cmd: 'assistant', pick: ['3,5 m'] }, { cmd: 'review', pick: ['Kat 13'] }],
+  ];
+
+  it('referans çözüm 20 katlı kuleyi kurar', () => {
+    const end = startModelOf(HOUSE5_DEF, H5.length);
+    expect(end.levels.length).toBe(TOWER_FLOORS + 1);
+    expect(end.levels.find((l) => l.name === 'Çatı')?.elevation).toBe(80000);
+    expect(end.elements.filter((e) => e.type === 'column')).toHaveLength(9);
+    expect(end.elements.filter((e) => e.type === 'floor')).toHaveLength(TOWER_FLOORS - 1);
+    const curtain = end.elements.filter((e) => e.type === 'wall' && e.typeId === 't-curtain');
+    expect(curtain).toHaveLength(4);
+    // Walls tied to the roof level grew with the assistant's 4 m storeys.
+    for (const w of curtain) if (w.type === 'wall') expect(w.height).toBe(80000);
+    for (const level of H5) for (const st of level.steps) expect(st.done(end), `${level.id}/${st.id}`).toBe(true);
+  });
+
+  H5.forEach((level, i) => {
+    it(`${level.id} ${level.title.tr}: dokunarak oynanınca biter ve 3 yıldız verir`, () => {
+      expect(level.steps[0].done(startModelOf(HOUSE5_DEF, i)), 'start').toBe(false);
+      const st = play5(i, perfect5[i]);
+      expect(st.done).toBe(true);
+      expect(starsFor(level, st)).toBe(3);
+    });
+  });
+
+  it('asistana kötü istek vermek ikinci yıldızı götürür; doğru katı onaylamak da', () => {
+    const level = H5[7];
+    const st = play5(7, [
+      { cmd: 'assistant', pick: ['tasarla', 'kat planı'] },
+      { cmd: 'assistant', pick: ['3,5 m'] },
+      { cmd: 'review', pick: ['Kat 7 ', 'Kat 13'] },
+    ]);
+    expect(st.done).toBe(true);
+    expect(st.wrongPicks).toBe(2);
+    expect(starsFor(level, st)).toBe(2);
+  });
+
+  it('Array az sayı verilirse bölüm bitmez, tekrar Array ile tamamlanır', () => {
+    let st = play5(0, [{ cmd: 'level', taps: [[0, 3500]] }, { cmd: 'array', pick: ['Number: 5'] }]);
+    expect(st.done).toBe(false);
+    st = choose(H5[0], st, '20').state;
+    expect(st.done).toBe(true);
   });
 });

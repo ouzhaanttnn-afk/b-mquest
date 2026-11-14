@@ -90,6 +90,9 @@ export function modelErrors(model: unknown): string[] {
       ) {
         errors.push(`E_OPENING_BOUNDS:${e.id}`);
       }
+    } else if (e.type === 'column') {
+      needLevel(e.id, e.baseLevelId);
+      needLevel(e.id, e.topLevelId);
     } else if (e.type === 'floor') {
       needLevel(e.id, e.levelId);
     } else if (e.type === 'roof') {

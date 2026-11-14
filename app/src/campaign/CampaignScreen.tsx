@@ -17,6 +17,8 @@ import {
   choose,
   pickCommand,
   setDrawMode,
+  setWallType,
+  setColumnMode,
   starsFor,
   stepLevel,
   tap,
@@ -310,7 +312,11 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
       : undefined;
   const revealSheet = level.reveal === 'sheet' ? [...model.elements].reverse().find((e) => e.type === 'sheet') : undefined;
   const listOpen = !!play.command && LIST_COMMANDS.includes(play.command) && !play.done;
-  const listTitle = play.command === 'paste' ? t('pasteTitle') : play.command === 'sheet' ? t('sheetTitle') : t('placeTitle');
+  const listTitle = t(
+    ({ paste: 'pasteTitle', sheet: 'sheetTitle', array: 'arrayTitle', assistant: 'assistantTitle', review: 'reviewTitle' } as const)[
+      play.command as 'paste' | 'sheet' | 'array' | 'assistant' | 'review'
+    ] ?? 'placeTitle'
+  );
   const ghosts = play.done ? [] : step.ghost;
   const usedCommands = useMemo(() => [...new Set(level.steps.map((s) => s.command))].map(commandById), [level]);
   const hasModel = play.session.model.elements.length > 0;
@@ -403,6 +409,54 @@ const LevelPlay: React.FC<LevelProps> = ({ house, levelIndex, theme, reducedMoti
                 ))}
               </div>
               <span className="bq-cmp-panel-name">Draw</span>
+            </div>
+          )}
+          {play.command === 'wall' && tab === 'architecture' && level.steps.some((st) => st.fullHeight) && (
+            <div className="bq-cmp-panel bq-cmp-panel-draw" role="group" aria-label="Type Selector" data-testid="campaign-walltype">
+              <div className="bq-cmp-panel-btns">
+                {(['generic', 'curtain'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={`bq-cmp-cmd ${play.wallType === k ? 'active' : ''}`}
+                    aria-pressed={play.wallType === k}
+                    onClick={() => apply(setWallType(play, k))}
+                    data-testid={`campaign-walltype-${k}`}
+                  >
+                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      {k === 'generic' ? <rect x="3" y="8" width="18" height="8" /> : <path d="M3 5h18v14H3zM9 5v14M15 5v14M3 12h18" />}
+                    </svg>
+                    <span>{k === 'generic' ? 'Generic' : 'Curtain Wall'}</span>
+                  </button>
+                ))}
+              </div>
+              <span className="bq-cmp-panel-name">Type</span>
+            </div>
+          )}
+          {play.command === 'column' && tab === 'structure' && (
+            <div className="bq-cmp-panel bq-cmp-panel-draw" role="group" aria-label="Multiple" data-testid="campaign-colmode">
+              <div className="bq-cmp-panel-btns">
+                {(['single', 'grids'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={`bq-cmp-cmd ${play.columnMode === k ? 'active' : ''}`}
+                    aria-pressed={play.columnMode === k}
+                    onClick={() => apply(setColumnMode(play, k))}
+                    data-testid={`campaign-colmode-${k}`}
+                  >
+                    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      {k === 'single' ? (
+                        <rect x="9" y="9" width="6" height="6" fill="currentColor" />
+                      ) : (
+                        <path d="M6 3v18M12 3v18M18 3v18M3 6h18M3 12h18M3 18h18" />
+                      )}
+                    </svg>
+                    <span>{k === 'single' ? 'Tek kolon' : 'At Grids'}</span>
+                  </button>
+                ))}
+              </div>
+              <span className="bq-cmp-panel-name">Multiple</span>
             </div>
           )}
           {[...new Set(RIBBON.filter((c) => c.tab === tab).map((c) => c.panel))].map((panel) => (
@@ -696,6 +750,13 @@ const HouseComplete: React.FC<{ house: HouseDef; progress: CampaignProgress; the
         </Suspense>
       </div>
       <div className="bq-cmp-house-text">
+        {house.finale && (
+          <div className="bq-cmp-finale" data-testid="campaign-finale">
+            <span>🏆</span>
+            <strong>{t('finaleTitle')}</strong>
+            <p>{t('finaleText')}</p>
+          </div>
+        )}
         <h1>{tx(house.title, L)}: {t('houseDone')}</h1>
         <p className="bq-cmp-hub-total">★ {houseStars(house, progress)} / {house.levels.length * 3}</p>
         <p>{t('houseDoneSub')}</p>

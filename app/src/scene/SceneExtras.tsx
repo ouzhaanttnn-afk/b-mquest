@@ -186,6 +186,24 @@ export const SceneExtras: React.FC<ExtrasProps> = ({
             />
           );
         }
+        if (el.type === 'column') {
+          const base = elev(model, el.baseLevelId) * MM;
+          const top = elev(model, el.topLevelId) * MM;
+          const h = Math.max(0.1, top - base);
+          return (
+            <mesh
+              key={el.id}
+              position={[el.at[0] * MM, base + h / 2, el.at[1] * MM]}
+              castShadow
+              receiveShadow
+              userData={{ elementId: el.id, elementType: 'column' }}
+              {...pick(onSelect, el.id)}
+            >
+              <boxGeometry args={[el.width * MM, h, el.width * MM]} />
+              <meshStandardMaterial color={tint(el.id, '#94A3B8', selectedId, failedElementIds)} roughness={0.8} transparent={opacity < 1} opacity={opacity} />
+            </mesh>
+          );
+        }
         if (el.type === 'stair') {
           const [dx, dz] = stairDir(el);
           const base = elev(model, el.baseLevelId) * MM;
@@ -280,6 +298,54 @@ export const SceneExtras: React.FC<ExtrasProps> = ({
         }
         return null;
       })}
+    </group>
+  );
+};
+
+/**
+ * Curtain wall: glass panels with the curtain grid (vertical lines every gridU,
+ * horizontal at each level) and mullions drawn as solid bars when added.
+ */
+export const CurtainWall3D: React.FC<{
+  wall: WallElement;
+  baseElev: number;
+  gridU: number;
+  mullions: boolean;
+  levels: number[];
+  isDark: boolean;
+  onSelect: (id: string | null) => void;
+}> = ({ wall, baseElev, gridU, mullions, levels, isDark, onSelect }) => {
+  const [x0, z0] = wall.start;
+  const [x1, z1] = wall.end;
+  const len = Math.hypot(x1 - x0, z1 - z0);
+  const ux = (x1 - x0) / len;
+  const uz = (z1 - z0) / len;
+  const top = baseElev + wall.height;
+  const cx = ((x0 + x1) / 2) * MM;
+  const cz = ((z0 + z1) / 2) * MM;
+  const cy = ((baseElev + top) / 2) * MM;
+  const along = Math.abs(ux) > 0.5;
+  const lines: [number, number, number][] = [];
+  if (gridU > 0) {
+    for (let d = gridU; d < len - 1; d += gridU) {
+      const px = (x0 + ux * d) * MM;
+      const pz = (z0 + uz * d) * MM;
+      lines.push([px, baseElev * MM, pz], [px, top * MM, pz]);
+    }
+  }
+  for (const e of levels) {
+    if (e <= baseElev || e >= top) continue;
+    lines.push([x0 * MM, e * MM, z0 * MM], [x1 * MM, e * MM, z1 * MM]);
+  }
+  const glass = isDark ? '#38BDF8' : '#7DD3FC';
+  const frame = mullions ? (isDark ? '#E2E8F0' : '#334155') : isDark ? '#93C5FD' : '#0EA5E9';
+  return (
+    <group userData={{ elementId: wall.id, elementType: 'wall' }}>
+      <mesh position={[cx, cy, cz]} {...pick(onSelect, wall.id)}>
+        <boxGeometry args={[along ? len * MM : 0.06, (top - baseElev) * MM, along ? 0.06 : len * MM]} />
+        <meshStandardMaterial color={glass} transparent opacity={0.38} roughness={0.05} metalness={0.4} />
+      </mesh>
+      {lines.length > 0 && <Line points={lines} segments color={frame} lineWidth={mullions ? 2.2 : 1} />}
     </group>
   );
 };

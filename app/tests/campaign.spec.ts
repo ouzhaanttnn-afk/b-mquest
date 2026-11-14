@@ -33,9 +33,13 @@ async function pick(page: Page, id: string) {
     ? 'annotate'
     : ['section', 'elevation', 'sheet', 'place'].includes(id)
       ? 'view'
-      : ['paste', 'mirror'].includes(id)
+      : ['paste', 'mirror', 'array'].includes(id)
         ? 'modify'
-        : 'architecture';
+        : id === 'column'
+          ? 'structure'
+          : ['assistant', 'review'].includes(id)
+            ? 'ai'
+            : 'architecture';
   const tabBtn = page.getByTestId(`campaign-tab-${tab}`);
   if ((await tabBtn.getAttribute('aria-selected')) !== 'true') await tabBtn.click();
   await page.getByTestId(`campaign-cmd-${id}`).click();
@@ -306,5 +310,87 @@ test.describe('Bahçe Evi', () => {
     await expect(page.getByTestId('campaign-house-done')).toBeVisible();
     await page.getByTestId('campaign-house-back').click();
     await expect(page.getByTestId('campaign-total-stars')).toContainText('12 / 12');
+  });
+
+  test('tablet: final — Gökdelen 8 bölüm baştan sona, asistanın hatası bulunur', async ({ page }) => {
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await freshStart(page);
+    await page.evaluate(() => {
+      const stars: Record<string, number> = {};
+      const n: Record<number, number> = { 1: 6, 2: 6, 3: 5, 4: 4 };
+      for (const h of [1, 2, 3, 4]) for (let i = 1; i <= n[h]; i++) stars[`h${h}-${i}`] = 3;
+      window.localStorage.setItem('bimquest.campaign.v1', JSON.stringify({ stars }));
+    });
+    await page.reload();
+    await expect(page.getByTestId('home-next-house')).toContainText('Gökdelen');
+    await page.getByTestId('home-next-house').click();
+    await page.getByTestId('campaign-level-1').click();
+    const choice = (re: RegExp) => page.getByTestId('campaign-list-sheet').getByRole('button', { name: re }).click();
+
+    await pick(page, 'level');
+    await tapAt(page, 0, 3500, true);
+    await pick(page, 'array');
+    await choice(/Number: 20/);
+    await finish(page);
+
+    await pick(page, 'grid');
+    for (const [a, b] of [
+      [[9000, -1000], [9000, 19000]],
+      [[18000, -1000], [18000, 19000]],
+      [[-1000, 9000], [19000, 9000]],
+      [[-1000, 18000], [19000, 18000]],
+    ] as Array<[[number, number], [number, number]]>) {
+      await tapAt(page, ...a);
+      await tapAt(page, ...b);
+    }
+    await finish(page);
+
+    await pick(page, 'column');
+    await page.getByTestId('campaign-colmode-grids').click();
+    await tapAt(page, 9000, 9000);
+    await expect(page.getByTestId('cmp-column')).toHaveCount(9);
+    await finish(page);
+
+    await pick(page, 'wall');
+    await page.getByTestId('campaign-draw-rect').click();
+    await tapAt(page, 6000, 6000);
+    await tapAt(page, 12000, 12000);
+    await finish(page);
+
+    await pick(page, 'floor');
+    await tapAt(page, 9000, 3000);
+    await page.getByTestId('campaign-finish').click();
+    await pick(page, 'paste');
+    await choice(/Bütün katlar/);
+    await finish(page);
+
+    await pick(page, 'wall');
+    await page.getByTestId('campaign-draw-rect').click();
+    await page.getByTestId('campaign-walltype-curtain').click();
+    await tapAt(page, 0, 0);
+    await tapAt(page, 18000, 18000);
+    await pick(page, 'curtaingrid');
+    await tapAt(page, 9000, 0);
+    await pick(page, 'mullion');
+    await tapAt(page, 9000, 0);
+    await finish(page);
+
+    await pick(page, 'roof');
+    await tapAt(page, 9000, 9000);
+    await page.getByTestId('campaign-finish').click();
+    await finish(page);
+
+    await pick(page, 'assistant');
+    await choice(/kat planı/);
+    await pick(page, 'assistant');
+    await choice(/3,5 m/);
+    await pick(page, 'review');
+    await expect(page.getByTestId('campaign-list-sheet')).toContainText('Kat 13 · +51,50');
+    await choice(/Kat 13/);
+    await finish(page);
+
+    await expect(page.getByTestId('campaign-finale')).toBeVisible();
+    await page.getByTestId('campaign-house-back').click();
+    await expect(page.getByTestId('campaign-total-stars')).toContainText('24 / 24');
   });
 });
